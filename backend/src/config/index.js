@@ -26,4 +26,10 @@ export const config = {
     monthly: 100,
     yearly: 500,
   },
+
+  admin: {
+    username: process.env.ADMIN_USERNAME || 'admin',
+    password: process.env.ADMIN_PASSWORD || 'inkflow2025',
+    jwtSecret: process.env.ADMIN_JWT_SECRET || 'inkflow-admin-secret',
+  },
 }
