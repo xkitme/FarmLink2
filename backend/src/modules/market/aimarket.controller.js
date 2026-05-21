@@ -1,0 +1,87 @@
+import { prisma } from '../../db.js'
+import { ok, errors } from '../../utils/response.js'
+
+/**
+ * 注意：本段为离线规则/模板版。
+ * 分段 11 将接入 Ollama：质量分级用视觉模型、文案生成用 LLM。
+ */
+
+const rand = (a, b) => a + Math.random() * (b - a)
+const GRADES = ['特级', '一级', '二级', '等外']
+
+/** AI 质量分级（图片） */
+export async function gradeDetect(req, res) {
+  if (!req.file) throw errors.param('请上传农产品图片')
+  const { productName } = req.body
+
+  const scores = {
+    色泽: Math.round(rand(70, 98)),
+    大小: Math.round(rand(70, 98)),
+    完整度: Math.round(rand(70, 98)),
+    成熟度: Math.round(rand(70, 98)),
+  }
+  const avg = Object.values(scores).reduce((a, b) => a + b, 0) / 4
+  const grade = avg >= 92 ? GRADES[0] : avg >= 84 ? GRADES[1] : avg >= 75 ? GRADES[2] : GRADES[3]
+  const confidence = Number(rand(0.80, 0.96).toFixed(2))
+  const imageUrl = `/uploads/${req.file.filename}`
+
+  await prisma.aiDetectRecord.create({
+    data: {
+      userId: req.user.id,
+      detectType: 'GRADE',
+      imageUrl,
+      resultLabel: grade,
+      confidence,
+      adviceText: `综合品相评分 ${avg.toFixed(0)}，定级 ${grade}。`,
+    },
+  })
+
+  ok(res, {
+    productName: productName || '农产品',
+    imageUrl,
+    grade,
+    overallScore: Number(avg.toFixed(0)),
+    scores,
+    confidence,
+    advice: grade === GRADES[0] || grade === GRADES[1]
+      ? '品相优良，建议按精品装销售，可获更高溢价。'
+      : '品相一般，建议分级包装，等外品可用于加工或就近销售。',
+  }, '质量分级完成')
+}
+
+/** 包装文案生成 */
+export async function packageGenerate(req, res) {
+  const { productName, features, sellingPoint } = req.body
+  if (!productName) throw errors.param('请填写产品名称')
+  const feat = Array.isArray(features) ? features.join('、') : (features || '生态种植、新鲜直供')
+
+  ok(res, {
+    productName,
+    slogan: `${productName}·一口尝到山野的鲜甜`,
+    description:
+      `精选产地${productName}，${feat}。从田间到餐桌，全程可溯源。\n` +
+      `${sellingPoint || '土生土长，自然成熟'}，把家乡的味道送到您家。`,
+    tags: ['原产地直供', '新鲜采摘', '溯源可查', '助农优选'],
+    designTip: '包装主色建议用大地色或果实本色，突出"原产地+溯源码"，简洁朴实更显信任感。',
+    tip: '本文案为模板生成，分段 11 接入本地大模型后可按产品特点智能生成。',
+  }, '包装文案已生成')
+}
+
+/** 直播带货话术生成 */
+export async function liveScript(req, res) {
+  const { productName, price } = req.body
+  if (!productName) throw errors.param('请填写产品名称')
+  const priceText = price ? `今天直播间专享价 ${price} 元` : '直播间价格非常实惠'
+
+  ok(res, {
+    productName,
+    script: [
+      `【开场】家人们好！我是咱村的新农人，今天给大家带来自家种的${productName}！`,
+      `【介绍】这个${productName}是咱们自家地里种的，不打催熟剂，自然成熟，扫包装上的溯源码全程都能查。`,
+      `【促单】${priceText}，数量不多，先下单先发货，错过就要等下一季啦！`,
+      `【互动】想要的家人扣个"1"，有问题尽管问，我一一回答。`,
+      `【收尾】感谢大家支持助农，下单后我们当天打包发货，给您最新鲜的！`,
+    ],
+    tip: '本话术为模板生成，分段 11 接入本地大模型后可按产品与场景智能生成。',
+  }, '直播话术已生成')
+}

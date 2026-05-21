@@ -9,7 +9,8 @@ import * as advise from './advise.controller.js'
 import * as info from './info.controller.js'
 
 const router = Router()
-router.use(requireAuth)
+// 仅对 /agri 路径要求登录（避免拦截其他模块请求）
+router.use('/agri', requireAuth)
 
 // ── 地块管理 ────────────────────────────────
 router.get('/agri/plot/list',   wrap(plot.list))
