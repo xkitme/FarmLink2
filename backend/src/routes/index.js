@@ -3,6 +3,7 @@ import { ok } from '../utils/response.js'
 import platformRoutes from '../modules/platform/platform.routes.js'
 import agriRoutes from '../modules/agri/agri.routes.js'
 import marketRoutes from '../modules/market/market.routes.js'
+import machineryRoutes from '../modules/machinery/machinery.routes.js'
 
 /**
  * 业务路由注册中心。
@@ -20,6 +21,8 @@ export function registerRoutes(app, prefix) {
   router.use(agriRoutes)
   // 板块二 market：流通销售
   router.use(marketRoutes)
+  // 板块三 machinery：农机共享
+  router.use(machineryRoutes)
 
   app.use(prefix, router)
 }
