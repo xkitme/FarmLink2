@@ -5,6 +5,7 @@ import agriRoutes from '../modules/agri/agri.routes.js'
 import marketRoutes from '../modules/market/market.routes.js'
 import machineryRoutes from '../modules/machinery/machinery.routes.js'
 import disasterRoutes from '../modules/disaster/disaster.routes.js'
+import policyRoutes from '../modules/policy/policy.routes.js'
 
 /**
  * 业务路由注册中心。
@@ -26,6 +27,8 @@ export function registerRoutes(app, prefix) {
   router.use(machineryRoutes)
   // 板块四 disaster：气象灾害
   router.use(disasterRoutes)
+  // 板块五 policy：惠农政策党建
+  router.use(policyRoutes)
 
   app.use(prefix, router)
 }
