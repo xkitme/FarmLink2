@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(uuid())
+  phone          String?   @unique
+  nickname       String
+  passwordHash   String
+  avatarPath     String?
+  level          Int       @default(1)
+  expPoints      Int       @default(0)
+  memberType     Int       @default(0)  // 0:免费 1:月度 2:年度
+  memberExpireAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  progress             LearningProgress[]
+  works                UserWork[]
+  likes                Like[]
+  favorites            Favorite[]
+  comments             Comment[]
+  checkins             Checkin[]
+  achievements         UserAchievement[]
+  conversations        AiConversation[]
+  challengeSubmissions ChallengeSubmission[]
+}
+
+model Content {
+  id          String   @id @default(uuid())
+  category    String   // poetry|calligraphy|history|classics|season|art|medicine
+  subCategory String?
+  title       String
+  author      String?
+  dynasty     String?
+  body        String
+  translation String?
+  annotation  String?  // JSON: {word: meaning}
+  background  String?
+  tags        String?  // JSON: string[]
+  difficulty  Int      @default(1)  // 1-5
+  isPremium   Boolean  @default(false)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  progress  LearningProgress[]
+  favorites Favorite[]
+}
+
+model LearningProgress {
+  id             String    @id @default(uuid())
+  userId         String
+  contentId      String
+  status         Int       @default(0)  // 0:未开始 1:进行中 2:完成
+  score          Int?
+  reviewCount    Int       @default(0)
+  nextReviewAt   DateTime?
+  masteryLevel   Int       @default(0)  // 0-5
+  lastAccessedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  content Content @relation(fields: [contentId], references: [id])
+
+  @@unique([userId, contentId])
+}
+
+model UserWork {
+  id           String   @id @default(uuid())
+  userId       String
+  workType     String   // calligraphy|poetry|painting
+  title        String?
+  content      String?
+  mediaPath    String?
+  aiReview     String?  // JSON
+  aiScore      Int?
+  isPublic     Boolean  @default(true)
+  likeCount    Int      @default(0)
+  commentCount Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  likes    Like[]
+  comments Comment[]
+}
+
+model Like {
+  userId    String
+  workId    String
+  createdAt DateTime @default(now())
+
+  user User     @relation(fields: [userId], references: [id])
+  work UserWork @relation(fields: [workId], references: [id])
+
+  @@id([userId, workId])
+}
+
+model Favorite {
+  userId    String
+  contentId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  content Content @relation(fields: [contentId], references: [id])
+
+  @@id([userId, contentId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  workId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  work UserWork @relation(fields: [workId], references: [id])
+  user User     @relation(fields: [userId], references: [id])
+}
+
+model Achievement {
+  id             String @id @default(uuid())
+  code           String @unique
+  name           String
+  description    String?
+  icon           String?
+  category       String?
+  conditionType  String?  // streak|complete|score|create
+  conditionValue Int?
+  expReward      Int    @default(0)
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id])
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@id([userId, achievementId])
+}
+
+model Checkin {
+  id        String   @id @default(uuid())
+  userId    String
+  date      String   // YYYY-MM-DD
+  expGained Int      @default(10)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+}
+
+model AiConversation {
+  id        String   @id @default(uuid())
+  userId    String
+  sessionId String
+  mode      String?  // guide|character|poetry|translation
+  character String?
+  messages  String   // JSON: Message[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model DailyChallenge {
+  id          String  @id @default(uuid())
+  date        String  @unique  // YYYY-MM-DD
+  contentId   String?
+  question    String
+  options     String? // JSON: string[]
+  answer      String
+  explanation String?
+
+  submissions ChallengeSubmission[]
+}
+
+model ChallengeSubmission {
+  userId      String
+  challengeId String
+  answer      String?
+  isCorrect   Boolean?
+  submittedAt DateTime @default(now())
+
+  user      User           @relation(fields: [userId], references: [id])
+  challenge DailyChallenge @relation(fields: [challengeId], references: [id])
+
+  @@id([userId, challengeId])
+}
