@@ -1,9 +1,9 @@
 import { message } from 'antd'
 import { clearSession, getToken } from './auth.js'
 
-const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
+export const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
 
-function buildUrl(path, params) {
+export function buildUrl(path, params) {
   const url = new URL(`${API_BASE}${path}`, window.location.origin)
   Object.entries(params || {}).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
@@ -42,6 +42,61 @@ export async function request(path, options = {}) {
     return Promise.reject(new Error(text))
   }
   return payload.data
+}
+
+function normalizeDebugPath(path) {
+  let value = String(path || '').trim()
+  if (!value) value = '/'
+  if (/^https?:\/\//i.test(value)) return value
+  if (value.startsWith(API_BASE)) value = value.slice(API_BASE.length) || '/'
+  if (!value.startsWith('/')) value = `/${value}`
+  return buildUrl(value)
+}
+
+export async function rawRequest(path, options = {}) {
+  const token = getToken()
+  const method = (options.method || 'GET').toUpperCase()
+  const headers = {
+    Accept: 'application/json',
+    ...(options.headers || {}),
+  }
+  if (token && !headers.Authorization) headers.Authorization = token
+  if (options.body !== undefined && !(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json'
+  }
+
+  const started = performance.now()
+  const response = await fetch(normalizeDebugPath(path), {
+    method,
+    headers,
+    body: method === 'GET' || method === 'HEAD'
+      ? undefined
+      : options.body instanceof FormData
+        ? options.body
+        : options.body !== undefined
+          ? JSON.stringify(options.body)
+          : undefined,
+  })
+  const rawText = await response.text()
+  let data = rawText
+  try {
+    data = rawText ? JSON.parse(rawText) : null
+  } catch {
+    data = rawText
+  }
+  const responseHeaders = {}
+  response.headers.forEach((value, key) => {
+    responseHeaders[key] = value
+  })
+  return {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    durationMs: Math.round(performance.now() - started),
+    headers: responseHeaders,
+    data,
+    rawText,
+  }
 }
 
 export const api = {
