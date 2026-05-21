@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { ok } from '../utils/response.js'
 import platformRoutes from '../modules/platform/platform.routes.js'
+import agriRoutes from '../modules/agri/agri.routes.js'
 
 /**
  * 业务路由注册中心。
@@ -14,6 +15,8 @@ export function registerRoutes(app, prefix) {
 
   // 板块八 platform：用户/认证/通知/反馈/搜索
   router.use(platformRoutes)
+  // 板块一 agri：农业生产
+  router.use(agriRoutes)
 
   app.use(prefix, router)
 }
