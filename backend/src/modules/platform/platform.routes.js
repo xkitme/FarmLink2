@@ -1,11 +1,12 @@
 import { Router } from 'express'
-import { requireAuth, optionalAuth } from '../../middleware/auth.js'
+import { requireAuth, optionalAuth, requireRole } from '../../middleware/auth.js'
 import { wrap } from '../../middleware/error.js'
 import * as auth from './auth.controller.js'
 import * as user from './user.controller.js'
 import * as noti from './notification.controller.js'
 import * as fb from './feedback.controller.js'
 import * as search from './search.controller.js'
+import * as admin from './admin.controller.js'
 
 const router = Router()
 
@@ -33,5 +34,15 @@ router.get('/feedback/list',   requireAuth,  wrap(fb.listMine))
 
 // ── 全局搜索 ────────────────────────────────
 router.get('/search', optionalAuth, wrap(search.globalSearch))
+
+// ── 后端管理能力：API 开关 / 限流 / 操作日志 ─
+router.get('/admin/api-switch/list',       requireAuth, requireRole('ADMIN'), wrap(admin.apiSwitchList))
+router.get('/admin/api-switch/categories', requireAuth, requireRole('ADMIN'), wrap(admin.apiSwitchCategories))
+router.post('/admin/api-switch',           requireAuth, requireRole('ADMIN'), wrap(admin.apiSwitchCreate))
+router.put('/admin/api-switch/:id',        requireAuth, requireRole('ADMIN'), wrap(admin.apiSwitchUpdate))
+router.put('/admin/api-switch/:id/toggle', requireAuth, requireRole('ADMIN'), wrap(admin.apiSwitchToggle))
+router.delete('/admin/api-switch/:id',     requireAuth, requireRole('ADMIN'), wrap(admin.apiSwitchRemove))
+router.get('/admin/operation-log/list',    requireAuth, requireRole('ADMIN'), wrap(admin.operationLogList))
+router.get('/admin/rate-limit/status',     requireAuth, requireRole('ADMIN'), wrap(admin.rateLimitStatus))
 
 export default router
