@@ -25,14 +25,14 @@ src/modules/platform/
 └── search.controller.js    全局搜索
 ```
 
-### 3. API 清单（15 个接口）
+### 3. API 清单（13 个接口）
+
+> 登录方式：**仅账号密码，后端校验**。已移除短信验证码、微信登录。
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | POST | /auth/register | 注册 |
-| POST | /auth/login | 登录（账号密码 / 手机验证码） |
-| POST | /auth/login/wechat | 微信登录（离线 mock） |
-| POST | /auth/sms/send | 发送验证码（离线直接返回） |
+| POST | /auth/login | 登录（账号密码，后端校验） |
 | POST | /auth/refresh | 刷新 Token |
 | POST | /auth/logout | 退出 |
 | GET | /user/profile | 个人资料 |
@@ -49,7 +49,7 @@ src/modules/platform/
 
 ### 4. 设计要点
 - 双 Token：access 2h + refresh 30d
-- 离线适配：短信验证码直接返回（无短信网关）、微信登录按 openId 自动注册/登录
+- 登录仅账号密码，bcrypt 校验，全部后端验证
 - JWT 载荷含 role/regionCode，为后续行级数据权限铺垫
 - 全局搜索用 SQLite `contains`（LIKE 子串匹配，支持中文）
 

@@ -9,13 +9,11 @@ import * as search from './search.controller.js'
 
 const router = Router()
 
-// ── 认证 ────────────────────────────────────
-router.post('/auth/register',      wrap(auth.register))
-router.post('/auth/login',         wrap(auth.login))
-router.post('/auth/login/wechat',  wrap(auth.wechatLogin))
-router.post('/auth/sms/send',      wrap(auth.sendSms))
-router.post('/auth/refresh',       wrap(auth.refresh))
-router.post('/auth/logout',        requireAuth, wrap(auth.logout))
+// ── 认证（仅账号密码，后端校验） ─────────────
+router.post('/auth/register',  wrap(auth.register))
+router.post('/auth/login',     wrap(auth.login))
+router.post('/auth/refresh',   wrap(auth.refresh))
+router.post('/auth/logout',    requireAuth, wrap(auth.logout))
 
 // ── 用户 ────────────────────────────────────
 router.get('/user/profile',     requireAuth, wrap(user.getProfile))
