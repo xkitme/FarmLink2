@@ -1,0 +1,14 @@
+{
+  "name": "inkflow",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev":   "concurrently -n backend,admin -c bgBlue,bgGreen \"npm run dev --prefix backend\" \"npm run dev --prefix admin\"",
+    "build": "npm run build --prefix admin",
+    "start": "npm run build && node backend/src/server.js",
+    "seed":  "node backend/seeds/index.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
