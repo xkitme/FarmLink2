@@ -1,12 +1,9 @@
 import express from 'express'
 import cors from 'cors'
-import { PrismaClient } from '@prisma/client'
 import { config } from './config/index.js'
 import { registerRoutes } from './routes/index.js'
 import { traceMiddleware, notFoundHandler, errorHandler } from './middleware/error.js'
 import { ok } from './utils/response.js'
-
-export const prisma = new PrismaClient()
 
 const app = express()
 

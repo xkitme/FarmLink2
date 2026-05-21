@@ -1,4 +1,5 @@
-import app, { prisma } from './app.js'
+import app from './app.js'
+import { prisma } from './db.js'
 import { config } from './config/index.js'
 
 const PORT = config.port
