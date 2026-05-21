@@ -1,5 +1,11 @@
-// 数字乡村助农 — Prisma Schema
-// 分段 01：仅 User 表（骨架可启动）。完整 40+ 表见分段 02。
+// 田园通 FarmLink — Prisma Schema
+// 分段 02：完整数据库设计，共 60 张表，覆盖 8 大板块 76 个功能模块。
+//
+// 约定：
+//  - SQLite 数据库，金额/面积用 Float，日期用 DateTime
+//  - JSON 字段用 String 存 JSON 文本（SQLite 不支持 Json 类型），控制器负责 parse/stringify
+//  - 业务表带 localUuid 支持离线同步去重
+//  - 表名 @@map 为 t_xxx 蛇形
 
 generator client {
   provider = "prisma-client-js"
@@ -9,6 +15,10 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  板块八 / platform：平台基础能力                        ║
+// ╚══════════════════════════════════════════════════════╝
 
 /// 用户主表
 model User {
@@ -25,6 +35,7 @@ model User {
   points       Int      @default(0)
   isElderMode  Boolean  @default(false)
   status       Int      @default(1) // 1正常 0禁用
+  lastLoginAt  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -32,4 +43,1038 @@ model User {
   @@index([regionCode])
   @@index([role])
   @@map("t_user")
+}
+
+/// 第三方登录绑定
+model UserOauth {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  platform  String   // wechat/apple
+  openId    String
+  unionId   String?
+  createdAt DateTime @default(now())
+
+  @@unique([platform, openId])
+  @@index([userId])
+  @@map("t_user_oauth")
+}
+
+/// 积分流水
+model PointsLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  points    Int      // 变化值（正负）
+  type      String   // SIGN_IN/LEARN/VOLUNTEER/EXCHANGE
+  remark    String?
+  refId     Int?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("t_points_log")
+}
+
+/// 通知（userId 为空表示全体广播）
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  type      String   // ALERT/POLICY/FARM/SYSTEM
+  title     String
+  content   String?
+  refId     Int?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@map("t_notification")
+}
+
+/// 问题反馈
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  category  String?  // BUG/建议/咨询
+  content   String
+  contact   String?
+  images    String?
+  status    String   @default("PENDING") // PENDING/REPLIED/CLOSED
+  reply     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("t_feedback")
+}
+
+/// 操作日志
+model OperationLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  module    String?
+  action    String
+  detail    String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([module])
+  @@map("t_operation_log")
+}
+
+/// API 功能开关（管理面板控制）
+model ApiSwitch {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  name        String
+  category    String
+  description String?
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("t_api_switch")
+}
+
+/// 行政区划
+model Region {
+  id         Int      @id @default(autoincrement())
+  code       String   @unique
+  name       String
+  level      String   // PROVINCE/CITY/COUNTY/TOWN/VILLAGE
+  parentCode String?
+  createdAt  DateTime @default(now())
+
+  @@index([parentCode])
+  @@map("t_region")
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  板块一 / agri：AI 农业生产                             ║
+// ╚══════════════════════════════════════════════════════╝
+
+/// 地块
+model LandPlot {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  plotName        String
+  areaMu          Float    @default(0) // 面积（亩）
+  boundaryGeojson String?  // 地块边界 GeoJSON
+  cropType        String?
+  soilType        String?
+  regionCode      String?
+  localUuid       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@map("t_land_plot")
+}
+
+/// 农事记录
+model FarmRecord {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  plotId     Int?
+  recordType String   // 播种/施肥/打药/灌溉/收获
+  cropType   String?
+  content    String?
+  cost       Float    @default(0)
+  images     String?
+  recordDate DateTime
+  localUuid  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([plotId])
+  @@index([recordDate])
+  @@map("t_farm_record")
+}
+
+/// 病害知识库
+model DiseaseKnowledge {
+  id              Int      @id @default(autoincrement())
+  diseaseName     String
+  cropType        String?
+  category        String?  // 虫害/病害/缺素
+  symptoms        String?
+  cause           String?
+  prevention      String?
+  medicineAdvice  String?
+  coverImage      String?
+  modelLabel      String?  // AI 模型对应标签
+  createdAt       DateTime @default(now())
+
+  @@index([modelLabel])
+  @@map("t_disease_knowledge")
+}
+
+/// AI 识别记录（病害/杂草/种子/分级）
+model AiDetectRecord {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  detectType  String   // DISEASE/WEED/SEED/GRADE
+  imageUrl    String
+  resultLabel String?
+  confidence  Float    @default(0)
+  adviceText  String?
+  isOffline   Boolean  @default(false)
+  feedback    Int?     // 1准 0不准
+  localUuid   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([detectType])
+  @@map("t_ai_detect_record")
+}
+
+/// 产量预测
+model YieldPrediction {
+  id              Int      @id @default(autoincrement())
+  plotId          Int
+  cropType        String?
+  predictedYield  Float    // 预测产量（公斤）
+  confidenceLow   Float?
+  confidenceHigh  Float?
+  predictDate     DateTime
+  createdAt       DateTime @default(now())
+
+  @@index([plotId])
+  @@map("t_yield_prediction")
+}
+
+/// 农事日历（节气 + 作物生长周期）
+model FarmCalendar {
+  id          Int      @id @default(autoincrement())
+  solarTerm   String?  // 节气
+  month       Int
+  cropType    String?
+  activity    String   // 农事活动
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@index([month])
+  @@map("t_farm_calendar")
+}
+
+/// 农药信息库（扫码查询）
+model PesticideInfo {
+  id           Int      @id @default(autoincrement())
+  name         String
+  regNo        String?  // 农药登记证号
+  type         String?  // 杀虫剂/杀菌剂/除草剂
+  targetPest   String?  // 防治对象
+  cropType     String?
+  safeDosage   String?  // 安全用量
+  safeInterval String?  // 安全间隔期
+  toxicity     String?  // 毒性等级
+  createdAt    DateTime @default(now())
+
+  @@index([regNo])
+  @@map("t_pesticide_info")
+}
+
+/// 农业碳汇计算记录
+model CarbonRecord {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  plotId       Int?
+  cropType     String?
+  areaMu       Float    @default(0)
+  carbonAmount Float    @default(0) // 估算固碳量（吨）
+  method       String?
+  recordDate   DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@map("t_carbon_record")
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  板块二 / market：农产品流通与销售                      ║
+// ╚══════════════════════════════════════════════════════╝
+
+/// 农产品行情
+model MarketPrice {
+  id          Int      @id @default(autoincrement())
+  productName String
+  category    String?  // 蔬菜/水果/粮油/畜禽
+  marketName  String?
+  regionCode  String?
+  price       Float
+  unit        String   @default("元/公斤")
+  priceDate   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([productName, priceDate])
+  @@index([regionCode])
+  @@map("t_market_price")
+}
+
+/// 价格预测
+model PricePrediction {
+  id             Int      @id @default(autoincrement())
+  productName    String
+  predictDate    DateTime
+  predictedPrice Float
+  trend          String?  // UP/DOWN/STABLE
+  advice         String?
+  createdAt      DateTime @default(now())
+
+  @@index([productName])
+  @@map("t_price_prediction")
+}
+
+/// 商品（乡村集市）
+model Product {
+  id          Int      @id @default(autoincrement())
+  sellerId    Int
+  title       String
+  category    String?
+  description String?
+  price       Float
+  unit        String   @default("斤")
+  stock       Int      @default(0)
+  images      String?
+  traceCode   String?
+  regionCode  String?
+  status      Int      @default(1) // 1上架 0下架
+  soldCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([sellerId])
+  @@index([category])
+  @@map("t_product")
+}
+
+/// 订单
+model Order {
+  id           Int      @id @default(autoincrement())
+  orderNo      String   @unique
+  buyerId      Int
+  sellerId     Int
+  productId    Int
+  quantity     Int
+  totalAmount  Float
+  status       String   @default("PENDING") // PENDING/PAID/SHIPPED/DONE/CANCELLED
+  receiverInfo String?
+  logisticsNo  String?
+  remark       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([orderNo])
+  @@map("t_order")
+}
+
+/// 溯源记录
+model TraceRecord {
+  id          Int      @id @default(autoincrement())
+  traceCode   String
+  productId   Int?
+  stage       String   // 种植/施肥/采收/包装/运输
+  description String?
+  images      String?
+  operator    String?
+  recordTime  DateTime @default(now())
+
+  @@index([traceCode])
+  @@map("t_trace_record")
+}
+
+/// 收购站
+model Buyer {
+  id          Int      @id @default(autoincrement())
+  name        String
+  contactName String?
+  phone       String?
+  address     String?
+  regionCode  String?
+  lat         Float?
+  lng         Float?
+  products    String?  // 收购品类
+  createdAt   DateTime @default(now())
+
+  @@index([regionCode])
+  @@map("t_buyer")
+}
+
+/// 农资团购拼单
+model GroupBuy {
+  id           Int      @id @default(autoincrement())
+  initiatorId  Int
+  title        String
+  itemName     String
+  category     String?  // 化肥/农药/种子
+  unitPrice    Float
+  targetCount  Int      @default(0)
+  currentCount Int      @default(0)
+  regionCode   String?
+  deadline     DateTime
+  status       String   @default("OPEN") // OPEN/SUCCESS/CLOSED
+  createdAt    DateTime @default(now())
+
+  @@index([initiatorId])
+  @@map("t_group_buy")
+}
+
+/// 物流单（含冷链）
+model Logistics {
+  id              Int      @id @default(autoincrement())
+  orderId         Int?
+  logisticsNo     String
+  company         String?
+  status          String   @default("PENDING") // PENDING/TRANSIT/DELIVERED
+  currentLocation String?
+  isColdChain     Boolean  @default(false)
+  fee             Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([logisticsNo])
+  @@map("t_logistics")
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  板块三 / machinery：农机农资共享                       ║
+// ╚══════════════════════════════════════════════════════╝
+
+/// 农机
+model Machinery {
+  id          Int      @id @default(autoincrement())
+  ownerId     Int
+  machineName String
+  machineType String?  // 拖拉机/收割机/旋耕机
+  dailyPrice  Float    @default(0)
+  deposit     Float    @default(0)
+  regionCode  String?
+  totalHours  Int      @default(0)
+  images      String?
+  description String?
+  status      Int      @default(1) // 1可租 0不可租
+  rating      Float    @default(5)
+  createdAt   DateTime @default(now())
+
+  @@index([ownerId])
+  @@index([regionCode])
+  @@map("t_machinery")
+}
+
+/// 农机预约
+model MachineryBooking {
+  id          Int      @id @default(autoincrement())
+  machineryId Int
+  renterId    Int
+  startDate   DateTime
+  endDate     DateTime
+  totalAmount Float    @default(0)
+  status      String   @default("PENDING") // PENDING/CONFIRMED/DONE/CANCELLED
+  remark      String?
+  createdAt   DateTime @default(now())
+
+  @@index([machineryId])
+  @@index([renterId])
+  @@map("t_machinery_booking")
+}
+
+/// 农机作业轨迹记录
+model MachineryTrack {
+  id            Int      @id @default(autoincrement())
+  machineryId   Int
+  operatorId    Int
+  workDate      DateTime
+  trackPoints   String?    // 轨迹点数组
+  workArea      Float    @default(0) // 作业亩数
+  durationHours Float    @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([machineryId])
+  @@map("t_machinery_track")
+}
+
+/// 土地流转
+model LandTransfer {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  title        String
+  areaMu       Float    @default(0)
+  regionCode   String?
+  location     String?
+  transferType String?  // 出租/转让
+  price        Float    @default(0)
+  priceUnit    String   @default("元/亩/年")
+  duration     String?  // 流转年限
+  description  String?
+  contactPhone String?
+  status       String   @default("OPEN") // OPEN/DEALT/CLOSED
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([regionCode])
+  @@map("t_land_transfer")
+}
+
+/// 农机保险投保
+model MachineryInsurance {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  machineryId   Int?
+  insuranceType String?
+  premium       Float    @default(0) // 保费
+  coverage      Float    @default(0) // 保额
+  startDate     DateTime
+  endDate       DateTime
+  status        String   @default("ACTIVE") // ACTIVE/EXPIRED/CLAIMED
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@map("t_machinery_insurance")
+}
+
+/// 机手技能认证
+model OperatorCert {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  realName     String?
+  certType     String?  // 认证类型
+  certNo       String?
+  machineTypes String?  // 可操作机型
+  issueDate    DateTime?
+  status       String   @default("PENDING") // PENDING/APPROVED/REJECTED
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@map("t_operator_cert")
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  板块四 / disaster：气象灾害与应急                      ║
+// ╚══════════════════════════════════════════════════════╝
+
+/// 灾情上报
+model DisasterReport {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  disasterType  String   // 暴雨/冰雹/干旱/冻害/虫灾
+  plotId        Int?
+  affectedArea  Float    @default(0) // 受灾面积（亩）
+  estimatedLoss Float    @default(0) // 预估损失（元）
+  description   String?
+  images        String?
+  location      String?
+  aiLossLevel   String?  // 轻/中/重
+  status        String   @default("REPORTED") // REPORTED/REVIEWING/PROCESSED
+  regionCode    String?
+  localUuid     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([regionCode])
+  @@index([status])
+  @@map("t_disaster_report")
+}
+
+/// 天气预警
+model WeatherAlert {
+  id           Int      @id @default(autoincrement())
+  alertType    String   // 暴雨/冰雹/霜冻/高温/大风
+  alertLevel   String   // 蓝/黄/橙/红
+  regionCode   String?
+  title        String
+  content      String?
+  defenseGuide String?  // 防护建议
+  validFrom    DateTime
+  validTo      DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([regionCode])
+  @@index([validFrom, validTo])
+  @@map("t_weather_alert")
+}
+
+/// 保险理赔
+model InsuranceClaim {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  disasterReportId Int?
+  claimType        String?
+  estimatedAmount  Float    @default(0)
+  aiAssessLevel    String?  // AI 评估损失等级
+  assessDetail     String?
+  status           String   @default("SUBMITTED") // SUBMITTED/ASSESSING/APPROVED/REJECTED
+  insurerContact   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+  @@map("t_insurance_claim")
+}
+
+/// 应急预案手册
+model EmergencyGuide {
+  id           Int      @id @default(autoincrement())
+  title        String
+  disasterType String   // 防汛/防旱/防冻/防火
+  category     String?
+  content      String
+  steps        String?    // 操作步骤数组
+  createdAt    DateTime @default(now())
+
+  @@index([disasterType])
+  @@map("t_emergency_guide")
+}
+
+/// 一键求助记录
+model SosRecord {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  sosType      String?  // 灾情/医疗/治安
+  location     String?
+  description  String?
+  contactPhone String?
+  status       String   @default("PENDING") // PENDING/HANDLING/DONE
+  handledBy    String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@map("t_sos_record")
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  板块五 / policy：惠农政策与党建思政                    ║
+// ╚══════════════════════════════════════════════════════╝
+
+/// 政策
+model Policy {
+  id          Int      @id @default(autoincrement())
+  title       String
+  level       String?  // 国家级/省级/县级
+  category    String?  // 种植补贴/农机补贴/金融/教育
+  content     String
+  summary     String?
+  publishOrg  String?
+  regionCode  String?
+  applyGuide  String?
+  validFrom   DateTime?
+  validTo     DateTime?
+  attachments String?
+  viewCount   Int      @default(0)
+  status      Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  @@index([level])
+  @@index([category])
+  @@index([regionCode])
+  @@map("t_policy")
+}
+
+/// 政策 RAG 切片
+model PolicyChunk {
+  id           Int      @id @default(autoincrement())
+  policyId     Int
+  chunkIndex   Int
+  chunkContent String
+  embedding    String?    // 向量数组
+  createdAt    DateTime @default(now())
+
+  @@index([policyId])
+  @@map("t_policy_chunk")
+}
+
+/// 补贴申请
+model SubsidyApplication {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  policyId     Int
+  materials    String?
+  status       String   @default("SUBMITTED") // SUBMITTED/REVIEWING/APPROVED/REJECTED
+  reviewRemark String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([policyId])
+  @@map("t_subsidy_application")
+}
+
+/// 党建学习内容
+model PartyLesson {
+  id           Int      @id @default(autoincrement())
+  title        String
+  type         String   @default("文章") // 文章/视频/音频
+  content      String?
+  mediaUrl     String?
+  pointsReward Int      @default(5)
+  publishDate  DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@map("t_party_lesson")
+}
+
+/// 党建学习打卡记录
+model PartyLearnLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  lessonId  Int
+  points    Int      @default(0)
+  learnDate DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([lessonId])
+  @@map("t_party_learn_log")
+}
+
+/// 村务公开
+model VillageAffair {
+  id          Int      @id @default(autoincrement())
+  regionCode  String?
+  category    String   // 财务/工程/评优
+  title       String
+  content     String?
+  attachments String?
+  publishOrg  String?
+  publishDate DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([regionCode])
+  @@map("t_village_affair")
+}
+
+/// 文明乡风榜
+model HonorRecord {
+  id           Int      @id @default(autoincrement())
+  regionCode   String?
+  honoreeName  String
+  honorType    String?  // 好人好事/星级文明户
+  deed         String?  // 事迹
+  images       String?
+  votes        Int      @default(0)
+  status       String   @default("PUBLISHED") // PENDING/PUBLISHED
+  createdAt    DateTime @default(now())
+
+  @@index([regionCode])
+  @@map("t_honor_record")
+}
+
+/// 职业农民培训课程
+model TrainingCourse {
+  id          Int      @id @default(autoincrement())
+  title       String
+  category    String?
+  cover       String?
+  instructor  String?
+  content     String?
+  videoUrl    String?
+  durationMin Int      @default(0)
+  certName    String?  // 证书名称
+  enrollCount Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@map("t_training_course")
+}
+
+/// 培训报名 / 证书
+model CourseEnrollment {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  courseId     Int
+  progress     Int      @default(0) // 0-100
+  completed    Boolean  @default(false)
+  certNo       String?
+  certIssuedAt DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([courseId])
+  @@map("t_course_enrollment")
+}
+
+/// 乡村人才库
+model TalentProfile {
+  id           Int      @id @default(autoincrement())
+  userId       Int?
+  name         String
+  talentType   String?  // 农技能人/工匠/致富带头人
+  skills       String?
+  regionCode   String?
+  description  String?
+  photo        String?
+  contactPhone String?
+  createdAt    DateTime @default(now())
+
+  @@index([regionCode])
+  @@map("t_talent_profile")
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  板块六 / life：乡村生活服务                            ║
+// ╚══════════════════════════════════════════════════════╝
+
+/// 村卫生室
+model Clinic {
+  id         Int      @id @default(autoincrement())
+  name       String
+  regionCode String?
+  address    String?
+  doctorName String?
+  phone      String?
+  services   String?
+  lat        Float?
+  lng        Float?
+  createdAt  DateTime @default(now())
+
+  @@index([regionCode])
+  @@map("t_clinic")
+}
+
+/// 在线问诊
+model Consultation {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  clinicId   Int?
+  symptom    String
+  images     String?
+  status     String   @default("PENDING") // PENDING/REPLIED/CLOSED
+  doctorReply String?
+  replyAt    DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("t_consultation")
+}
+
+/// 就业信息
+model JobInfo {
+  id           Int      @id @default(autoincrement())
+  publisherId  Int?
+  title        String
+  jobType      String?  // 本地用工/外出务工
+  company      String?
+  location     String?
+  salary       String?
+  headcount    Int      @default(1)
+  requirement  String?
+  contactPhone String?
+  regionCode   String?
+  status       String   @default("OPEN") // OPEN/CLOSED
+  createdAt    DateTime @default(now())
+
+  @@index([regionCode])
+  @@map("t_job_info")
+}
+
+/// 乡村旅游
+model TourismSpot {
+  id          Int      @id @default(autoincrement())
+  name        String
+  spotType    String?  // 民宿/农家乐/景点
+  regionCode  String?
+  address     String?
+  description String?
+  images      String?
+  price       Float?
+  phone       String?
+  promoText   String?  // AI 生成推广文案
+  rating      Float    @default(5)
+  createdAt   DateTime @default(now())
+
+  @@index([regionCode])
+  @@map("t_tourism_spot")
+}
+
+/// 二手交易
+model SecondhandItem {
+  id          Int      @id @default(autoincrement())
+  sellerId    Int
+  title       String
+  category    String?
+  description String?
+  price       Float    @default(0)
+  images      String?
+  regionCode  String?
+  status      String   @default("ON_SALE") // ON_SALE/SOLD
+  createdAt   DateTime @default(now())
+
+  @@index([sellerId])
+  @@index([regionCode])
+  @@map("t_secondhand_item")
+}
+
+/// 邻里互助
+model HelpRequest {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  type         String   @default("求助") // 求助/提供帮助
+  title        String
+  content      String?
+  regionCode   String?
+  contactPhone String?
+  status       String   @default("OPEN") // OPEN/DONE
+  helperId     Int?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([regionCode])
+  @@map("t_help_request")
+}
+
+/// 环境问题举报
+model EnvReport {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  problemType  String?  // 污染/垃圾/其他
+  description  String?
+  images       String?
+  location     String?
+  regionCode   String?
+  status       String   @default("REPORTED") // REPORTED/HANDLING/RESOLVED
+  handleResult String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([regionCode])
+  @@map("t_env_report")
+}
+
+/// 贷款产品
+model LoanProduct {
+  id           Int      @id @default(autoincrement())
+  bankName     String
+  productName  String
+  interestRate Float    @default(0)
+  maxAmount    Float    @default(0)
+  term         String?  // 贷款期限
+  requirement  String?
+  description  String?
+  createdAt    DateTime @default(now())
+
+  @@map("t_loan_product")
+}
+
+/// 贷款资质评估申请
+model LoanApplication {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  loanProductId  Int
+  amount         Float    @default(0)
+  purpose        String?
+  aiCreditScore  Int?
+  aiAssessResult String?
+  status         String   @default("ASSESSING") // ASSESSING/PASSED/REJECTED
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@map("t_loan_application")
+}
+
+/// 民俗文化记录
+model FolkCulture {
+  id          Int      @id @default(autoincrement())
+  userId      Int?
+  title       String
+  cultureType String?  // 村史/非遗/民俗
+  regionCode  String?
+  content     String?
+  images      String?
+  videoUrl    String?
+  createdAt   DateTime @default(now())
+
+  @@index([regionCode])
+  @@map("t_folk_culture")
+}
+
+/// 快递代收站
+model ExpressPoint {
+  id            Int      @id @default(autoincrement())
+  name          String
+  regionCode    String?
+  address       String?
+  phone         String?
+  companies     String?  // 代收快递公司
+  businessHours String?
+  createdAt     DateTime @default(now())
+
+  @@index([regionCode])
+  @@map("t_express_point")
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  板块七 / data：数据与智能管理                          ║
+// ╚══════════════════════════════════════════════════════╝
+
+/// 农事年度报告（AI 生成）
+model AnnualReport {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  year          Int
+  reportContent String?
+  totalIncome   Float?
+  totalCost     Float?
+  summary       String?
+  generatedByAi Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@map("t_annual_report")
+}
+
+/// 农业统计上报
+model StatReport {
+  id         Int      @id @default(autoincrement())
+  regionCode String?
+  reporterId Int?
+  statType   String?  // 种植面积/产量/收入
+  year       Int
+  period     String?  // 季度/月份
+  dataJson   String?
+  status     String   @default("DRAFT") // DRAFT/SUBMITTED/CONFIRMED
+  createdAt  DateTime @default(now())
+
+  @@index([regionCode])
+  @@map("t_stat_report")
+}
+
+/// 离线同步日志
+model SyncLog {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  tableName      String
+  operation      String   // INSERT/UPDATE/DELETE
+  localUuid      String?
+  syncStatus     String   // SUCCESS/CONFLICT/FAILED
+  conflictDetail String?
+  syncedAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([localUuid])
+  @@map("t_sync_log")
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  AI 能力 / ai：问答记录                                 ║
+// ╚══════════════════════════════════════════════════════╝
+
+/// AI 问答记录
+model AiQaRecord {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  scene          String   // POLICY/AGRI/LEGAL/GENERAL
+  question       String
+  answer         String
+  modelUsed      String?
+  isOffline      Boolean  @default(false)
+  referencesJson String?
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([scene])
+  @@map("t_ai_qa_record")
 }
