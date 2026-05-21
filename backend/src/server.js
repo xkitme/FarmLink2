@@ -12,7 +12,7 @@ const isProd = process.env.NODE_ENV === 'production'
 
 // 生产模式：把 admin/dist 挂载到同一端口
 if (isProd) {
-  const adminDist = path.resolve(__dirname, '../../../admin/dist')
+  const adminDist = path.resolve(__dirname, '../../admin/dist')
   if (fs.existsSync(adminDist)) {
     app.use(express.static(adminDist))
     // SPA fallback（不拦截 /api /admin /health）

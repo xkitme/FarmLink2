@@ -10,5 +10,5 @@ echo  管理面板:  http://localhost:3001
 echo.
 
 cd /d "%~dp0"
-call npm install
+call npm run install:all
 npm run dev

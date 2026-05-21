@@ -1,17 +1,21 @@
 {
   "name": "inkflow-backend",
   "version": "1.0.0",
-  "description": "墨脉 InkFlow — 中华传统文化×AI学习 App 后端",
+  "description": "墨脉 InkFlow — 后端 + 管理面板",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
-    "db:migrate": "prisma migrate dev",
-    "db:generate": "prisma generate",
-    "db:seed": "node seeds/index.js",
-    "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset"
+    "dev":          "concurrently -n backend,admin -c bgBlue,bgGreen \"nodemon src/server.js\" \"npm run dev --prefix admin\"",
+    "dev:backend":  "nodemon src/server.js",
+    "dev:admin":    "npm run dev --prefix admin",
+    "start":        "npm run build:admin && cross-env NODE_ENV=production node src/server.js",
+    "build:admin":  "npm run build --prefix admin",
+    "db:migrate":   "prisma migrate dev",
+    "db:generate":  "prisma generate",
+    "db:seed":      "node seeds/index.js",
+    "db:studio":    "prisma studio",
+    "db:reset":     "prisma migrate reset",
+    "install:all":  "npm install && npm install --prefix admin"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -26,6 +30,8 @@
     "uuid": "^10.0.0"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
     "nodemon": "^3.1.7",
     "prisma": "^5.22.0"
   }
