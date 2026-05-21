@@ -7,6 +7,7 @@ import machineryRoutes from '../modules/machinery/machinery.routes.js'
 import disasterRoutes from '../modules/disaster/disaster.routes.js'
 import policyRoutes from '../modules/policy/policy.routes.js'
 import lifeRoutes from '../modules/life/life.routes.js'
+import dataRoutes from '../modules/data/data.routes.js'
 
 /**
  * 业务路由注册中心。
@@ -32,6 +33,8 @@ export function registerRoutes(app, prefix) {
   router.use(policyRoutes)
   // 板块六 life：乡村生活服务
   router.use(lifeRoutes)
+  // 板块七 data：数据与智能管理
+  router.use(dataRoutes)
 
   app.use(prefix, router)
 }
