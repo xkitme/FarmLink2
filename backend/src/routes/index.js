@@ -6,6 +6,7 @@ import marketRoutes from '../modules/market/market.routes.js'
 import machineryRoutes from '../modules/machinery/machinery.routes.js'
 import disasterRoutes from '../modules/disaster/disaster.routes.js'
 import policyRoutes from '../modules/policy/policy.routes.js'
+import lifeRoutes from '../modules/life/life.routes.js'
 
 /**
  * 业务路由注册中心。
@@ -29,6 +30,8 @@ export function registerRoutes(app, prefix) {
   router.use(disasterRoutes)
   // 板块五 policy：惠农政策党建
   router.use(policyRoutes)
+  // 板块六 life：乡村生活服务
+  router.use(lifeRoutes)
 
   app.use(prefix, router)
 }
