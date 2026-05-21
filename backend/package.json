@@ -1,7 +1,7 @@
 {
-  "name": "inkflow-backend",
+  "name": "village-backend",
   "version": "1.0.0",
-  "description": "墨脉 InkFlow — 后端 + 管理面板",
+  "description": "数字乡村助农 App — 后端 + 管理面板",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
@@ -10,8 +10,9 @@
     "dev:admin":    "npm run dev --prefix admin",
     "start":        "npm run build:admin && cross-env NODE_ENV=production node src/server.js",
     "build:admin":  "npm run build --prefix admin",
-    "db:migrate":   "prisma migrate dev",
     "db:generate":  "prisma generate",
+    "db:migrate":   "prisma migrate dev",
+    "db:push":      "prisma db push",
     "db:seed":      "node seeds/index.js",
     "db:studio":    "prisma studio",
     "db:reset":     "prisma migrate reset",

@@ -1,19 +1,15 @@
-import authRoutes from './auth.js'
-import contentsRoutes from './contents.js'
-import aiRoutes from './ai.js'
-import learningRoutes from './learning.js'
-import communityRoutes from './community.js'
-import achievementsRoutes from './achievements.js'
-import searchRoutes from './search.js'
-import mediaRoutes from './media.js'
+import { Router } from 'express'
+import { ok } from '../utils/response.js'
 
-export function registerRoutes(app) {
-  app.use('/api/auth', authRoutes)
-  app.use('/api/contents', contentsRoutes)
-  app.use('/api/ai', aiRoutes)
-  app.use('/api/learning', learningRoutes)
-  app.use('/api/community', communityRoutes)
-  app.use('/api/achievements', achievementsRoutes)
-  app.use('/api/search', searchRoutes)
-  app.use('/api/media', mediaRoutes)
+/**
+ * 业务路由注册中心。
+ * 各业务模块路由将在后续分段逐步挂载到此处。
+ */
+export function registerRoutes(app, prefix) {
+  const router = Router()
+
+  // 占位健康路由（业务路由后续分段补充）
+  router.get('/ping', (req, res) => ok(res, { pong: true }))
+
+  app.use(prefix, router)
 }

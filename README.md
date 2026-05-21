@@ -1,173 +1,49 @@
-# 墨脉 · 𝑰𝒏𝒌𝑭𝒍𝒐𝒘
+# 数字乡村助农 App
 
-> 以 AI 为引擎，让中华传统文化「活」起来
+> 围绕「乡村振兴」战略与「数字乡村」建设方针，服务农户日常生产生活的移动应用。
+> 核心理念：**离线优先 + AI 赋能**。
 
-一款融合人工智能的中华传统文化学习 App，支持诗词、书法、国学、历史、节气民俗等多维度内容，通过本地 AI 模型实现智能问答、古文翻译、书法点评、历史人物对话等功能。
+## 项目特点
 
----
+- **76 个功能模块**，8 大板块：AI 农业生产、流通销售、农机共享、气象灾害、惠农政策、乡村生活、数据管理、平台基础
+- **24 个 AI 融合模块**，本地 Ollama 模型离线运行（RTX 5060 Laptop 8GB 可跑）
+- **离线优先**：核心功能断网可用，SQLite + 同步队列
+- **思政有高度**：惠农政策、党建学习、文明乡风紧扣国家战略
+- **完整管理面板**：数据增删改查、API 开关、API 在线调试
 
-## 功能亮点
+## 技术栈
 
-| 模块 | 功能 |
-|------|------|
-| 诗词歌赋 | 注释赏析、跟读评分、AI 辅助创作律诗词 |
-| 书法篆刻 | 作品上传、AI 视觉点评（结构/笔力/章法）|
-| 国学经典 | 四书五经精读、AI 哲学问答 |
-| 历史典故 | 朝代时间轴、成语溯源、人物图谱 |
-| 节气民俗 | 二十四节气动态日历、当日文化推送 |
-| AI 文化向导 | 全局智能问答，支持追问和深度解析 |
-| 历史人物对话 | 扮演孔子、李白、苏轼等人物沉浸式对话 |
-| 古文翻译 | 古文 ↔ 现代文双向翻译，逐句解析 |
-| 学习路径 | 个性化计划 + 艾宾浩斯复习调度 |
-| 社区广场 | 书法/诗词作品展示、每日挑战排行榜 |
-| 成就系统 | 白丁 → 状元十级称号体系 |
+| 层 | 技术 |
+|---|---|
+| 后端 | Node.js + Express + Prisma |
+| 数据库 | SQLite（轻量、离线、免安装） |
+| AI | Ollama 本地模型（qwen2.5 / bge-m3 / minicpm-v） |
+| 管理面板 | Ant Design Pro（React + Vite） |
+| 移动端 | Flutter（Android APK） |
 
----
-
-## 技术架构
-
-```
-客户端（前端）
-      ↓ HTTP / SSE
-  Node.js 后端（Express）
-      ↓
-┌────────────────────────────────────┐
-│  SQLite（主数据库，Prisma ORM）    │
-│  node-cache（内存缓存）            │
-│  Ollama（本地 AI 推理，离线）      │
-│    ├── qwen2.5:7b（对话/创作）     │
-│    └── minicpm-v（书法视觉点评）   │
-└────────────────────────────────────┘
-```
-
-### 技术选型
-
-| 层级 | 技术 |
-|------|------|
-| 后端框架 | Node.js + Express 4 |
-| ORM | Prisma 5 |
-| 数据库 | SQLite（WAL 模式） |
-| 缓存 | node-cache（内存，无需额外服务） |
-| AI 推理 | Ollama（离线本地） |
-| 主模型 | qwen2.5:7b-instruct-q4_K_M |
-| 视觉模型 | minicpm-v:8b-2.6-q4_K_M |
-| 认证 | JWT（jsonwebtoken） |
-
----
+> 强制离线部署，无 Docker，完整项目包可参赛。
 
 ## 目录结构
 
 ```
-InkFlow/
-├── backend/
-│   ├── src/
-│   │   ├── app.js              Express 应用入口
-│   │   ├── server.js           启动文件
-│   │   ├── config/             环境配置
-│   │   ├── routes/             路由（auth/contents/ai/learning/community/...）
-│   │   ├── controllers/        控制器
-│   │   ├── services/           业务逻辑（AI、学习引擎、成就系统）
-│   │   ├── middleware/         JWT 认证、文件上传
-│   │   └── utils/              工具函数（JWT、缓存、艾宾浩斯算法）
-│   ├── prisma/
-│   │   └── schema.prisma       数据库 Schema
-│   ├── seeds/                  初始化文化内容数据
-│   ├── uploads/                用户上传文件
-│   ├── .env.example
-│   └── package.json
-└── frontend/                   前端（待开发）
+village/
+├── docs/        开发进度记录
+├── backend/     Node.js 后端 + Ant Design Pro 管理面板
+└── app/         Flutter 移动端
 ```
 
----
-
-## 快速启动
-
-### 环境要求
-
-- Node.js 18+
-- Ollama（用于 AI 功能）
-- NVIDIA GPU，8GB+ VRAM（推荐 RTX 5060 Laptop 及以上）
-
-### 启动步骤
+## 快速开始
 
 ```bash
-# 1. 克隆项目
-git clone https://github.com/hczdngr/InkFlow.git
-cd InkFlow/backend
-
-# 2. 安装依赖
-npm install
-
-# 3. 复制配置文件
-cp .env.example .env
-
-# 4. 初始化数据库
-npm run db:migrate
-
-# 5. 写入初始数据
-npm run db:seed
-
-# 6. 启动开发服务器
-npm run dev
+cd backend
+npm run install:all      # 安装后端 + 管理面板依赖
+npm run db:migrate       # 初始化数据库
+npm run db:seed          # 写入种子数据
+npm run dev              # 开发模式（后端 + 管理面板热更新）
 ```
 
-### 服务端口
+后端 API：`http://localhost:8000/api/v1`
 
-| 服务 | 地址 |
-|------|------|
-| 后端 API | http://localhost:8000 |
-| Ollama | http://localhost:11434 |
+## 开发进度
 
----
-
-## AI 模型说明
-
-本项目使用 **Ollama** 在本地运行大语言模型，无需联网，完全离线可用。
-
-| 模型 | 用途 | VRAM |
-|------|------|------|
-| `qwen2.5:7b-instruct-q4_K_M` | 对话/翻译/诗词创作/出题 | ~4.5GB |
-| `minicpm-v:8b-2.6-q4_K_M` | 书法作品视觉点评 | ~5GB |
-
-> 推荐在 RTX 5060 Laptop 及以上 GPU 运行，显存 8GB+。
-
-**模型预下载**（有网络环境时执行一次）：
-
-```bash
-ollama pull qwen2.5:7b-instruct-q4_K_M
-ollama pull minicpm-v:8b-2.6-q4_K_M
-```
-
----
-
-## API 接口
-
-| 分组 | 路径前缀 | 说明 |
-|------|----------|------|
-| 认证 | `/api/auth` | 注册、登录、刷新 Token |
-| 内容 | `/api/contents` | 诗词、典故、节气等文化内容 |
-| AI | `/api/ai` | 对话、翻译、书法点评（SSE 流式） |
-| 学习 | `/api/learning` | 进度、复习、打卡、测验 |
-| 社区 | `/api/community` | 作品、评论、点赞、挑战 |
-| 成就 | `/api/achievements` | 成就解锁、排行榜 |
-| 搜索 | `/api/search` | 全文内容搜索 |
-| 媒体 | `/api/media` | 文件上传与访问 |
-
----
-
-## 开发命令
-
-```bash
-npm run dev          # 开发模式（nodemon 热重载）
-npm run start        # 生产模式
-npm run db:migrate   # 执行数据库迁移
-npm run db:seed      # 写入初始数据
-npm run db:studio    # 打开 Prisma Studio 可视化数据库
-npm run db:reset     # 重置数据库
-```
-
----
-
-## License
-
-MIT License © 2025 InkFlow Team
+详见 [`docs/进度总览.md`](docs/进度总览.md)。
