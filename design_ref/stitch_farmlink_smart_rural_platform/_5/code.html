@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FarmLink 田园通 - 农机共享</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#795548",
+                    "outline": "#707a6c",
+                    "on-tertiary-fixed": "#281900",
+                    "surface-container": "#eeeeee",
+                    "secondary": "#7a5649",
+                    "secondary-fixed": "#ffdbcf",
+                    "surface-bright": "#f9f9f9",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed": "#002204",
+                    "primary-container": "#2e7d32",
+                    "on-secondary-fixed-variant": "#603f33",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-container": "#ffefda",
+                    "primary-fixed": "#a3f69c",
+                    "outline-variant": "#bfcaba",
+                    "tertiary-container": "#926500",
+                    "primary-fixed-dim": "#88d982",
+                    "surface": "#f9f9f9",
+                    "on-surface-variant": "#40493d",
+                    "on-surface": "#1a1c1c",
+                    "surface-dim": "#dadada",
+                    "inverse-on-surface": "#f1f1f1",
+                    "tertiary-fixed": "#ffdeac",
+                    "surface-container-highest": "#e2e2e2",
+                    "primary": "#0d631b",
+                    "surface-tint": "#1b6d24",
+                    "secondary-container": "#fdcdbc",
+                    "tertiary": "#734e00",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed-dim": "#ebbcac",
+                    "on-primary-container": "#cbffc2",
+                    "on-tertiary-fixed-variant": "#604100",
+                    "background": "#f9f9f9",
+                    "surface-container-low": "#f3f3f3",
+                    "inverse-primary": "#88d982",
+                    "on-background": "#1a1c1c",
+                    "on-tertiary": "#ffffff",
+                    "surface-variant": "#e2e2e2",
+                    "on-primary": "#ffffff",
+                    "inverse-surface": "#2f3131",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#005312",
+                    "on-secondary-fixed": "#2e150b",
+                    "tertiary-fixed-dim": "#ffba38",
+                    "surface-container-high": "#e8e8e8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-md": "16px",
+                    "unit": "8px",
+                    "stack-lg": "24px",
+                    "stack-sm": "8px",
+                    "margin-mobile": "20px",
+                    "gutter-mobile": "16px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Noto Sans"],
+                    "label-lg": ["Noto Sans"],
+                    "label-sm": ["Noto Sans"],
+                    "body-md": ["Noto Sans"],
+                    "headline-sm": ["Noto Sans"],
+                    "headline-lg": ["Noto Sans"],
+                    "headline-md": ["Noto Sans"],
+                    "headline-lg-mobile": ["Noto Sans"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md h-screen flex flex-col overflow-hidden">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface shadow-sm flex justify-between items-center px-margin-mobile h-16 w-full z-40">
+<button class="text-primary hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">FarmLink 田园通</h1>
+<button class="text-primary hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</header>
+<!-- Main Content Canvas (Map & Overlays) -->
+<main class="flex-grow relative overflow-hidden bg-surface-container">
+<!-- Map Background -->
+<div class="absolute inset-0 w-full h-full z-0">
+<img alt="Map view" class="w-full h-full object-cover opacity-80" data-alt="A clean, modern satellite map view of rural agricultural land. The map uses a light-mode aesthetic with soft green and earthy brown tones, representing fields and paths. The styling is highly legible, suitable for an enterprise software interface, with subtle topographical details but avoiding clutter." data-location="rural farmland, China" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANyJB-6IvTtZF3qcEZtG3EcefFjcxX6nxchUigaFuF4bwjeG4d-J00EYCNkgoKa0FlXZI9FTQu35xkHBen_oTFom9wC0LpUZIZUFr-eB-LeP0htiGoYFM7OfcgzyUD2wFaBS308jD1-tJnTtEvdfzKkOdZHhBp__beohsL8tlJVqlbWEKV83h3zYqlcqvnWvWbeNuxCKVfTTTFnFIeDJjMVXXfvLY33AU7yQxDdmdlFLGmQokICx5YONVcwenPJaff_QKKceFBc5PL"/>
+</div>
+<!-- Search Bar Overlay -->
+<div class="absolute top-stack-md left-0 w-full px-margin-mobile z-10">
+<div class="bg-surface-container-lowest rounded-full shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] flex items-center px-4 py-3 border border-outline-variant/30">
+<span class="material-symbols-outlined text-outline mr-3">search</span>
+<input class="bg-transparent border-none outline-none flex-grow text-body-md font-body-md text-on-surface placeholder:text-on-surface-variant focus:ring-0 p-0" placeholder="搜索农机类型 (如: 收割机, 拖拉机)" type="text"/>
+<button class="bg-surface-variant p-2 rounded-full flex items-center justify-center ml-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">tune</span>
+</button>
+</div>
+<!-- Filter Chips -->
+<div class="flex gap-unit mt-stack-sm overflow-x-auto hide-scrollbar py-1">
+<button class="bg-primary text-on-primary px-3 py-1.5 rounded-[8px] font-label-sm text-label-sm whitespace-nowrap shadow-sm">附近可用</button>
+<button class="bg-surface-container-lowest text-on-surface-variant border border-outline-variant px-3 py-1.5 rounded-[8px] font-label-sm text-label-sm whitespace-nowrap shadow-sm">大型拖拉机</button>
+<button class="bg-surface-container-lowest text-on-surface-variant border border-outline-variant px-3 py-1.5 rounded-[8px] font-label-sm text-label-sm whitespace-nowrap shadow-sm">联合收割机</button>
+<button class="bg-surface-container-lowest text-on-surface-variant border border-outline-variant px-3 py-1.5 rounded-[8px] font-label-sm text-label-sm whitespace-nowrap shadow-sm">无人机</button>
+</div>
+</div>
+<!-- Map Pins (Simulated) -->
+<div class="absolute top-1/3 left-1/4 z-10 flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 cursor-pointer active:scale-95 transition-transform">
+<div class="bg-primary text-on-primary rounded-full p-2 shadow-lg border-2 border-surface-container-lowest">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+</div>
+<div class="mt-1 bg-surface-container-lowest px-2 py-0.5 rounded-md shadow text-[10px] font-bold text-on-surface">¥150/h</div>
+</div>
+<div class="absolute top-1/2 left-2/3 z-10 flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 cursor-pointer active:scale-95 transition-transform opacity-70">
+<div class="bg-secondary text-on-secondary rounded-full p-2 shadow-lg border-2 border-surface-container-lowest">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+</div>
+<div class="mt-1 bg-surface-container-lowest px-2 py-0.5 rounded-md shadow text-[10px] font-bold text-on-surface">¥200/h</div>
+</div>
+<!-- Machinery Booking Card (Bottom Sheet Style) -->
+<div class="absolute bottom-20 left-0 w-full px-margin-mobile z-20 pb-4">
+<div class="bg-surface-container-lowest rounded-DEFAULT shadow-[0px_4px_20px_0px_rgba(121,85,72,0.1)] border border-surface-variant p-4 flex flex-col gap-stack-md">
+<!-- Header Info -->
+<div class="flex gap-4">
+<img alt="Tractor" class="w-24 h-24 rounded-lg object-cover border border-surface-variant" data-alt="A detailed, bright close-up photo of a modern green agricultural tractor parked in a sunlit field. The image is high contrast and professional, highlighting the technological aspects of the machinery against a soft natural background. The lighting is bright daylight." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVf8JeWN49tFNNyEUWGZE3omt8gzBCV7N7m-qZzufSyQE2zyKbnrfhqukZh--DBIodbstcL8lNbZAoLBp1h-fr1KHW5zJ7OvMSYXTSU2Dm1rlty3x23PeZ4Zh5DoKv_V1czNEOOylke_9Zh7yB415iOBrPN2zMSY0wlfBz52lx49aod3HNRexb8XtiPUF0vrEBS1uFEgH9i5Cerhpz0gZHlv9GRq_txMUL4ysrqRJ8qYFV5fnrrawnWfl9LghSa9_MXVBmdxR-9LMA"/>
+<div class="flex flex-col flex-grow justify-between py-1">
+<div>
+<div class="flex justify-between items-start">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">雷沃欧豹 M1004</h3>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">100马力 轮式拖拉机</p>
+</div>
+<div class="flex items-end justify-between">
+<div class="flex items-center gap-1 text-tertiary-fixed-dim">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">4.9 (128次作业)</span>
+</div>
+<div class="text-right">
+<span class="font-headline-md text-headline-md text-primary">¥150</span>
+<span class="font-body-md text-body-md text-on-surface-variant">/小时</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Owner & Location -->
+<div class="flex items-center justify-between border-t border-surface-variant pt-3">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-label-lg text-label-lg">李</div>
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg text-on-surface">李师傅</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center"><span class="material-symbols-outlined text-[14px] mr-0.5">location_on</span> 距您 2.5 km</span>
+</div>
+</div>
+<button class="p-2 rounded-full bg-surface-container text-primary active:scale-95 transition-transform">
+<span class="material-symbols-outlined">call</span>
+</button>
+</div>
+<!-- Date & Action -->
+<div class="flex gap-unit items-center">
+<div class="flex-grow bg-surface-container-low rounded-lg flex items-center px-3 py-2 border border-surface-variant">
+<span class="material-symbols-outlined text-on-surface-variant mr-2">calendar_month</span>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">预约时间</span>
+<span class="font-body-md text-body-md text-on-surface">今天 14:00 - 18:00</span>
+</div>
+</div>
+<button class="bg-primary text-on-primary font-label-lg text-label-lg rounded-full px-6 py-3 h-full shadow-sm hover:opacity-90 active:scale-95 transition-all whitespace-nowrap">
+                        立即预约
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full rounded-t-lg bg-surface-container-lowest shadow-[0px_-4px_20px_0px_rgba(121,85,72,0.05)] z-50 flex justify-around items-center px-4 pb-4 pt-2 border-t-0 md:hidden">
+<!-- 首页 (Active) -->
+<a class="flex flex-col items-center justify-center text-primary bg-primary-container/20 rounded-xl px-3 py-1 hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-sm text-label-sm font-medium">首页</span>
+</a>
+<!-- AI农技 (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">smart_toy</span>
+<span class="font-label-sm text-label-sm font-medium">AI农技</span>
+</a>
+<!-- 发布 (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">add_circle</span>
+<span class="font-label-sm text-label-sm font-medium">发布</span>
+</a>
+<!-- 消息 (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">mail</span>
+<span class="font-label-sm text-label-sm font-medium">消息</span>
+</a>
+<!-- 我的 (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-label-sm text-label-sm font-medium">我的</span>
+</a>
+</nav>
+</body></html>

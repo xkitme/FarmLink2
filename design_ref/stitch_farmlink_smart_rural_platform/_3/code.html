@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FarmLink 田园通 - 惠农政策</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-container": "#795548",
+                      "outline": "#707a6c",
+                      "on-tertiary-fixed": "#281900",
+                      "surface-container": "#eeeeee",
+                      "secondary": "#7a5649",
+                      "secondary-fixed": "#ffdbcf",
+                      "surface-bright": "#f9f9f9",
+                      "error": "#ba1a1a",
+                      "on-primary-fixed": "#002204",
+                      "primary-container": "#2e7d32",
+                      "on-secondary-fixed-variant": "#603f33",
+                      "on-secondary": "#ffffff",
+                      "on-tertiary-container": "#ffefda",
+                      "primary-fixed": "#a3f69c",
+                      "outline-variant": "#bfcaba",
+                      "tertiary-container": "#926500",
+                      "primary-fixed-dim": "#88d982",
+                      "surface": "#f9f9f9",
+                      "on-surface-variant": "#40493d",
+                      "on-surface": "#1a1c1c",
+                      "surface-dim": "#dadada",
+                      "inverse-on-surface": "#f1f1f1",
+                      "tertiary-fixed": "#ffdeac",
+                      "surface-container-highest": "#e2e2e2",
+                      "primary": "#0d631b",
+                      "surface-tint": "#1b6d24",
+                      "secondary-container": "#fdcdbc",
+                      "tertiary": "#734e00",
+                      "on-error-container": "#93000a",
+                      "secondary-fixed-dim": "#ebbcac",
+                      "on-primary-container": "#cbffc2",
+                      "on-tertiary-fixed-variant": "#604100",
+                      "background": "#f9f9f9",
+                      "surface-container-low": "#f3f3f3",
+                      "inverse-primary": "#88d982",
+                      "on-background": "#1a1c1c",
+                      "on-tertiary": "#ffffff",
+                      "surface-variant": "#e2e2e2",
+                      "on-primary": "#ffffff",
+                      "inverse-surface": "#2f3131",
+                      "surface-container-lowest": "#ffffff",
+                      "on-error": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "on-primary-fixed-variant": "#005312",
+                      "on-secondary-fixed": "#2e150b",
+                      "tertiary-fixed-dim": "#ffba38",
+                      "surface-container-high": "#e8e8e8"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-md": "16px",
+                      "unit": "8px",
+                      "stack-lg": "24px",
+                      "stack-sm": "8px",
+                      "margin-mobile": "20px",
+                      "gutter-mobile": "16px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Noto Sans"
+                      ],
+                      "label-lg": [
+                              "Noto Sans"
+                      ],
+                      "label-sm": [
+                              "Noto Sans"
+                      ],
+                      "body-md": [
+                              "Noto Sans"
+                      ],
+                      "headline-sm": [
+                              "Noto Sans"
+                      ],
+                      "headline-lg": [
+                              "Noto Sans"
+                      ],
+                      "headline-md": [
+                              "Noto Sans"
+                      ],
+                      "headline-lg-mobile": [
+                              "Noto Sans"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-lg": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.04em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen flex flex-col pb-24">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface-dim shadow-sm z-40">
+<div class="flex justify-between items-center px-margin-mobile h-16 w-full z-40">
+<button class="text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="agriculture">agriculture</span>
+</button>
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">FarmLink 田园通</div>
+<button class="text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-grow px-margin-mobile pt-stack-lg">
+<!-- Tabbed Navigation -->
+<div class="flex space-x-unit overflow-x-auto pb-stack-sm hide-scrollbar border-b-2 border-surface-container-high mb-stack-lg">
+<button class="whitespace-nowrap px-4 py-2 font-label-lg text-label-lg text-primary border-b-2 border-primary">
+                惠农政策
+            </button>
+<button class="whitespace-nowrap px-4 py-2 font-label-lg text-label-lg text-on-surface-variant border-b-2 border-transparent">
+                党建学习
+            </button>
+<button class="whitespace-nowrap px-4 py-2 font-label-lg text-label-lg text-on-surface-variant border-b-2 border-transparent">
+                文明乡风
+            </button>
+</div>
+<!-- Information Stream -->
+<div class="flex flex-col space-y-stack-md">
+<!-- News Card 1 -->
+<article class="bg-surface-container-lowest rounded-DEFAULT p-4 shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] flex gap-4 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="w-24 h-24 flex-shrink-0 rounded overflow-hidden">
+<img alt="News Image" class="w-full h-full object-cover" data-alt="A lush green agricultural field under a bright blue sky, showcasing vibrant modern farming practices. The scene emphasizes organic growth and technological vitality, captured with high contrast and natural lighting. The color palette focuses on leaf greens and earth tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgHi4DNmLKnCFN2XHt6ySEA233KKUiufzWcLBkFrg-alOk98bJXlyJrSI0YdPzOzYgwoNa6Yt7folzfEhMsh_cjGfmsjjQcZymRIF3ntZ71nUDwRzgIPpUh28yT-Wsk6voX_bS4VkV-FZKEzysOQDqK-qgOZSbsQZw0qvoJCRzkBppQCyO7xkG0PtUDiyotZB4rPfWlXH7XKJbYAq_towF2Os0DuNPn8xITx9Xxe2Cb6OK3TOKtwmGFXj3kylEnqKlpvyXejmYzReq"/>
+</div>
+<div class="flex flex-col justify-between">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-2">2024年中央一号文件发布：推进乡村全面振兴</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-1 mt-1 text-sm">关注国家最新涉农政策导向</p>
+</div>
+<div class="flex items-center justify-between mt-2">
+<span class="font-label-sm text-label-sm text-outline">今天 10:00</span>
+<span class="px-2 py-1 bg-secondary-container text-on-secondary-container rounded-full font-label-sm text-[10px]">政策解读</span>
+</div>
+</div>
+</article>
+<!-- News Card 2 -->
+<article class="bg-surface-container-lowest rounded-DEFAULT p-4 shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] flex gap-4 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="w-24 h-24 flex-shrink-0 rounded overflow-hidden">
+<img alt="News Image" class="w-full h-full object-cover" data-alt="A close-up of a modern tractor tilling rich, dark brown soil in a wide agricultural field. The image is bathed in warm, golden hour sunlight, highlighting the earthiness and professional reliability of modern farming equipment. Colors are deep browns and soft golden yellows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzdA7BzD6U9XWpKz8US4F4opHrKOW6NmGQkLyBC7V-4ew32mLIMcR4cHZR5WDfTDcBnm-nm6yyluyNGvcDlRo6Latav5XtRg71xXEuRJIYxbwjTTPftV1fEypv36pl4umb9Cc3t0IdLreeaTw5B2Y0Z33eE5BjWOPof1abHL0tSdyO_pCydDqexrCon3GxeoTEjR6ugWHFiV3zP1GoheOjVSDK0gZT5HCdh3Oj33AH0mqRlyKpx2Xz0BxOkW_lj0JbxC_ssuCds_L0"/>
+</div>
+<div class="flex flex-col justify-between">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-2">农业农村部部署春耕备耕工作，确保粮食丰收</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-1 mt-1 text-sm">保障农资供应，加强技术指导</p>
+</div>
+<div class="flex items-center justify-between mt-2">
+<span class="font-label-sm text-label-sm text-outline">昨天 14:30</span>
+<span class="px-2 py-1 bg-tertiary-container text-on-tertiary-container rounded-full font-label-sm text-[10px]">春耕春管</span>
+</div>
+</div>
+</article>
+<!-- News Card 3 -->
+<article class="bg-surface-container-lowest rounded-DEFAULT p-4 shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] flex gap-4 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="w-24 h-24 flex-shrink-0 rounded overflow-hidden">
+<img alt="News Image" class="w-full h-full object-cover" data-alt="A smart farming setup featuring a drone hovering above a field of crops. The scene is bright and modern, representing accessible innovation in agriculture. The lighting is high-key and clear, with a palette of soft whites, vibrant crop greens, and metallic greys." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSSiyN7l8LpM5mzvmzygCMZ5X9eTMPLsf8eLLLpzQiyf0Kr0xOhgzcm6LCUPZeDvQnVh02q73glkpSm0bp0kFvpztRzgXx-h_OScO3EVjjKrPD4P9wVTMNyo3QUOdQvaresQTn22QVP2IudnwAljAWJIEGn0pVrxgVz26c2D_LqbkVpjOp57veti4DeCBXwKB8BIOE9JDpk1cctXSKaeujtlYTnz-bY-mp3EOWimHOeachnVQXlfI0FP_0F5izHaI9cDwbo3HItJgJ"/>
+</div>
+<div class="flex flex-col justify-between">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-2">关于发放2024年实际种粮农民一次性补贴的通知</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-1 mt-1 text-sm">资金直达基层，惠及广大农户</p>
+</div>
+<div class="flex items-center justify-between mt-2">
+<span class="font-label-sm text-label-sm text-outline">3天前</span>
+<span class="px-2 py-1 bg-primary-container text-on-primary-container rounded-full font-label-sm text-[10px]">补贴资金</span>
+</div>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0px_-4px_20px_0px_rgba(121,85,72,0.05)] rounded-t-lg md:hidden">
+<button class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed bg-primary-container/20 rounded-xl px-3 py-1 hover:opacity-80 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm mt-1">首页</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-sm text-label-sm mt-1">AI农技</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="font-label-sm text-label-sm mt-1">发布</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+<span class="font-label-sm text-label-sm mt-1">消息</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm mt-1">我的</span>
+</button>
+</nav>
+<style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</body></html>

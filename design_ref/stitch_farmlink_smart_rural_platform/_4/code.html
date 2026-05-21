@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FarmLink - Sales &amp; Logistics</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#795548",
+                    "outline": "#707a6c",
+                    "on-tertiary-fixed": "#281900",
+                    "surface-container": "#eeeeee",
+                    "secondary": "#7a5649",
+                    "secondary-fixed": "#ffdbcf",
+                    "surface-bright": "#f9f9f9",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed": "#002204",
+                    "primary-container": "#2e7d32",
+                    "on-secondary-fixed-variant": "#603f33",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-container": "#ffefda",
+                    "primary-fixed": "#a3f69c",
+                    "outline-variant": "#bfcaba",
+                    "tertiary-container": "#926500",
+                    "primary-fixed-dim": "#88d982",
+                    "surface": "#f9f9f9",
+                    "on-surface-variant": "#40493d",
+                    "on-surface": "#1a1c1c",
+                    "surface-dim": "#dadada",
+                    "inverse-on-surface": "#f1f1f1",
+                    "tertiary-fixed": "#ffdeac",
+                    "surface-container-highest": "#e2e2e2",
+                    "primary": "#0d631b",
+                    "surface-tint": "#1b6d24",
+                    "secondary-container": "#fdcdbc",
+                    "tertiary": "#734e00",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed-dim": "#ebbcac",
+                    "on-primary-container": "#cbffc2",
+                    "on-tertiary-fixed-variant": "#604100",
+                    "background": "#f9f9f9",
+                    "surface-container-low": "#f3f3f3",
+                    "inverse-primary": "#88d982",
+                    "on-background": "#1a1c1c",
+                    "on-tertiary": "#ffffff",
+                    "surface-variant": "#e2e2e2",
+                    "on-primary": "#ffffff",
+                    "inverse-surface": "#2f3131",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#005312",
+                    "on-secondary-fixed": "#2e150b",
+                    "tertiary-fixed-dim": "#ffba38",
+                    "surface-container-high": "#e8e8e8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-md": "16px",
+                    "unit": "8px",
+                    "stack-lg": "24px",
+                    "stack-sm": "8px",
+                    "margin-mobile": "20px",
+                    "gutter-mobile": "16px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Noto Sans"],
+                    "label-lg": ["Noto Sans"],
+                    "label-sm": ["Noto Sans"],
+                    "body-md": ["Noto Sans"],
+                    "headline-sm": ["Noto Sans"],
+                    "headline-lg": ["Noto Sans"],
+                    "headline-md": ["Noto Sans"],
+                    "headline-lg-mobile": ["Noto Sans"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Subtle hide scrollbar for horizontal scrolling areas */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen relative pb-32">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface-dim shadow-sm flex justify-between items-center px-margin-mobile h-16 z-40">
+<div class="flex items-center gap-unit cursor-pointer hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="agriculture">agriculture</span>
+</div>
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">
+            FarmLink 田园通
+        </div>
+<div class="flex items-center gap-unit cursor-pointer hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full">
+<span class="material-symbols-outlined text-on-surface-variant dark:text-outline" data-icon="notifications">notifications</span>
+</div>
+</header>
+<!-- Search & Filters -->
+<div class="px-margin-mobile py-stack-sm sticky top-16 z-30 bg-surface/90 backdrop-blur-md">
+<div class="flex items-center bg-surface-container-lowest border-b-2 border-secondary rounded-lg shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] px-4 py-2">
+<span class="material-symbols-outlined text-outline mr-2" data-icon="search">search</span>
+<input class="bg-transparent border-none outline-none flex-1 font-body-md text-on-surface placeholder:text-outline-variant focus:ring-0" placeholder="搜索生鲜、农资、合作社..." type="text"/>
+<span class="material-symbols-outlined text-primary cursor-pointer active:scale-95" data-icon="mic">mic</span>
+</div>
+<!-- Filter Chips -->
+<div class="flex gap-unit mt-stack-md overflow-x-auto hide-scrollbar pb-2">
+<button class="whitespace-nowrap px-4 py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm flex items-center gap-1 shadow-[0px_4px_20px_0px_rgba(121,85,72,0.1)] active:scale-95 transition-transform">
+<span>全部</span>
+</button>
+<button class="whitespace-nowrap px-4 py-1.5 rounded-full bg-surface-container-lowest text-on-surface border border-outline-variant font-label-sm text-label-sm active:scale-95 transition-transform">
+                当季水果
+            </button>
+<button class="whitespace-nowrap px-4 py-1.5 rounded-full bg-surface-container-lowest text-on-surface border border-outline-variant font-label-sm text-label-sm active:scale-95 transition-transform">
+                有机蔬菜
+            </button>
+<button class="whitespace-nowrap px-4 py-1.5 rounded-full bg-surface-container-lowest text-on-surface border border-outline-variant font-label-sm text-label-sm active:scale-95 transition-transform">
+                土特产
+            </button>
+</div>
+</div>
+<!-- Product Waterfall Grid -->
+<main class="px-gutter-mobile py-stack-md grid grid-cols-2 gap-gutter-mobile items-start">
+<!-- Card 1 -->
+<article class="bg-surface-container-lowest rounded-DEFAULT shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] overflow-hidden flex flex-col active:scale-[0.98] transition-transform duration-200">
+<div class="w-full h-40 bg-surface-variant relative">
+<img alt="Fresh organic strawberries in a rustic woven basket resting on a wooden table, bathed in warm, soft natural sunlight. The vibrant red tones of the berries contrast beautifully against the earthy brown textures. The image exudes a modern, tactile agricultural aesthetic." class="w-full h-full object-cover" data-alt="Fresh organic strawberries in a rustic woven basket resting on a wooden table, bathed in warm, soft natural sunlight. The vibrant red tones of the berries contrast beautifully against the earthy brown textures. The image exudes a modern, tactile agricultural aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOrQTMW3umIfhn0eBQCWH5GueuiMqgNL6mtuynXvySedn11jbftm0we_grpHWsUyvpCeyNv0oSgvZJ0qrBuouY9YunvTQJYKhnSqgMFL8WtjLBempF3O9H9HMNkvWfRAbqgdjRgLQ5qebZlgaQ2NUrSjIKA1htafsTTB3s8-hJZHcpMsQAPFpdvu5UNqrNTSEs-dY1-7g_7XQlhkz1Sq_sh9PKzUJDnpM254plHVJolHG8wSP59k0fghGOH3ou81p076fH66jyI7us"/>
+<div class="absolute top-2 left-2 bg-secondary text-white font-label-sm text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm bg-opacity-90">
+                    产地直发
+                </div>
+</div>
+<div class="p-3 flex flex-col gap-1">
+<h3 class="font-label-lg text-label-lg text-on-surface line-clamp-2 leading-tight">丹东红颜草莓 新鲜采摘 有机种植</h3>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-error font-headline-sm text-headline-sm font-bold">¥45.00</span>
+<span class="text-outline text-[10px]">/斤</span>
+</div>
+<div class="flex justify-between items-center mt-2">
+<div class="flex items-center gap-1.5">
+<img alt="Farmer avatar" class="w-5 h-5 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiS-J8dvuUxH4aZUbK2sy_k-F9_p1tbBOWZR_Z-BJ1TZnh3MddVy_Qp4EDPS4B-GwVOJdW_fViDYmKG-gi9JQPssdrlXcALnvfIYPpaG8GhK2UDORdk-DL_pUozgVLqBy8yAxs2xEN8YIZY_797hVAM4EfwjYSLekHD42vv4LrmCU5lXS7XKu0hRlJ2AbygwmSPpaxy6trOLOH45Yf-JhHaYBaUGEwK4ojIqYeJmvH0F4hKlw0lIFmUwvUOr1FilRsPC_jblZF4f5n"/>
+<span class="font-label-sm text-[10px] text-on-surface-variant">李大爷果园</span>
+</div>
+<button class="w-7 h-7 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]" data-icon="add_shopping_cart">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Card 2 (Slightly taller image for irregular grid feel) -->
+<article class="bg-surface-container-lowest rounded-DEFAULT shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] overflow-hidden flex flex-col active:scale-[0.98] transition-transform duration-200">
+<div class="w-full h-48 bg-surface-variant relative">
+<img alt="Dozens of fresh, free-range brown eggs neatly arranged in a cardboard carton on a clean white surface. Soft, high-key lighting creates a bright, modern aesthetic, highlighting the natural textures and organic curves of the eggs. The mood is clean, reliable, and deeply connected to natural farming." class="w-full h-full object-cover" data-alt="Dozens of fresh, free-range brown eggs neatly arranged in a cardboard carton on a clean white surface. Soft, high-key lighting creates a bright, modern aesthetic, highlighting the natural textures and organic curves of the eggs. The mood is clean, reliable, and deeply connected to natural farming." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrS0k_V3QZb-EB8hDu_sql3QwQFySiOxXYwrHOopZCZGAI5pmC50fxRfI9RRA8Tm64w9dp4C5G0VMgFy7xES78GLFmnzbH9wsC7-jaVH-GtjnSkFNB-Vdyhun8vvTs23VzD9Dc4TdH3s5l6fDno0-ODWitgfpuxtWoXt9AOueXAN17POCgitZuEbtUZQ6K7aRO36_76DCPhy94up485H45-mNc1Xzeo1vkxZxH7SiOmfSMoCPf9dexc36if_jfgTUpFggFKiljLuH2"/>
+<div class="absolute top-2 left-2 bg-primary text-white font-label-sm text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm bg-opacity-90">
+                    AI质检
+                </div>
+</div>
+<div class="p-3 flex flex-col gap-1 border-t border-surface-variant">
+<h3 class="font-label-lg text-label-lg text-on-surface line-clamp-2 leading-tight">散养土鸡蛋 谷物喂养 30枚装</h3>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-error font-headline-sm text-headline-sm font-bold">¥58.00</span>
+<span class="text-outline text-[10px]">/箱</span>
+</div>
+<div class="flex justify-between items-center mt-2">
+<div class="flex items-center gap-1.5">
+<img alt="Farmer avatar" class="w-5 h-5 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArZYsG4ak_D9EmRM6YFSD1y3Az0FnJmtqgbUvknhzCuZ9G_wImFxu8Pmk_2QXYbqgJyhIjIWuxsB4ebeTy-WQUc5r2arm5hkAskkghElpivUT7hfK0K-efubWbA5n7jFzVXrUUee2LDhL9txxSvUAnckQ_0MQMYxeYmuNeGIK3VfIwvDpzTmhBNWfGGXmv05ClGszyHz_U_LnsOlVdbOfWjyTzc-vXdvWAHvDdqEJKh3idW0PltBibxVSjF4D4YyboH1dGOq8QlWwE"/>
+<span class="font-label-sm text-[10px] text-on-surface-variant">张姐禽业</span>
+</div>
+<button class="w-7 h-7 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]" data-icon="add_shopping_cart">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Card 3 -->
+<article class="bg-surface-container-lowest rounded-DEFAULT shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] overflow-hidden flex flex-col active:scale-[0.98] transition-transform duration-200">
+<div class="w-full h-36 bg-surface-variant relative">
+<img alt="A bundle of crisp, vibrant green organic asparagus stalks tied with a rustic twine string, placed against a soft off-white background. The lighting is crisp and clear, emphasizing the tactile freshness of the produce. The aesthetic bridges physical soil with clean digital presentation." class="w-full h-full object-cover" data-alt="A bundle of crisp, vibrant green organic asparagus stalks tied with a rustic twine string, placed against a soft off-white background. The lighting is crisp and clear, emphasizing the tactile freshness of the produce. The aesthetic bridges physical soil with clean digital presentation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYXAOzLtfb8J6P8CB-8fj3xAJbp4o1VH3vhyOHz-BJaztqic9ondArwydxSSkipy-u3BsTTHBLePVXp0uLf_n2rYyefFfBx46YdOg9PbV_9890HuFvuyiSyvNQIQTXtofgJ-n6mDfTGEAdacQbP1crlmoMET7VksHBUceAAduq3tKWffQd_g98gC1E6F23Ztq5p7SbxyakfPrut_uU7Qegw7WzhWTtqg7QhMOWBRr5WElizf7B21wA4udxSrnABPWVvahMbzi5ic6o"/>
+</div>
+<div class="p-3 flex flex-col gap-1">
+<h3 class="font-label-lg text-label-lg text-on-surface line-clamp-2 leading-tight">高山露天有机芦笋 现采现发</h3>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-error font-headline-sm text-headline-sm font-bold">¥22.50</span>
+<span class="text-outline text-[10px]">/把</span>
+</div>
+<div class="flex justify-between items-center mt-2">
+<div class="flex items-center gap-1.5">
+<img alt="Farmer avatar" class="w-5 h-5 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtXq9GFxQlvU2_GTaOudhjTYgb9dJ-J8qriR9VXVFC6tvK_jwM0sel7YavdlYfAwZcLeXMJQg-xj5-zRp-_vFWxhP5dUb3fLky0MQqWET94EkLQiT7bK2-FAWr8fa16KLoU6_OjQg8Pu9cW77bnN5ey6fFyI6z4fUlta5L6HpDTA6tJZrJDGxRh3Mq8iTQzGegVVaIwQO1Udt-524e_kWQOEAS6pG-OVVYruXCp68CgWM276AR0DOv6ZVY1kc4w6P2GdS4qnyGyr2B"/>
+<span class="font-label-sm text-[10px] text-on-surface-variant">绿色合作社</span>
+</div>
+<button class="w-7 h-7 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]" data-icon="add_shopping_cart">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Card 4 -->
+<article class="bg-surface-container-lowest rounded-DEFAULT shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] overflow-hidden flex flex-col active:scale-[0.98] transition-transform duration-200">
+<div class="w-full h-40 bg-surface-variant relative border border-tertiary-container/20 rounded-t-DEFAULT">
+<!-- AI Insight border simulation -->
+<img alt="Freshly harvested sweet corn cobs partially husked, revealing bright golden kernels. The cobs are arranged on a rough wooden surface under bright, natural daylight. The vibrant yellows and earthy greens create a sense of professional reliability and organic growth." class="w-full h-full object-cover" data-alt="Freshly harvested sweet corn cobs partially husked, revealing bright golden kernels. The cobs are arranged on a rough wooden surface under bright, natural daylight. The vibrant yellows and earthy greens create a sense of professional reliability and organic growth." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxoGnaDrk24szLlUIl-fRa5MM4l6jPIcjFquhTtQrDgfhUpGaf78VkXefcwWQ3V8yFXiOkYNrsPWTM2-GSoBqD55LTY_jj0-JEyxktsn1cXW53xt1QO3IpTPg6H7D2_OrdILXIsuq-_UaFq_qy1bsnGKzwluFDeDiJHDy2YocM0qCEmHoTUvxdCBpMwB8xJ-FeHAbbdgLvQweKzlWGZ-K7oj6A26u8_eMd1Osdk5yxWcMmaGUwULpDJTpYpQvczVT2AEaElZbvLXRl"/>
+</div>
+<div class="p-3 flex flex-col gap-1">
+<h3 class="font-label-lg text-label-lg text-on-surface line-clamp-2 leading-tight">农家自种水果玉米 鲜嫩多汁</h3>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-error font-headline-sm text-headline-sm font-bold">¥19.90</span>
+<span class="text-outline text-[10px]">/5斤</span>
+</div>
+<div class="flex justify-between items-center mt-2">
+<div class="flex items-center gap-1.5">
+<img alt="Farmer avatar" class="w-5 h-5 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDr4-RdepQDS01eJYQXsQtvxNsI6bjKT0dMw-alNtX8HHcYl0TJ65t0TKjBjutjNZwc0CRhGeHYKifxr1MWAphXB3ytF2MWnfYgDwGYk873XZhC-c6A_QLOcUvvqPCeDOzc6_9GDqwjMpcuPvur78VgeK_9s11QATa7Lim7SoYE_svH4jeVd2HeIs2btUbgLuvT938DzDjXfpGrZelbJ8-6Iq0xNGysGWzzYrvHq0H09oCp4KN4C9-NPm7PSMZTqOCOuihXh7MgiEo"/>
+<span class="font-label-sm text-[10px] text-on-surface-variant">王叔农场</span>
+</div>
+<button class="w-7 h-7 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]" data-icon="add_shopping_cart">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</article>
+</main>
+<!-- Floating Cart & Checkout (Level 2 Elevation) -->
+<div class="fixed bottom-[88px] left-4 right-4 z-40 bg-surface-container-lowest/95 backdrop-blur-md rounded-xl shadow-[0px_8px_24px_0px_rgba(121,85,72,0.1)] p-3 flex justify-between items-center border border-outline-variant/30">
+<div class="flex items-center gap-3">
+<div class="relative bg-primary-container w-12 h-12 rounded-full flex items-center justify-center cursor-pointer active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-on-primary-container icon-fill" data-icon="shopping_basket">shopping_basket</span>
+<span class="absolute -top-1 -right-1 bg-error text-on-error text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-surface-container-lowest">3</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-outline">合计预估</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold text-error">¥125.50</span>
+</div>
+</div>
+<button class="bg-primary hover:bg-surface-tint text-on-primary font-label-lg px-6 py-3 rounded-full shadow-sm active:scale-95 transition-all flex items-center gap-1">
+            去结算
+            <span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0px_-4px_20px_0px_rgba(121,85,72,0.05)] rounded-t-lg">
+<!-- 首页 (Active) -->
+<div class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed bg-primary-container/20 rounded-xl px-3 py-1 cursor-pointer hover:opacity-80 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined icon-fill" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm mt-0.5">首页</span>
+</div>
+<!-- AI农技 (Inactive) -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant cursor-pointer hover:opacity-80 transition-opacity active:scale-90 duration-200 px-3 py-1">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-sm text-label-sm mt-0.5">AI农技</span>
+</div>
+<!-- 发布 (Inactive) -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant cursor-pointer hover:opacity-80 transition-opacity active:scale-90 duration-200 px-3 py-1">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="font-label-sm text-label-sm mt-0.5">发布</span>
+</div>
+<!-- 消息 (Inactive) -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant cursor-pointer hover:opacity-80 transition-opacity active:scale-90 duration-200 px-3 py-1 relative">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+<span class="absolute top-1 right-2 w-2 h-2 bg-error rounded-full"></span>
+<span class="font-label-sm text-label-sm mt-0.5">消息</span>
+</div>
+<!-- 我的 (Inactive) -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant cursor-pointer hover:opacity-80 transition-opacity active:scale-90 duration-200 px-3 py-1">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm mt-0.5">我的</span>
+</div>
+</nav>
+</body></html>

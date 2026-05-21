@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html lang="zh"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FarmLink - 登录</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        @keyframes slideUpRise {
+            0% {
+                transform: translateY(40px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .animate-slide-up-rise {
+            animation: slideUpRise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+    </style>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "primary-fixed-dim": "#88d982",
+                "background": "#f9f9f9",
+                "surface-variant": "#e2e2e2",
+                "on-tertiary-fixed": "#281900",
+                "on-tertiary-container": "#ffefda",
+                "surface-container-lowest": "#ffffff",
+                "on-secondary-container": "#795548",
+                "on-primary-fixed-variant": "#005312",
+                "on-primary-fixed": "#002204",
+                "on-error": "#ffffff",
+                "secondary": "#7a5649",
+                "on-surface": "#1a1c1c",
+                "primary-fixed": "#a3f69c",
+                "primary-container": "#2e7d32",
+                "tertiary-fixed-dim": "#ffba38",
+                "error": "#ba1a1a",
+                "surface-container": "#eeeeee",
+                "secondary-container": "#fdcdbc",
+                "on-secondary-fixed-variant": "#603f33",
+                "on-primary": "#ffffff",
+                "surface-dim": "#dadada",
+                "surface-container-low": "#f3f3f3",
+                "on-tertiary": "#ffffff",
+                "inverse-primary": "#88d982",
+                "secondary-fixed": "#ffdbcf",
+                "primary": "#0d631b",
+                "on-background": "#1a1c1c",
+                "inverse-on-surface": "#f1f1f1",
+                "tertiary-container": "#926500",
+                "surface-container-highest": "#e2e2e2",
+                "on-primary-container": "#cbffc2",
+                "outline-variant": "#bfcaba",
+                "outline": "#707a6c",
+                "on-error-container": "#93000a",
+                "error-container": "#ffdad6",
+                "surface-container-high": "#e8e8e8",
+                "on-secondary": "#ffffff",
+                "on-secondary-fixed": "#2e150b",
+                "inverse-surface": "#2f3131",
+                "tertiary": "#734e00",
+                "surface-bright": "#f9f9f9",
+                "tertiary-fixed": "#ffdeac",
+                "secondary-fixed-dim": "#ebbcac",
+                "surface-tint": "#1b6d24",
+                "surface": "#f9f9f9",
+                "on-tertiary-fixed-variant": "#604100",
+                "on-surface-variant": "#40493d"
+        },
+        "borderRadius": {
+                "DEFAULT": "1rem",
+                "lg": "2rem",
+                "xl": "3rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "stack-sm": "8px",
+                "gutter-mobile": "16px",
+                "stack-md": "16px",
+                "unit": "8px",
+                "stack-lg": "24px",
+                "margin-mobile": "20px"
+        },
+        "fontFamily": {
+                "label-lg": [
+                        "Noto Sans"
+                ],
+                "headline-lg-mobile": [
+                        "Noto Sans"
+                ],
+                "headline-lg": [
+                        "Noto Sans"
+                ],
+                "headline-sm": [
+                        "Noto Sans"
+                ],
+                "label-sm": [
+                        "Noto Sans"
+                ],
+                "body-md": [
+                        "Noto Sans"
+                ],
+                "body-lg": [
+                        "Noto Sans"
+                ],
+                "headline-md": [
+                        "Noto Sans"
+                ]
+        },
+        "fontSize": {
+                "label-lg": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.02em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-sm": [
+                        "20px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.04em",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "600"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md antialiased selection:bg-primary-container selection:text-on-primary-container flex justify-center h-screen w-full">
+<main class="w-full max-w-[430px] h-full relative overflow-hidden bg-background shadow-2xl sm:rounded-[2.5rem] sm:my-8 sm:h-[calc(100vh-4rem)]">
+<div class="absolute inset-0 h-[60%] w-full">
+<img alt="Background" class="w-full h-full object-cover" data-alt="A breathtaking aerial cinematic view of lush, vibrant green terraced rice fields winding down a steep mountainside at sunrise." src="https://lh3.googleusercontent.com/aida/ADBb0ugriR995-QE6sDnFRlk0uWZO3LCw_CPwFwS7_fh_L1J7nurgbCMx88SMcK_Do6tN-CconvbPLDsa5_8tRrOlf8lsUovxhfdc4_nX9K0hi5PzlM9WJTbKIUyMJO0cjCcUx6W6JN60nsFYQWWm0QusjIPNRQY6dv5i2jsbODd6qAjNul4ew3hAJg3rysWGTYXdR91DiJEwM54eAfXhNXS1zPyLi0HgtmrtL2h-QrtNWgGUhABjDrIb0nVNQ_0"/>
+<div class="absolute inset-0 bg-gradient-to-b from-on-background/60 via-transparent to-transparent"></div>
+<div class="absolute top-12 left-margin-mobile flex items-center gap-2">
+<span class="material-symbols-outlined text-on-primary text-[32px]" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+<span class="font-headline-sm text-on-primary drop-shadow-md tracking-tight">FarmLink 田园通</span>
+</div>
+</div>
+<div class="absolute bottom-0 w-full h-auto min-h-[45%] bg-surface-container-lowest rounded-t-[2rem] px-margin-mobile pt-stack-lg pb-10 shadow-[0px_-8px_30px_0px_rgba(46,125,50,0.08)] flex flex-col gap-stack-lg z-10 animate-slide-up-rise">
+<div class="flex flex-col gap-1">
+<h1 class="font-headline-lg-mobile text-on-surface">欢迎回来</h1>
+<p class="font-body-md text-on-surface-variant">进入您的智能农业中心</p>
+</div>
+<form class="flex flex-col gap-stack-md" onsubmit="event.preventDefault();">
+<div class="flex flex-col gap-unit">
+<label class="font-label-sm text-on-surface-variant">手机号/账号</label>
+<div class="relative w-full group">
+<span class="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-outline text-[20px] transition-colors group-focus-within:text-primary">person</span>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 pl-8 pb-2 pt-2 font-body-md text-on-surface placeholder:text-outline-variant transition-colors" placeholder="请输入注册手机号" type="text"/>
+</div>
+</div>
+<div class="flex flex-col gap-unit">
+<label class="font-label-sm text-on-surface-variant">密码</label>
+<div class="relative w-full group">
+<span class="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-outline text-[20px] transition-colors group-focus-within:text-primary">lock</span>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 pl-8 pr-8 pb-2 pt-2 font-body-md text-on-surface placeholder:text-outline-variant transition-colors" placeholder="请输入登录密码" type="password"/>
+<button class="absolute right-0 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors pb-1" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility_off</span>
+</button>
+</div>
+<div class="flex justify-end mt-2">
+<a class="font-label-sm text-primary hover:text-primary-container transition-colors" href="#">忘记密码？</a>
+</div>
+</div>
+<button class="w-full min-h-[48px] mt-2 bg-primary text-on-primary font-label-lg rounded-full flex items-center justify-center gap-2 hover:bg-primary-container active:scale-[0.98] transition-all shadow-sm" type="submit">
+                    安全登录
+                    <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</form>
+<div class="mt-auto flex flex-col items-center gap-stack-sm pb-2">
+<span class="font-label-sm text-outline-variant relative w-full text-center before:content-[''] before:absolute before:left-0 before:top-1/2 before:w-[25%] before:h-[1px] before:bg-outline-variant/30 after:content-[''] after:absolute after:right-0 after:top-1/2 after:w-[25%] after:h-[1px] after:bg-outline-variant/30">
+                    其他方式登录
+                </span>
+<div class="flex gap-stack-lg mt-2">
+<button aria-label="Login with WeChat" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center text-[#07C160] hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">forum</span>
+</button>
+<button aria-label="Login with Alipay" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center text-[#1677FF] hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FarmLink 田园通 - 乡村生活</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#795548",
+                        "outline": "#707a6c",
+                        "on-tertiary-fixed": "#281900",
+                        "surface-container": "#eeeeee",
+                        "secondary": "#7a5649",
+                        "secondary-fixed": "#ffdbcf",
+                        "surface-bright": "#f9f9f9",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#002204",
+                        "primary-container": "#2e7d32",
+                        "on-secondary-fixed-variant": "#603f33",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-container": "#ffefda",
+                        "primary-fixed": "#a3f69c",
+                        "outline-variant": "#bfcaba",
+                        "tertiary-container": "#926500",
+                        "primary-fixed-dim": "#88d982",
+                        "surface": "#f9f9f9",
+                        "on-surface-variant": "#40493d",
+                        "on-surface": "#1a1c1c",
+                        "surface-dim": "#dadada",
+                        "inverse-on-surface": "#f1f1f1",
+                        "tertiary-fixed": "#ffdeac",
+                        "surface-container-highest": "#e2e2e2",
+                        "primary": "#0d631b",
+                        "surface-tint": "#1b6d24",
+                        "secondary-container": "#fdcdbc",
+                        "tertiary": "#734e00",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed-dim": "#ebbcac",
+                        "on-primary-container": "#cbffc2",
+                        "on-tertiary-fixed-variant": "#604100",
+                        "background": "#f9f9f9",
+                        "surface-container-low": "#f3f3f3",
+                        "inverse-primary": "#88d982",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#2f3131",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#005312",
+                        "on-secondary-fixed": "#2e150b",
+                        "tertiary-fixed-dim": "#ffba38",
+                        "surface-container-high": "#e8e8e8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "unit": "8px",
+                        "stack-lg": "24px",
+                        "stack-sm": "8px",
+                        "margin-mobile": "20px",
+                        "gutter-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Noto Sans"],
+                        "label-lg": ["Noto Sans"],
+                        "label-sm": ["Noto Sans"],
+                        "body-md": ["Noto Sans"],
+                        "headline-sm": ["Noto Sans"],
+                        "headline-lg": ["Noto Sans"],
+                        "headline-md": ["Noto Sans"],
+                        "headline-lg-mobile": ["Noto Sans"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Noto Sans', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background pb-[88px] min-h-screen">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface-dim shadow-sm z-40">
+<div class="flex justify-between items-center px-margin-mobile h-16 w-full z-40">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed text-[24px]">agriculture</span>
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">FarmLink 田园通</span>
+</div>
+<button class="hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed text-[24px]">notifications</span>
+</button>
+</div>
+</header>
+<main class="max-w-md mx-auto p-gutter-mobile space-y-stack-lg">
+<!-- Village Notice Board (Status Banner Style) -->
+<section class="bg-tertiary-container text-on-tertiary-container rounded-[16px] p-stack-md shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] relative overflow-hidden">
+<div class="absolute -right-4 -top-4 opacity-10">
+<span class="material-symbols-outlined text-[100px]" style="font-variation-settings: 'FILL' 1;">campaign</span>
+</div>
+<div class="flex items-start gap-3 relative z-10">
+<span class="material-symbols-outlined mt-1 text-on-tertiary-container" style="font-variation-settings: 'FILL' 1;">campaign</span>
+<div>
+<h2 class="font-label-lg text-label-lg mb-1">村委紧急通知：明日停水</h2>
+<p class="font-label-sm text-label-sm opacity-90">因南渠主干管维修，明日上午8:00至下午6:00全村暂停供水，请各位村民提前做好储水准备。</p>
+<div class="mt-3 flex justify-between items-center text-[10px] opacity-75">
+<span>发布于 10分钟前</span>
+<span>李村长</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Community Feed -->
+<section class="space-y-stack-lg">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">乡村动态</h3>
+<!-- Post 1: High Quality Image Post -->
+<article class="bg-surface-container-lowest rounded-[16px] shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] overflow-hidden border border-surface-variant">
+<div class="p-4 flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center overflow-hidden">
+<img alt="Avatar" class="w-full h-full object-cover" data-alt="A close-up portrait of a cheerful, middle-aged female farmer wearing a wide-brimmed straw hat. The lighting is bright and sunny, reflecting a positive, modern rural lifestyle. The color palette features earthy browns and vibrant leaf greens, ensuring a warm, accessible aesthetic. The style is highly detailed and photorealistic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAww7HuqX-MZO45IXTDqO42t37-SDyK65KxmGW-tM9t02Uuh2nV8cpJAZ8u_YDoFmWiZwjCeWlJCh9RQ-9MWLFqMJO01qOjdGMpzIX3Aj1_5E36WNIkEIHcI0bK4tK3_DOZ5gK9ipesR15Zy_-rOgMoQcBw4AY3impcu3ubXYOZNPa7P28bidoLgdxctfHJ46q6H3kNKtxqIFNhrwSYzrdOx8vkbsPIxntByNuKOvmhyfudTXAyT6jIyO_yYm9suFDH_Mk-DlqDmZCm"/>
+</div>
+<div>
+<h4 class="font-label-lg text-label-lg text-on-surface">王大姐农场</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant">2小时前 · 幸福村</p>
+</div>
+<button class="ml-auto text-primary p-2 hover:bg-surface-container-high rounded-full">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+<div class="px-4 pb-3">
+<p class="font-body-md text-body-md text-on-surface">今年的阳光玫瑰长势特别好！多亏了上周AI推荐的施肥方案。周末可以开放采摘了，欢迎乡亲们来玩！🍇✨</p>
+</div>
+<div class="w-full aspect-[4/3] bg-surface-container">
+<img alt="Grapes" class="w-full h-full object-cover" data-alt="A lush, close-up view of vibrant green grapes hanging from a vine in a sunlit greenhouse. The scene is bathed in high-key natural lighting, emphasizing the freshness and vitality of the produce. The aesthetic is clean, organic, and modern, using deep greens and soft earthy tones to convey agricultural success. The style is sharp, professional photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7eG7b3hIJuI2P1_haebjrsdrFyUqUCks-LLso1kDu3i0CXRtZUnjQ4pf3ujsBD65XjNrD6vIZoABENJNhUzfAhEFNtzTRcYGqIETsxUnyrosTSvE438xlqI5ccj3JHMEokbCwOVSX9DAmEipe1MZpla6ty2WIYIESN4G_97EU7A8UTg0iNMdxTTLghlSD7Ab8V6rsPm9sgSAsVLnozgxwmQNJrF3tsWLqv-gsQr8J66ZB9XcpOsUoplJNMhqqbKHVgiu2HTWmXnbF"/>
+</div>
+<div class="px-4 py-3 flex justify-between items-center border-t border-surface-variant">
+<div class="flex gap-4">
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">favorite</span>
+<span class="font-label-sm text-label-sm">128</span>
+</button>
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-sm text-label-sm">34</span>
+</button>
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Post 2: Text & Chip Post -->
+<article class="bg-surface-container-lowest rounded-[16px] shadow-[0px_4px_20px_0px_rgba(121,85,72,0.05)] p-4 border border-surface-variant">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="font-label-lg text-label-lg">赵</span>
+</div>
+<div>
+<h4 class="font-label-lg text-label-lg text-on-surface">老赵农机租赁</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant">昨天 15:30</p>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface mb-3">
+                    新进两台大马力旋耕机，带GPS自动驾驶功能，效率提高30%。现在预订秋耕享受8折优惠！有需要的乡亲直接电话联系。
+                </p>
+<div class="flex gap-2 mb-4">
+<span class="px-3 py-1 bg-surface-container-high rounded-[8px] font-label-sm text-label-sm text-on-surface-variant">农机租赁</span>
+<span class="px-3 py-1 bg-surface-container-high rounded-[8px] font-label-sm text-label-sm text-on-surface-variant">秋耕特惠</span>
+</div>
+<div class="flex justify-between items-center border-t border-surface-variant pt-3">
+<div class="flex gap-4">
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">favorite</span>
+<span class="font-label-sm text-label-sm">45</span>
+</button>
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-sm text-label-sm">12</span>
+</button>
+</div>
+<button class="px-4 py-2 bg-primary text-on-primary rounded-full font-label-sm text-label-sm flex items-center gap-1 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[18px]">call</span>
+                        联系他
+                    </button>
+</div>
+</article>
+</section>
+<!-- Floating Action Button for creating new post -->
+<button class="fixed bottom-[104px] right-6 w-14 h-14 bg-primary text-on-primary rounded-[16px] shadow-lg flex items-center justify-center hover:opacity-90 active:scale-90 transition-all z-40">
+<span class="material-symbols-outlined text-[28px]">edit</span>
+</button>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0px_-4px_20px_0px_rgba(121,85,72,0.05)] rounded-t-lg">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">home</span>
+<span class="font-label-sm text-label-sm">首页</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">smart_toy</span>
+<span class="font-label-sm text-label-sm">AI农技</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed bg-primary-container/20 rounded-xl px-3 py-1 hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+<span class="font-label-sm text-label-sm">发布</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">mail</span>
+<span class="font-label-sm text-label-sm">消息</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-label-sm text-label-sm">我的</span>
+</a>
+</nav>
+</body></html>

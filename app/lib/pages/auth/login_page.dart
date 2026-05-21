@@ -15,6 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   final _username = TextEditingController();
   final _password = TextEditingController();
   bool _loading = false;
+  bool _obscure = true;
   String? _error;
 
   @override
@@ -49,84 +50,127 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 64),
-              Center(
-                child: Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(22),
+      backgroundColor: AppColors.background,
+      body: Stack(
+        children: [
+          // 顶部 hero
+          Container(
+            height: 280,
+            decoration: const BoxDecoration(gradient: AppColors.heroGradient),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(R.sm),
+                      ),
+                      child: const Icon(Icons.agriculture, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('FarmLink 田园通',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // 白色表单卡
+          SingleChildScrollView(
+            padding: const EdgeInsets.only(top: 180),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(R.lg),
+                boxShadow: AppColors.ambientShadow,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('欢迎回来',
+                      style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface)),
+                  const SizedBox(height: 4),
+                  const Text('进入您的智能农业中心',
+                      style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14)),
+                  const SizedBox(height: 26),
+                  const Text('用户名',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.onSurfaceVariant)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _username,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      hintText: '请输入账号',
+                      prefixIcon: Icon(Icons.person_outline, color: AppColors.outline),
+                    ),
                   ),
-                  child: const Icon(Icons.eco, size: 44, color: Colors.white),
-                ),
-              ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
-              const SizedBox(height: 18),
-              const Text('田园通',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                      letterSpacing: 3)),
-              const SizedBox(height: 4),
-              const Text('登录你的助农账号',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-              const SizedBox(height: 40),
-              TextField(
-                controller: _username,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  hintText: '用户名',
-                  prefixIcon: Icon(Icons.person_outline, color: AppColors.textHint),
-                ),
+                  const SizedBox(height: 18),
+                  const Text('密码',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.onSurfaceVariant)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _password,
+                    obscureText: _obscure,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _login(),
+                    decoration: InputDecoration(
+                      hintText: '请输入登录密码',
+                      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                            _obscure ? Icons.visibility_off : Icons.visibility,
+                            color: AppColors.outline, size: 20),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                  ],
+                  const SizedBox(height: 26),
+                  ElevatedButton(
+                    onPressed: _loading ? null : _login,
+                    child: _loading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
+                        : const Text('安全登录  →'),
+                  ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => context.go('/auth/login/register'),
+                      child: const Text('没有账号？立即注册'),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _password,
-                obscureText: true,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _login(),
-                decoration: const InputDecoration(
-                  hintText: '密码',
-                  prefixIcon: Icon(Icons.lock_outline, color: AppColors.textHint),
-                ),
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(_error!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.danger, fontSize: 13)),
-              ],
-              const SizedBox(height: 26),
-              SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _loading ? null : _login,
-                  child: _loading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                      : const Text('登 录'),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextButton(
-                onPressed: () => context.go('/auth/login/register'),
-                child: const Text('没有账号？立即注册'),
-              ),
-            ],
-          ).animate().fadeIn(duration: 400.ms),
-        ),
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1),
+          ),
+        ],
       ),
     );
   }

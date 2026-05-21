@@ -1,98 +1,124 @@
 import 'package:flutter/material.dart';
 import 'constants.dart';
 
+/// Agro-Modernist Tech 主题（参考 docs/设计参考.md）
 ThemeData buildAppTheme() {
   const cs = ColorScheme(
     brightness: Brightness.light,
     primary: AppColors.primary,
     onPrimary: Colors.white,
-    secondary: AppColors.harvest,
+    primaryContainer: AppColors.primaryContainer,
+    onPrimaryContainer: AppColors.onPrimaryContainer,
+    secondary: AppColors.secondary,
     onSecondary: Colors.white,
-    error: AppColors.danger,
+    tertiary: AppColors.tertiary,
+    onTertiary: Colors.white,
+    error: AppColors.error,
     onError: Colors.white,
     surface: AppColors.surface,
-    onSurface: AppColors.textPrimary,
+    onSurface: AppColors.onSurface,
+    surfaceContainerHighest: AppColors.surfaceHigh,
+    outline: AppColors.outline,
+    outlineVariant: AppColors.outlineVariant,
   );
 
   return ThemeData(
     useMaterial3: true,
     colorScheme: cs,
     scaffoldBackgroundColor: AppColors.background,
-    fontFamily: 'sans-serif',
+    splashFactory: InkRipple.splashFactory,
 
+    // 白底顶栏
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.primary,
       elevation: 0,
+      scrolledUnderElevation: 0,
       centerTitle: true,
       titleTextStyle: TextStyle(
-        color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 1,
+        color: AppColors.primary,
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
       ),
+      iconTheme: IconThemeData(color: AppColors.onSurfaceVariant),
     ),
 
     cardTheme: CardThemeData(
       color: AppColors.surface,
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: AppColors.border),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
     ),
 
+    // 输入框：浅白填充 + 底部棕色边
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surface,
-      hintStyle: const TextStyle(color: AppColors.textHint),
+      fillColor: AppColors.surfaceLow,
+      hintStyle: const TextStyle(color: AppColors.outline),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
+      enabledBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: AppColors.secondary, width: 2),
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
+      focusedBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: AppColors.primary, width: 2),
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+      border: const UnderlineInputBorder(
+        borderSide: BorderSide(color: AppColors.secondary, width: 2),
       ),
     ),
 
+    // 主按钮：胶囊形实心绿
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 2),
+        minimumSize: const Size(0, 52),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        shape: const StadiumBorder(),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+      ),
+    ),
+
+    // 次按钮：胶囊棕色描边
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.secondary,
+        minimumSize: const Size(0, 52),
+        side: const BorderSide(color: AppColors.secondary, width: 2),
+        shape: const StadiumBorder(),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     ),
 
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
     ),
 
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: AppColors.surface,
-      selectedItemColor: AppColors.primary,
-      unselectedItemColor: AppColors.textHint,
-      type: BottomNavigationBarType.fixed,
-      showUnselectedLabels: true,
-      elevation: 0,
-      selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: TextStyle(fontSize: 12),
+    dividerTheme: const DividerThemeData(
+      color: AppColors.outlineVariant, thickness: 1, space: 1,
     ),
 
-    dividerTheme: const DividerThemeData(color: AppColors.border, thickness: 1, space: 1),
+    chipTheme: ChipThemeData(
+      backgroundColor: AppColors.surfaceContainer,
+      labelStyle: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+      side: BorderSide.none,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
+    ),
 
     textTheme: const TextTheme(
-      headlineMedium: TextStyle(color: AppColors.textPrimary, fontSize: 22, fontWeight: FontWeight.bold),
-      headlineSmall:  TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
-      titleMedium:    TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
-      bodyLarge:      TextStyle(color: AppColors.textPrimary, fontSize: 16, height: 1.6),
-      bodyMedium:     TextStyle(color: AppColors.textPrimary, fontSize: 14, height: 1.6),
-      bodySmall:      TextStyle(color: AppColors.textSecondary, fontSize: 12),
+      headlineLarge:  TextStyle(color: AppColors.onSurface, fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -0.4),
+      headlineMedium: TextStyle(color: AppColors.onSurface, fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.2),
+      headlineSmall:  TextStyle(color: AppColors.onSurface, fontSize: 20, fontWeight: FontWeight.w600),
+      titleMedium:    TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600),
+      bodyLarge:      TextStyle(color: AppColors.onSurface, fontSize: 18, height: 1.55),
+      bodyMedium:     TextStyle(color: AppColors.onSurface, fontSize: 16, height: 1.5),
+      bodySmall:      TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14, height: 1.45),
+      labelLarge:     TextStyle(color: AppColors.onSurface, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.2),
+      labelSmall:     TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: 0.4),
     ),
   );
 }

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
+import '../../widgets/common.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -52,69 +53,79 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  Widget _field(String label, TextEditingController c, String hint, IconData icon,
+      {bool obscure = false, TextInputAction action = TextInputAction.next}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.onSurfaceVariant)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: c,
+          obscureText: obscure,
+          textInputAction: action,
+          onSubmitted: action == TextInputAction.done ? (_) => _register() : null,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, color: AppColors.outline),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('注册账号')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('注册账号'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: AppCard(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text('加入田园通',
                   style: TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary)),
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface)),
               const SizedBox(height: 4),
               const Text('开启你的数字助农之旅',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-              const SizedBox(height: 30),
-              TextField(
-                controller: _nickname,
-                decoration: const InputDecoration(
-                  hintText: '昵称',
-                  prefixIcon: Icon(Icons.badge_outlined, color: AppColors.textHint),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _username,
-                decoration: const InputDecoration(
-                  hintText: '用户名（字母 / 数字）',
-                  prefixIcon: Icon(Icons.person_outline, color: AppColors.textHint),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _password,
-                obscureText: true,
-                onSubmitted: (_) => _register(),
-                decoration: const InputDecoration(
-                  hintText: '密码（至少 6 位）',
-                  prefixIcon: Icon(Icons.lock_outline, color: AppColors.textHint),
-                ),
-              ),
+                  style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14)),
+              const SizedBox(height: 24),
+              _field('昵称', _nickname, '怎么称呼你', Icons.badge_outlined),
+              _field('用户名', _username, '字母 / 数字', Icons.person_outline),
+              _field('密码', _password, '至少 6 位', Icons.lock_outline,
+                  obscure: true, action: TextInputAction.done),
               if (_error != null) ...[
-                const SizedBox(height: 12),
                 Text(_error!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+                    style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                const SizedBox(height: 8),
               ],
-              const SizedBox(height: 26),
-              SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _loading ? null : _register,
-                  child: _loading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                      : const Text('注 册'),
-                ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: _loading ? null : _register,
+                child: _loading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                    : const Text('注 册'),
               ),
             ],
           ),

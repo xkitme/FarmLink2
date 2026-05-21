@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>气象灾害 - FarmLink</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#795548",
+                    "outline": "#707a6c",
+                    "on-tertiary-fixed": "#281900",
+                    "surface-container": "#eeeeee",
+                    "secondary": "#7a5649",
+                    "secondary-fixed": "#ffdbcf",
+                    "surface-bright": "#f9f9f9",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed": "#002204",
+                    "primary-container": "#2e7d32",
+                    "on-secondary-fixed-variant": "#603f33",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-container": "#ffefda",
+                    "primary-fixed": "#a3f69c",
+                    "outline-variant": "#bfcaba",
+                    "tertiary-container": "#926500",
+                    "primary-fixed-dim": "#88d982",
+                    "surface": "#f9f9f9",
+                    "on-surface-variant": "#40493d",
+                    "on-surface": "#1a1c1c",
+                    "surface-dim": "#dadada",
+                    "inverse-on-surface": "#f1f1f1",
+                    "tertiary-fixed": "#ffdeac",
+                    "surface-container-highest": "#e2e2e2",
+                    "primary": "#0d631b",
+                    "surface-tint": "#1b6d24",
+                    "secondary-container": "#fdcdbc",
+                    "tertiary": "#734e00",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed-dim": "#ebbcac",
+                    "on-primary-container": "#cbffc2",
+                    "on-tertiary-fixed-variant": "#604100",
+                    "background": "#f9f9f9",
+                    "surface-container-low": "#f3f3f3",
+                    "inverse-primary": "#88d982",
+                    "on-background": "#1a1c1c",
+                    "on-tertiary": "#ffffff",
+                    "surface-variant": "#e2e2e2",
+                    "on-primary": "#ffffff",
+                    "inverse-surface": "#2f3131",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#005312",
+                    "on-secondary-fixed": "#2e150b",
+                    "tertiary-fixed-dim": "#ffba38",
+                    "surface-container-high": "#e8e8e8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-md": "16px",
+                    "unit": "8px",
+                    "stack-lg": "24px",
+                    "stack-sm": "8px",
+                    "margin-mobile": "20px",
+                    "gutter-mobile": "16px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Noto Sans"],
+                    "label-lg": ["Noto Sans"],
+                    "label-sm": ["Noto Sans"],
+                    "body-md": ["Noto Sans"],
+                    "headline-sm": ["Noto Sans"],
+                    "headline-lg": ["Noto Sans"],
+                    "headline-md": ["Noto Sans"],
+                    "headline-lg-mobile": ["Noto Sans"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .ticker-move {
+            display: inline-block;
+            animation: ticker 15s linear infinite;
+        }
+        @keyframes ticker {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        /* Ambient shadow utility based on design system */
+        .shadow-ambient {
+            box-shadow: 0px 4px 20px rgba(121, 85, 72, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface shadow-sm z-40 flex justify-between items-center px-margin-mobile h-16">
+<div class="flex items-center gap-unit cursor-pointer active:scale-95 duration-150 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-full p-2">
+<span class="material-symbols-outlined" data-icon="agriculture">agriculture</span>
+</div>
+<div class="font-headline-md text-headline-md font-bold text-primary text-center flex-1">
+            FarmLink 田园通
+        </div>
+<div class="flex items-center gap-unit cursor-pointer active:scale-95 duration-150 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-full p-2">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</div>
+</header>
+<!-- Disaster Alert Banner -->
+<div class="bg-error text-on-error px-margin-mobile py-unit flex items-center gap-unit shadow-ambient relative z-30">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">warning</span>
+<div class="ticker-wrap flex-1">
+<div class="ticker-move font-label-lg text-label-lg">
+                【红色预警】预计未来24小时内将有特大暴雨，请低洼地带农户及时做好排水防涝准备，暂停田间作业。
+            </div>
+</div>
+</div>
+<!-- Main Content Canvas -->
+<main class="px-margin-mobile pt-stack-md flex flex-col gap-stack-lg">
+<!-- Weather Dashboard (Bento Style) -->
+<section class="grid grid-cols-2 gap-gutter-mobile">
+<!-- Hero Card: Temperature -->
+<div class="col-span-2 relative overflow-hidden rounded-lg shadow-ambient bg-surface-container flex flex-col justify-between p-stack-md min-h-[160px]">
+<div class="absolute inset-0 z-0 bg-cover bg-center opacity-40" data-alt="A cinematic, dramatic view of dark, heavy storm clouds gathering over a vast, vibrant green agricultural field. The scene captures the tension right before a heavy downpour, with high contrast between the deep, brooding grey sky and the illuminated, lush crops below. The aesthetic aligns with a modern, high-tech agricultural interface, conveying an urgent yet professional mood. Soft, diffused lighting pierces through the clouds, highlighting the organic texture of the earth." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBR6vHfSkh7sIjmDx1VfmjYRfYrz5lCKgxX1rBglwDr4x5cJlGQ1dBqDfwc4Ffu4nD22EzTPgkcku_V0PeLy9NF2O8VWq5Y1JDRWo69lQIY4QXNC06dNx389nXHbZueIWYCbuRsUDu6iKKwi61z1LYpGnBdxh3vfIDh8EB0F4CtwmVhqpI8ABLaDSdpu6ORizV53ehEe8Y2RpIyOxD0d_d7lgonpuB2ZDQQQREdd0fmnUeCLLeuhCJKBpJIzDrJrM2df2oLbRLDPLXO');">
+</div>
+<div class="relative z-10 flex justify-between items-start w-full">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">当前气况 · 实验田A区</span>
+<div class="flex items-baseline gap-2 mt-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">26°C</span>
+<span class="font-body-md text-body-md text-on-surface-variant">/ 32°C 最高</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[40px] text-primary" data-icon="thunderstorm" data-weight="fill" style="font-variation-settings: 'FILL' 1;">thunderstorm</span>
+</div>
+<div class="relative z-10 mt-auto pt-4 flex gap-4">
+<div class="bg-surface/80 backdrop-blur-sm px-3 py-1 rounded-DEFAULT font-label-sm text-label-sm text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">air</span> 阵风 8级
+                     </div>
+<div class="bg-surface/80 backdrop-blur-sm px-3 py-1 rounded-DEFAULT font-label-sm text-label-sm text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">water_drop</span> 降水率 95%
+                     </div>
+</div>
+</div>
+<!-- Sub Card: Soil Status -->
+<div class="rounded-lg shadow-ambient bg-surface p-stack-md flex flex-col gap-2 border-[1px] border-tertiary-fixed-dim">
+<div class="flex items-center gap-2 text-tertiary">
+<span class="material-symbols-outlined" data-icon="grass">grass</span>
+<span class="font-label-sm text-label-sm">土壤墒情 (AI分析)</span>
+</div>
+<div class="font-headline-md text-headline-md text-on-surface mt-1">过饱和</div>
+<span class="font-label-sm text-label-sm text-error">积水风险极高</span>
+</div>
+<!-- Sub Card: Humidity -->
+<div class="rounded-lg shadow-ambient bg-surface p-stack-md flex flex-col gap-2">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="humidity_percentage">humidity_percentage</span>
+<span class="font-label-sm text-label-sm">相对湿度</span>
+</div>
+<div class="font-headline-md text-headline-md text-on-surface mt-1">88%</div>
+<div class="w-full bg-surface-container-highest h-2 rounded-full mt-2 overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 88%;"></div>
+</div>
+</div>
+</section>
+<!-- Forecast Chart Section -->
+<section class="bg-surface rounded-lg shadow-ambient p-stack-md">
+<div class="flex justify-between items-center mb-stack-md">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">24小时趋势预判</h2>
+<button class="font-label-sm text-label-sm text-primary flex items-center">
+                    详情 <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+<!-- CSS Bar Chart Representation -->
+<div class="flex items-end justify-between h-[120px] pt-4 gap-1">
+<!-- Data Points (Simulated) -->
+<div class="flex flex-col items-center gap-2 w-full">
+<span class="font-label-sm text-label-sm text-on-surface-variant text-[10px]">现在</span>
+<div class="w-full max-w-[24px] bg-error rounded-t-sm" style="height: 90px;"></div>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<span class="font-label-sm text-label-sm text-on-surface-variant text-[10px]">14:00</span>
+<div class="w-full max-w-[24px] bg-error rounded-t-sm" style="height: 100px;"></div>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<span class="font-label-sm text-label-sm text-on-surface-variant text-[10px]">16:00</span>
+<div class="w-full max-w-[24px] bg-error-container rounded-t-sm" style="height: 70px;"></div>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<span class="font-label-sm text-label-sm text-on-surface-variant text-[10px]">18:00</span>
+<div class="w-full max-w-[24px] bg-primary-container opacity-50 rounded-t-sm" style="height: 40px;"></div>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<span class="font-label-sm text-label-sm text-on-surface-variant text-[10px]">20:00</span>
+<div class="w-full max-w-[24px] bg-primary-container opacity-30 rounded-t-sm" style="height: 20px;"></div>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<span class="font-label-sm text-label-sm text-on-surface-variant text-[10px]">22:00</span>
+<div class="w-full max-w-[24px] bg-primary-container opacity-20 rounded-t-sm" style="height: 10px;"></div>
+</div>
+</div>
+<div class="text-center mt-2 font-label-sm text-label-sm text-on-surface-variant">降水量预测 (mm)</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface-container-lowest shadow-[0px_-4px_20px_0px_rgba(121,85,72,0.05)] rounded-t-lg">
+<!-- Tab 1: Active (Home/Dashboard mapped to Disaster view context) -->
+<div class="flex flex-col items-center justify-center text-primary bg-primary-container/20 rounded-xl px-3 py-1 cursor-pointer active:scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined" data-icon="home" data-weight="fill" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-sm text-label-sm">首页</span>
+</div>
+<!-- Tab 2: Inactive -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant cursor-pointer hover:opacity-80 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-sm text-label-sm mt-1">AI农技</span>
+</div>
+<!-- Tab 3: Inactive -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant cursor-pointer hover:opacity-80 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="font-label-sm text-label-sm mt-1">发布</span>
+</div>
+<!-- Tab 4: Inactive -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant cursor-pointer hover:opacity-80 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+<span class="font-label-sm text-label-sm mt-1">消息</span>
+</div>
+<!-- Tab 5: Inactive -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant cursor-pointer hover:opacity-80 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm mt-1">我的</span>
+</div>
+</nav>
+</body></html>

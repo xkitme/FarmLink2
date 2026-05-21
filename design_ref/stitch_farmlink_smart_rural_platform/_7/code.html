@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FarmLink 田园通 - Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#005312",
+                        "primary-fixed": "#a3f69c",
+                        "tertiary-fixed-dim": "#ffba38",
+                        "tertiary-fixed": "#ffdeac",
+                        "secondary-fixed-dim": "#ebbcac",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#2e7d32",
+                        "on-secondary-fixed": "#2e150b",
+                        "surface-container-high": "#e8e8e8",
+                        "on-surface-variant": "#40493d",
+                        "background": "#f9f9f9",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-secondary-fixed-variant": "#603f33",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#bfcaba",
+                        "inverse-primary": "#88d982",
+                        "on-error-container": "#93000a",
+                        "surface-tint": "#1b6d24",
+                        "on-error": "#ffffff",
+                        "secondary": "#7a5649",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f3f3f3",
+                        "secondary-fixed": "#ffdbcf",
+                        "surface-dim": "#dadada",
+                        "surface-container": "#eeeeee",
+                        "on-tertiary-container": "#ffefda",
+                        "on-primary-container": "#cbffc2",
+                        "inverse-surface": "#2f3131",
+                        "tertiary": "#734e00",
+                        "surface-bright": "#f9f9f9",
+                        "tertiary-container": "#926500",
+                        "on-secondary-container": "#795548",
+                        "surface": "#f9f9f9",
+                        "on-tertiary-fixed": "#281900",
+                        "secondary-container": "#fdcdbc",
+                        "primary": "#0d631b",
+                        "outline": "#707a6c",
+                        "on-tertiary-fixed-variant": "#604100",
+                        "on-primary-fixed": "#002204",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#1a1c1c",
+                        "error": "#ba1a1a",
+                        "on-background": "#1a1c1c",
+                        "primary-fixed-dim": "#88d982",
+                        "inverse-on-surface": "#f1f1f1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "unit": "8px",
+                        "stack-lg": "24px",
+                        "stack-sm": "8px",
+                        "margin-mobile": "20px",
+                        "gutter-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Noto Sans"],
+                        "label-lg": ["Noto Sans"],
+                        "headline-sm": ["Noto Sans"],
+                        "body-lg": ["Noto Sans"],
+                        "headline-lg": ["Noto Sans"],
+                        "headline-md": ["Noto Sans"],
+                        "body-md": ["Noto Sans"],
+                        "headline-lg-mobile": ["Noto Sans"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background h-screen w-full flex flex-col font-body-md text-on-background overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top AppBar (Suppressed per rules for transactional onboarding, but kept as a visual anchor if needed. Decided to hide entirely for full bleed effect) -->
+<!-- Main Content Area -->
+<main class="flex-1 relative w-full h-full flex flex-col">
+<!-- Full Bleed Image Container (Top 60%) -->
+<div class="relative h-[60%] w-full bg-surface-variant shrink-0">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A high-quality, sunlit image of a vibrant village lifestyle or community farm scene. People interacting in a rural setting, perhaps sharing produce or working together in a community garden. The lighting is warm and golden, evoking a sense of technological vitality and organic growth, bridging the physical soil with digital accessible innovation. The overall aesthetic is modern, clean, yet grounded in the earth, matching the FarmLink brand identity." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCNx-bFZovtL2HLLcX3EgeIQa0-pdKbUuz_QZyUFBlN5Q7kbdScNw_zUwfCjxp4AT-dzjJjsLDZGycm66PhVmjabszZHbFb3M57zZU7y3tqZ8qUjFYOPKoLfBh6WmoKmf59s_IZKXuLORR8auDiFKis7h7RZ1c0bkKIzhk9GEr7-u7XxdHHDqldJHJAw5r46rx-2_fjyXnQrg1nw__QNBgXeQUyi2NsO5wpasQ2UjdsE84hEXfcYlrkqT9Up3EfA5D9Dm3wmHxzZHlE');">
+</div>
+<!-- Brand Overlay -->
+<div class="absolute top-12 left-0 w-full flex justify-center px-margin-mobile">
+<div class="flex items-center gap-2 bg-surface/80 backdrop-blur-md px-4 py-2 rounded-full shadow-lg">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+<span class="text-headline-md font-headline-md text-primary tracking-tight">FarmLink</span>
+</div>
+</div>
+<!-- Gradient Fade -->
+<div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent"></div>
+</div>
+<!-- White Card Content (Bottom 40%) -->
+<div class="relative flex-1 bg-surface rounded-t-[3rem] -mt-8 z-10 flex flex-col px-margin-mobile pt-stack-lg pb-[48px] shadow-[0px_-8px_30px_0px_rgba(122,86,73,0.08)]">
+<!-- Progress Indicator (Simulated) -->
+<div class="flex justify-center gap-2 mb-stack-md">
+<div class="w-2 h-2 rounded-full bg-surface-dim"></div>
+<div class="w-2 h-2 rounded-full bg-surface-dim"></div>
+<div class="w-8 h-2 rounded-full bg-primary transition-all duration-300"></div>
+</div>
+<!-- Text Content -->
+<div class="flex flex-col items-center text-center flex-1 justify-center space-y-unit">
+<h1 class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface">共建社区，乐享生活</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant max-w-[280px]">
+                    农产品直供，共享农机，助力乡村振兴
+                </p>
+</div>
+<!-- Action Area -->
+<div class="mt-auto w-full pt-stack-lg">
+<button class="w-full h-[56px] bg-primary text-on-primary rounded-full text-headline-sm font-headline-sm flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-primary/20">
+                    立即开启
+                </button>
+</div>
+</div>
+</main>
+<!-- BottomNavBar and SideNav suppressed per Semantic Shell Mandate (Transactional/Onboarding intent) -->
+</body></html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Agricultural Production</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#795548",
+                        "outline": "#707a6c",
+                        "on-tertiary-fixed": "#281900",
+                        "surface-container": "#eeeeee",
+                        "secondary": "#7a5649",
+                        "secondary-fixed": "#ffdbcf",
+                        "surface-bright": "#f9f9f9",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#002204",
+                        "primary-container": "#2e7d32",
+                        "on-secondary-fixed-variant": "#603f33",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-container": "#ffefda",
+                        "primary-fixed": "#a3f69c",
+                        "outline-variant": "#bfcaba",
+                        "tertiary-container": "#926500",
+                        "primary-fixed-dim": "#88d982",
+                        "surface": "#f9f9f9",
+                        "on-surface-variant": "#40493d",
+                        "on-surface": "#1a1c1c",
+                        "surface-dim": "#dadada",
+                        "inverse-on-surface": "#f1f1f1",
+                        "tertiary-fixed": "#ffdeac",
+                        "surface-container-highest": "#e2e2e2",
+                        "primary": "#0d631b",
+                        "surface-tint": "#1b6d24",
+                        "secondary-container": "#fdcdbc",
+                        "tertiary": "#734e00",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed-dim": "#ebbcac",
+                        "on-primary-container": "#cbffc2",
+                        "on-tertiary-fixed-variant": "#604100",
+                        "background": "#f9f9f9",
+                        "surface-container-low": "#f3f3f3",
+                        "inverse-primary": "#88d982",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#2f3131",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#005312",
+                        "on-secondary-fixed": "#2e150b",
+                        "tertiary-fixed-dim": "#ffba38",
+                        "surface-container-high": "#e8e8e8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "unit": "8px",
+                        "stack-lg": "24px",
+                        "stack-sm": "8px",
+                        "margin-mobile": "20px",
+                        "gutter-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Noto Sans"],
+                        "label-lg": ["Noto Sans"],
+                        "label-sm": ["Noto Sans"],
+                        "body-md": ["Noto Sans"],
+                        "headline-sm": ["Noto Sans"],
+                        "headline-lg": ["Noto Sans"],
+                        "headline-md": ["Noto Sans"],
+                        "headline-lg-mobile": ["Noto Sans"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Custom Ambient Shadow for UI Guidance */
+        .shadow-ambient-level-1 {
+            box-shadow: 0px 4px 20px 0px rgba(121, 85, 72, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-dim w-full top-0 sticky shadow-sm flex justify-between items-center px-margin-mobile h-16 z-40">
+<button class="text-primary dark:text-primary-fixed hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="agriculture">agriculture</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">FarmLink 田园通</h1>
+<button class="text-primary dark:text-primary-fixed hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-margin-mobile pt-stack-md pb-[96px] flex flex-col gap-stack-lg w-full max-w-4xl mx-auto">
+<!-- Image Diagnosis Component (Bento Grid Style) -->
+<section class="bg-surface-container-lowest rounded-DEFAULT shadow-ambient-level-1 border border-tertiary-fixed p-stack-md flex flex-col gap-stack-sm relative overflow-hidden">
+<!-- Decorative AI Glow Element -->
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-primary-fixed/20 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-center gap-unit text-primary">
+<span class="material-symbols-outlined icon-fill" data-icon="center_focus_strong">center_focus_strong</span>
+<h2 class="font-headline-sm text-headline-sm">智能识病</h2>
+</div>
+<p class="font-body-md text-on-surface-variant mb-unit">拍照或上传作物叶片，AI即刻为您诊断并提供用药建议。</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+<!-- Upload Area -->
+<button class="border-2 border-dashed border-outline-variant hover:border-primary bg-surface-container-low hover:bg-primary-container/10 transition-colors rounded-DEFAULT h-32 flex flex-col items-center justify-center gap-unit group active:scale-95 duration-150">
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary text-3xl transition-colors" data-icon="add_a_photo">add_a_photo</span>
+<span class="font-label-lg text-label-lg text-on-surface-variant group-hover:text-primary transition-colors">点击拍照或上传图片</span>
+</button>
+<!-- Sample Diagnosis Result Card -->
+<div class="bg-surface rounded-DEFAULT border border-surface-variant p-unit flex gap-stack-sm items-start shadow-sm">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container-high relative">
+<img class="w-full h-full object-cover" data-alt="A close-up photograph of an apple tree leaf in natural daylight, showing clear signs of powdery mildew disease with white, powdery fungal spots. The setting is a professional agricultural context, focusing on organic growth and technological vitality. The lighting is high-key and outdoors, capturing the texture of the diseased leaf against a soft, blurred background of a healthy green orchard. Overall aesthetic aligns with an accessible, modern farming diagnostic tool." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALHVP7ouT1SenILx_yZUQcdfLbnMIopv4boY9PG3xEn8VWKr-Iwvsq9mWxdWzexPJafycDIL6kZz6prDZTz3-HvmjVxTKN8ddDLdKw52TUiszBdppAd_eHw2XsaOJh9KJADPU5qhzRsPXrWOq_k9yptd7vKkcpZoL9VfW9e7i2StsFOj0tsdwzB2NmYfYv5TRktDMNX8TE7MkDalEWZhJj5iZUZA8lrI7fvNfj2z6utjCSV0OGrdIStwaug8NqaY5zGlm9q-2FXTzu"/>
+<div class="absolute inset-0 border border-black/10 rounded-lg pointer-events-none"></div>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-error inline-block"></span>
+<span class="font-label-lg text-label-lg text-on-surface">发现疑似病害</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-error">苹果白粉病</h3>
+<div class="flex flex-wrap gap-1 mt-1">
+<span class="bg-primary-container/20 text-primary font-label-sm text-label-sm px-2 py-1 rounded-full">建议喷洒三唑酮</span>
+<span class="bg-surface-variant text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">可信度 96%</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- AI Chat Interface -->
+<section class="flex-1 flex flex-col bg-surface-container-lowest rounded-DEFAULT shadow-ambient-level-1 overflow-hidden min-h-[400px]">
+<div class="bg-surface-container-low px-stack-md py-unit border-b border-surface-variant flex items-center justify-between">
+<div class="flex items-center gap-unit text-on-surface">
+<span class="material-symbols-outlined text-primary" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-lg text-label-lg">农技专家 AI</span>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</button>
+</div>
+<!-- Chat Messages Area -->
+<div class="flex-1 overflow-y-auto p-stack-md flex flex-col gap-stack-md">
+<!-- AI Message -->
+<div class="flex gap-unit items-end max-w-[85%]">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary-container text-sm" data-icon="eco">eco</span>
+</div>
+<div class="bg-surface-container p-unit px-stack-md rounded-2xl rounded-bl-none text-on-surface font-body-md">
+<p>您好！我是您的专属农技助手。无论是病虫害识别、测土配方还是天气影响，都可以问我。今天我能帮您什么？</p>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex gap-unit items-end max-w-[85%] self-end flex-row-reverse">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-secondary-container text-sm" data-icon="person">person</span>
+</div>
+<div class="bg-primary text-on-primary p-unit px-stack-md rounded-2xl rounded-br-none font-body-md">
+<p>最近这几天要下暴雨，我的玉米地刚施完肥，需要做啥防护吗？</p>
+</div>
+</div>
+<!-- AI Message -->
+<div class="flex gap-unit items-end max-w-[85%]">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary-container text-sm" data-icon="eco">eco</span>
+</div>
+<div class="bg-surface-container p-unit px-stack-md rounded-2xl rounded-bl-none text-on-surface font-body-md">
+<p>暴雨可能导致肥料流失和田间积水。建议：<br/>
+                        1. 紧急检查田间排水沟渠，确保排水通畅。<br/>
+                        2. 雨后及时查苗，如果发生肥料流失，视作物长势适量追施速效肥。<br/>
+                        3. 注意防范雨后高湿环境可能引发的病害。需要我为您查询详细的玉米病害预防方案吗？</p>
+</div>
+</div>
+</div>
+<!-- Chat Input Area -->
+<div class="p-stack-sm bg-surface-container-lowest border-t border-surface-variant flex gap-unit items-center">
+<button class="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-variant flex items-center justify-center text-on-surface-variant transition-colors shrink-0">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+</button>
+<div class="flex-1 relative">
+<input class="w-full h-12 bg-surface-container-low border-b-2 border-secondary focus:border-primary focus:bg-surface-container focus:ring-0 rounded-t-DEFAULT px-stack-md font-body-md text-on-surface placeholder:text-outline outline-none transition-colors" placeholder="向农技助手提问..." type="text"/>
+</div>
+<button class="w-12 h-12 rounded-full bg-primary text-on-primary hover:bg-surface-tint shadow-sm flex items-center justify-center transition-colors shrink-0 active:scale-95">
+<span class="material-symbols-outlined icon-fill" data-icon="mic">mic</span>
+</button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0px_-4px_20px_0px_rgba(121,85,72,0.05)] rounded-t-lg">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm mt-1">首页</span>
+</a>
+<!-- Active State: AI农技 -->
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed bg-primary-container/20 rounded-xl px-3 py-1 hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined icon-fill" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-sm text-label-sm mt-1">AI农技</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="font-label-sm text-label-sm mt-1">发布</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+<span class="font-label-sm text-label-sm mt-1">消息</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm mt-1">我的</span>
+</a>
+</nav>
+</body></html>
