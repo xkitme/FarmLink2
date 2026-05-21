@@ -3,6 +3,10 @@ admin/node_modules/
 admin/dist/
 .env
 *.log
+boot.err
+boot.log
+_test_*.mjs
+_verify.mjs
 uploads/*
 !uploads/.gitkeep
 data/*.db
