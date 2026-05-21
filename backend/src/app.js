@@ -23,11 +23,21 @@ app.use(operationLogMiddleware)
 // 上传文件静态访问
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')))
 
+// 管理面板生产构建产物（开发时由 Vite 独立服务承载）
+const adminDist = path.resolve(__dirname, '../admin/dist')
+app.use('/admin', express.static(adminDist))
+
 // 健康检查
 app.get('/health', (req, res) => ok(res, { status: 'ok', env: config.isProd ? 'production' : 'development' }))
 
 // 业务路由
 registerRoutes(app, config.apiPrefix)
+
+app.get('/admin/*', (req, res, next) => {
+  res.sendFile(path.join(adminDist, 'index.html'), (err) => {
+    if (err) next()
+  })
+})
 
 // 404 + 全局异常
 app.use(notFoundHandler)

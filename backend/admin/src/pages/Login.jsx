@@ -1,0 +1,55 @@
+import { LockOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
+import { Button, Card, Form, Input, Typography, message } from 'antd'
+import { useNavigate } from 'react-router-dom'
+import { api } from '../api/request.js'
+import { saveSession } from '../api/auth.js'
+
+export default function Login() {
+  const navigate = useNavigate()
+
+  async function onFinish(values) {
+    const session = await api.post('/auth/login', values)
+    if (session.user?.role !== 'ADMIN') {
+      message.error('当前账号不是管理员')
+      return
+    }
+    saveSession(session)
+    message.success('登录成功')
+    navigate('/dashboard', { replace: true })
+  }
+
+  return (
+    <div className="login-page">
+      <div className="login-visual">
+        <div className="field-map">
+          {Array.from({ length: 36 }).map((_, index) => <span key={index} />)}
+        </div>
+      </div>
+      <Card className="login-card">
+        <div className="login-title">
+          <SafetyCertificateOutlined />
+          <div>
+            <Typography.Title level={2}>田园通管理后台</Typography.Title>
+            <Typography.Text type="secondary">本机离线部署 · SQLite · 本地 AI</Typography.Text>
+          </div>
+        </div>
+        <Form
+          layout="vertical"
+          initialValues={{ username: 'admin', password: '123456' }}
+          onFinish={onFinish}
+          requiredMark={false}
+        >
+          <Form.Item label="管理员账号" name="username" rules={[{ required: true, message: '请输入账号' }]}>
+            <Input size="large" prefix={<UserOutlined />} autoComplete="username" />
+          </Form.Item>
+          <Form.Item label="密码" name="password" rules={[{ required: true, message: '请输入密码' }]}>
+            <Input.Password size="large" prefix={<LockOutlined />} autoComplete="current-password" />
+          </Form.Item>
+          <Button block size="large" type="primary" htmlType="submit">
+            登录后台
+          </Button>
+        </Form>
+      </Card>
+    </div>
+  )
+}
