@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -15,8 +15,8 @@ class CalligraphyPage extends StatefulWidget {
 }
 
 class _CalligraphyPageState extends State<CalligraphyPage> {
-  String? _imagePath;
-  String? _imageLocalPath;
+  XFile? _imageFile;
+  Uint8List? _imageBytes;
   bool _uploading = false;
   Map<String, dynamic>? _review;
   String? _error;
@@ -25,21 +25,25 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
     final picker = ImagePicker();
     final file = await picker.pickImage(source: source, imageQuality: 85);
     if (file == null) return;
+    final rawBytes = await file.readAsBytes();
     setState(() {
-      _imageLocalPath = file.path;
+      _imageFile = file;
+      _imageBytes = rawBytes;
       _review = null;
       _error = null;
     });
   }
 
   Future<void> _upload() async {
-    if (_imageLocalPath == null) return;
+    if (_imageBytes == null || _imageFile == null) return;
     setState(() { _uploading = true; _error = null; });
     try {
-      final res = await ApiClient.postMultipart(
+      final filename = _imageFile!.name.isNotEmpty ? _imageFile!.name : 'calligraphy.jpg';
+      final res = await ApiClient.postMultipartBytes(
         '/api/ai/calligraphy/review',
         'image',
-        _imageLocalPath!,
+        _imageBytes!,
+        filename,
       );
       if (!mounted) return;
       setState(() {
@@ -67,7 +71,6 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 说明
             InkCard(
               padding: const EdgeInsets.all(16),
               gradient: const LinearGradient(
@@ -75,11 +78,11 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Text('🖌', style: TextStyle(fontSize: 32)),
-                  const SizedBox(width: 14),
-                  const Expanded(
+                  Text('🖌', style: TextStyle(fontSize: 32)),
+                  SizedBox(width: 14),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -103,20 +106,19 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
 
             const SizedBox(height: 20),
 
-            // 上传区
+            // 图片预览区
             GestureDetector(
               onTap: () => _showPicker(context),
               child: InkCard(
                 padding: EdgeInsets.zero,
-                child: _imageLocalPath != null
+                child: _imageBytes != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          File(_imageLocalPath!),
+                        child: Image.memory(
+                          _imageBytes!,
                           height: 260,
                           width: double.infinity,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => _buildPlaceholder(),
                         ),
                       )
                     : _buildPlaceholder(),
@@ -125,14 +127,13 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
 
             const SizedBox(height: 16),
 
-            // 操作按钮
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _showPicker(context),
                     icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
-                    label: Text(_imageLocalPath != null ? '重新上传' : '选择图片'),
+                    label: Text(_imageBytes != null ? '重新上传' : '选择图片'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: InkColors.gold,
                       side: const BorderSide(color: InkColors.gold),
@@ -141,15 +142,14 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
                     ),
                   ),
                 ),
-                if (_imageLocalPath != null) ...[
+                if (_imageBytes != null) ...[
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: _uploading ? null : _upload,
                       icon: _uploading
                           ? const SizedBox(
-                              width: 16,
-                              height: 16,
+                              width: 16, height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation(InkColors.background),
@@ -157,9 +157,7 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
                             )
                           : const Icon(Icons.auto_awesome, size: 18),
                       label: Text(_uploading ? '点评中...' : 'AI 点评'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
                     ),
                   ),
                 ],
@@ -172,7 +170,6 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
                   textAlign: TextAlign.center),
             ],
 
-            // 点评结果
             if (_review != null) ...[
               const SizedBox(height: 24),
               _buildReview(_review!),
@@ -213,11 +210,11 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
     );
   }
 
-  Widget _buildPlaceholder() => SizedBox(
+  Widget _buildPlaceholder() => const SizedBox(
     height: 200,
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: const [
+      children: [
         Icon(Icons.add_photo_alternate_outlined, color: InkColors.textDisabled, size: 48),
         SizedBox(height: 12),
         Text('点击上传书法作品', style: TextStyle(color: InkColors.textSecondary, fontSize: 13)),
@@ -229,7 +226,6 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
 
   Widget _buildReview(Map<String, dynamic> review) {
     final scores = review['scores'] as Map<String, dynamic>? ?? {};
-    final comments = review['comments'] as List? ?? [];
     final overall = review['overall'] as String? ?? '';
     final suggestion = review['suggestion'] as String? ?? '';
 
@@ -237,7 +233,6 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SectionTitle('AI 点评报告'),
-        // 评分雷达
         if (scores.isNotEmpty) ...[
           InkCard(
             padding: const EdgeInsets.all(16),
@@ -251,9 +246,7 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
                       SizedBox(
                         width: 60,
                         child: Text(e.key, style: const TextStyle(
-                          color: InkColors.textSecondary,
-                          fontSize: 12,
-                        )),
+                          color: InkColors.textSecondary, fontSize: 12)),
                       ),
                       Expanded(
                         child: ClipRRect(
@@ -263,8 +256,8 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
                             backgroundColor: InkColors.border,
                             valueColor: AlwaysStoppedAnimation(
                               score >= 8 ? InkColors.jade
-                                : score >= 6 ? InkColors.gold
-                                : InkColors.cinnabar,
+                                  : score >= 6 ? InkColors.gold
+                                  : InkColors.cinnabar,
                             ),
                             minHeight: 6,
                           ),
@@ -272,20 +265,15 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
                       ),
                       const SizedBox(width: 8),
                       Text('${score.toStringAsFixed(1)}', style: const TextStyle(
-                        color: InkColors.gold,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      )),
+                        color: InkColors.gold, fontSize: 12, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 );
               }).toList(),
             ),
-          )
-          .animate().fade(duration: 400.ms),
+          ).animate().fade(duration: 400.ms),
           const SizedBox(height: 12),
         ],
-        // 总评
         if (overall.isNotEmpty)
           InkCard(
             padding: const EdgeInsets.all(16),
@@ -297,43 +285,28 @@ class _CalligraphyPageState extends State<CalligraphyPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
-                  children: [
-                    Icon(Icons.star_outline, color: InkColors.jade, size: 16),
-                    SizedBox(width: 6),
-                    Text('总体评价', style: TextStyle(
-                      color: InkColors.jade,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    )),
-                  ],
-                ),
+                const Row(children: [
+                  Icon(Icons.star_outline, color: InkColors.jade, size: 16),
+                  SizedBox(width: 6),
+                  Text('总体评价', style: TextStyle(
+                    color: InkColors.jade, fontSize: 13, fontWeight: FontWeight.w600)),
+                ]),
                 const SizedBox(height: 10),
                 Text(overall, style: const TextStyle(
-                  color: InkColors.textPrimary,
-                  fontSize: 14,
-                  height: 1.7,
-                )),
+                  color: InkColors.textPrimary, fontSize: 14, height: 1.7)),
                 if (suggestion.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   const Divider(color: InkColors.border),
                   const SizedBox(height: 8),
                   const Text('改进建议', style: TextStyle(
-                    color: InkColors.gold,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  )),
+                    color: InkColors.gold, fontSize: 12, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   Text(suggestion, style: const TextStyle(
-                    color: InkColors.textSecondary,
-                    fontSize: 13,
-                    height: 1.6,
-                  )),
+                    color: InkColors.textSecondary, fontSize: 13, height: 1.6)),
                 ],
               ],
             ),
-          )
-          .animate(delay: 200.ms).fade(duration: 400.ms),
+          ).animate(delay: 200.ms).fade(duration: 400.ms),
       ],
     );
   }

@@ -34,7 +34,7 @@ ThemeData buildInkTheme() {
     ),
 
     // Card
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: InkColors.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(

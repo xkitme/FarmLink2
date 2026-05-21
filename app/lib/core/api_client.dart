@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'constants.dart';
 
@@ -63,13 +64,13 @@ class ApiClient {
     }
   }
 
-  // Multipart for calligraphy upload
-  static Future<Map<String, dynamic>> postMultipart(
-      String path, String fileField, String filePath) async {
+  // Multipart for calligraphy upload (cross-platform: accepts bytes)
+  static Future<Map<String, dynamic>> postMultipartBytes(
+      String path, String fileField, Uint8List bytes, String filename) async {
     final uri = Uri.parse('$baseUrl$path');
     final req = http.MultipartRequest('POST', uri)
       ..headers.addAll({if (_token != null) 'Authorization': 'Bearer $_token'})
-      ..files.add(await http.MultipartFile.fromPath(fileField, filePath));
+      ..files.add(http.MultipartFile.fromBytes(fileField, bytes, filename: filename));
     final streamed = await req.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
     return _parse(res);
