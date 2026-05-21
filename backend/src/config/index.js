@@ -13,7 +13,7 @@ export const config = {
 
   ollama: {
     baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-    primaryModel: process.env.OLLAMA_PRIMARY_MODEL || 'qwen2.5:7b-instruct-q4_K_M',
+    primaryModel: process.env.OLLAMA_PRIMARY_MODEL || 'qwen2.5:1.5b-instruct-q4_K_M',
     visionModel: process.env.OLLAMA_VISION_MODEL || 'minicpm-v:8b-2.6-q4_K_M',
     embedModel: process.env.OLLAMA_EMBED_MODEL || 'bge-m3',
   },

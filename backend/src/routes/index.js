@@ -8,6 +8,7 @@ import disasterRoutes from '../modules/disaster/disaster.routes.js'
 import policyRoutes from '../modules/policy/policy.routes.js'
 import lifeRoutes from '../modules/life/life.routes.js'
 import dataRoutes from '../modules/data/data.routes.js'
+import aiRoutes from '../modules/ai/ai.routes.js'
 
 /**
  * 业务路由注册中心。
@@ -35,6 +36,8 @@ export function registerRoutes(app, prefix) {
   router.use(lifeRoutes)
   // 板块七 data：数据与智能管理
   router.use(dataRoutes)
+  // AI 能力：本地 Ollama + SQLite RAG + 离线兜底
+  router.use(aiRoutes)
 
   app.use(prefix, router)
 }
