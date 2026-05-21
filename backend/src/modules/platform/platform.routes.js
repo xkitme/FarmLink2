@@ -7,6 +7,7 @@ import * as noti from './notification.controller.js'
 import * as fb from './feedback.controller.js'
 import * as search from './search.controller.js'
 import * as admin from './admin.controller.js'
+import * as resource from './resource.controller.js'
 
 const router = Router()
 
@@ -44,5 +45,12 @@ router.put('/admin/api-switch/:id/toggle', requireAuth, requireRole('ADMIN'), wr
 router.delete('/admin/api-switch/:id',     requireAuth, requireRole('ADMIN'), wrap(admin.apiSwitchRemove))
 router.get('/admin/operation-log/list',    requireAuth, requireRole('ADMIN'), wrap(admin.operationLogList))
 router.get('/admin/rate-limit/status',     requireAuth, requireRole('ADMIN'), wrap(admin.rateLimitStatus))
+router.get('/admin/resource/index',        requireAuth, requireRole('ADMIN'), wrap(resource.resourceIndex))
+router.get('/admin/resource/:resource/config', requireAuth, requireRole('ADMIN'), wrap(resource.resourceConfig))
+router.get('/admin/resource/:resource/list',   requireAuth, requireRole('ADMIN'), wrap(resource.resourceList))
+router.get('/admin/resource/:resource/:id',     requireAuth, requireRole('ADMIN'), wrap(resource.resourceDetail))
+router.post('/admin/resource/:resource',        requireAuth, requireRole('ADMIN'), wrap(resource.resourceCreate))
+router.put('/admin/resource/:resource/:id',     requireAuth, requireRole('ADMIN'), wrap(resource.resourceUpdate))
+router.delete('/admin/resource/:resource/:id',  requireAuth, requireRole('ADMIN'), wrap(resource.resourceRemove))
 
 export default router

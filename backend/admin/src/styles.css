@@ -204,6 +204,30 @@ body {
   color: #5f716a;
 }
 
+.resource-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.resource-form-grid .wide-field {
+  grid-column: 1 / -1;
+}
+
+.full-control {
+  width: 100%;
+}
+
+.detail-pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+}
+
 @media (max-width: 860px) {
   .login-page {
     grid-template-columns: 1fr;
@@ -214,6 +238,10 @@ body {
   }
 
   .placeholder-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .resource-form-grid {
     grid-template-columns: 1fr;
   }
 
