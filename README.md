@@ -1,4 +1,4 @@
-# 墨脉 · 𝑰𝒏𝒌𝑭𝒍𝒐𝒘
+# 墨脉 · InkFlow
 
 > 以 AI 为引擎，让中华传统文化「活」起来
 
@@ -27,36 +27,31 @@
 ## 技术架构
 
 ```
-客户端（Flutter Web）
-        ↓ HTTP / SSE
-     Nginx（静态托管 + 反向代理）
-        ↓
-   FastAPI 后端（Python 3.12）
-        ↓
-┌───────────────────────────────────┐
-│  SQLite（主数据库 + FTS5 搜索）   │
-│  Redis（会话缓存 + 限流）         │
-│  ChromaDB（向量语义搜索）         │
-│  Ollama（本地 AI 推理）           │
-│    ├── qwen2.5:7b（对话/创作）    │
-│    └── minicpm-v（书法视觉点评）  │
-└───────────────────────────────────┘
+客户端（前端）
+      ↓ HTTP / SSE
+  Node.js 后端（Express）
+      ↓
+┌────────────────────────────────────┐
+│  SQLite（主数据库，Prisma ORM）    │
+│  node-cache（内存缓存）            │
+│  Ollama（本地 AI 推理，离线）      │
+│    ├── qwen2.5:7b（对话/创作）     │
+│    └── minicpm-v（书法视觉点评）   │
+└────────────────────────────────────┘
 ```
 
 ### 技术选型
 
 | 层级 | 技术 |
 |------|------|
-| 前端 | Flutter 3.x（Web 构建） |
-| 后端 | FastAPI + SQLAlchemy 2.0（async） |
+| 后端框架 | Node.js + Express 4 |
+| ORM | Prisma 5 |
 | 数据库 | SQLite（WAL 模式） |
-| 缓存 | Redis 7 |
-| 全文搜索 | SQLite FTS5 |
-| 向量搜索 | ChromaDB（本地） |
+| 缓存 | node-cache（内存，无需额外服务） |
 | AI 推理 | Ollama（离线本地） |
 | 主模型 | qwen2.5:7b-instruct-q4_K_M |
 | 视觉模型 | minicpm-v:8b-2.6-q4_K_M |
-| 容器化 | Docker Compose |
+| 认证 | JWT（jsonwebtoken） |
 
 ---
 
@@ -64,24 +59,23 @@
 
 ```
 InkFlow/
-├── backend/                   后端（FastAPI）
-│   ├── main.py
-│   ├── core/                  配置、数据库、安全
-│   ├── models/                SQLAlchemy 数据模型
-│   ├── routers/               API 路由
-│   ├── services/              业务逻辑（AI、学习引擎等）
-│   ├── seeds/                 初始文化内容数据
-│   ├── data/                  SQLite 文件 + 上传目录
-│   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/                  前端（Flutter）
-│   ├── lib/
-│   └── build/                 构建产物（Nginx 托管）
-├── models/                    Ollama 模型文件（离线包）
-├── docker-compose.yml
-├── nginx.conf
-├── start.bat                  Windows 一键启动
-└── README.md
+├── backend/
+│   ├── src/
+│   │   ├── app.js              Express 应用入口
+│   │   ├── server.js           启动文件
+│   │   ├── config/             环境配置
+│   │   ├── routes/             路由（auth/contents/ai/learning/community/...）
+│   │   ├── controllers/        控制器
+│   │   ├── services/           业务逻辑（AI、学习引擎、成就系统）
+│   │   ├── middleware/         JWT 认证、文件上传
+│   │   └── utils/              工具函数（JWT、缓存、艾宾浩斯算法）
+│   ├── prisma/
+│   │   └── schema.prisma       数据库 Schema
+│   ├── seeds/                  初始化文化内容数据
+│   ├── uploads/                用户上传文件
+│   ├── .env.example
+│   └── package.json
+└── frontend/                   前端（待开发）
 ```
 
 ---
@@ -90,41 +84,38 @@ InkFlow/
 
 ### 环境要求
 
-- Windows 10/11，64 位
-- Docker Desktop（已启用 WSL2）
-- NVIDIA GPU + CUDA 驱动（推荐 RTX 系列，8GB+ VRAM）
-- NVIDIA Container Toolkit
+- Node.js 18+
+- Ollama（用于 AI 功能）
+- NVIDIA GPU，8GB+ VRAM（推荐 RTX 5060 Laptop 及以上）
 
-### 一键启动（离线模式）
+### 启动步骤
 
 ```bash
-# 克隆项目
+# 1. 克隆项目
 git clone https://github.com/hczdngr/InkFlow.git
-cd InkFlow
+cd InkFlow/backend
 
-# 启动所有服务
-docker compose up -d
+# 2. 安装依赖
+npm install
 
-# 初始化数据库和文化内容数据
-docker compose exec backend python seeds/init_data.py
+# 3. 复制配置文件
+cp .env.example .env
 
-# 打开应用
-start http://localhost:3000
-```
+# 4. 初始化数据库
+npm run db:migrate
 
-或直接运行 Windows 启动脚本：
+# 5. 写入初始数据
+npm run db:seed
 
-```
-双击 start.bat
+# 6. 启动开发服务器
+npm run dev
 ```
 
 ### 服务端口
 
 | 服务 | 地址 |
 |------|------|
-| 前端（App） | http://localhost:3000 |
 | 后端 API | http://localhost:8000 |
-| API 文档 | http://localhost:8000/docs |
 | Ollama | http://localhost:11434 |
 
 ---
@@ -137,7 +128,6 @@ start http://localhost:3000
 |------|------|------|
 | `qwen2.5:7b-instruct-q4_K_M` | 对话/翻译/诗词创作/出题 | ~4.5GB |
 | `minicpm-v:8b-2.6-q4_K_M` | 书法作品视觉点评 | ~5GB |
-| `nomic-embed-text` | 语义向量搜索 | ~0.3GB |
 
 > 推荐在 RTX 5060 Laptop 及以上 GPU 运行，显存 8GB+。
 
@@ -146,84 +136,34 @@ start http://localhost:3000
 ```bash
 ollama pull qwen2.5:7b-instruct-q4_K_M
 ollama pull minicpm-v:8b-2.6-q4_K_M
-ollama pull nomic-embed-text
 ```
 
 ---
 
-## API 文档
+## API 接口
 
-启动后访问 [http://localhost:8000/docs](http://localhost:8000/docs) 查看完整 Swagger 文档。
-
-核心接口分组：
-
-- `/api/auth` — 认证登录
-- `/api/contents` — 文化内容
-- `/api/ai` — AI 功能（支持 SSE 流式输出）
-- `/api/learning` — 学习进度与复习
-- `/api/works` — 社区作品
-- `/api/achievements` — 成就与排行
+| 分组 | 路径前缀 | 说明 |
+|------|----------|------|
+| 认证 | `/api/auth` | 注册、登录、刷新 Token |
+| 内容 | `/api/contents` | 诗词、典故、节气等文化内容 |
+| AI | `/api/ai` | 对话、翻译、书法点评（SSE 流式） |
+| 学习 | `/api/learning` | 进度、复习、打卡、测验 |
+| 社区 | `/api/community` | 作品、评论、点赞、挑战 |
+| 成就 | `/api/achievements` | 成就解锁、排行榜 |
+| 搜索 | `/api/search` | 全文内容搜索 |
+| 媒体 | `/api/media` | 文件上传与访问 |
 
 ---
 
-## 开发
-
-### 后端本地开发
+## 开发命令
 
 ```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
-```
-
-### 前端本地开发
-
-```bash
-cd frontend
-flutter pub get
-flutter run -d chrome
-```
-
-### 构建前端
-
-```bash
-cd frontend
-flutter build web --release
-# 产物在 frontend/build/web/，复制到 frontend/build/ 供 Nginx 托管
-```
-
----
-
-## 数据初始化说明
-
-`seeds/init_data.py` 会向 SQLite 写入：
-
-- 诗词内容（唐诗宋词精选）
-- 历史典故与成语
-- 节气知识库
-- 国学经典章节
-- 成就定义列表
-- 每日挑战题库
-
----
-
-## 离线部署说明
-
-本项目专为**完全离线环境**设计：
-
-- 所有 AI 推理通过 Ollama 本地执行
-- 数据库使用 SQLite，无需额外数据库服务（Redis 除外）
-- 前端构建为静态文件，由 Nginx 托管
-- Docker 镜像可提前拉取打包，现场无需联网
-
-**完整离线包结构**：
-```
-InkFlow-offline-package/
-├── images/          Docker 镜像（tar 包）
-├── models/          Ollama 模型文件
-└── InkFlow/         项目源码
+npm run dev          # 开发模式（nodemon 热重载）
+npm run start        # 生产模式
+npm run db:migrate   # 执行数据库迁移
+npm run db:seed      # 写入初始数据
+npm run db:studio    # 打开 Prisma Studio 可视化数据库
+npm run db:reset     # 重置数据库
 ```
 
 ---
