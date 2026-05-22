@@ -475,8 +475,9 @@ class _HomePageState extends State<HomePage> {
         context.go('/machinery');
       case 'policy':
         context.go('/policy');
-      case 'ai':
       case 'agri':
+        context.go('/agri');
+      case 'ai':
         context.go('/ai');
       case 'life':
         context.go('/publish');

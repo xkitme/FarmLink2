@@ -10,6 +10,7 @@ import '../pages/ai/ai_page.dart';
 import '../pages/market/market_page.dart';
 import '../pages/machinery/machinery_page.dart';
 import '../pages/disaster/disaster_page.dart';
+import '../pages/agri/agri_page.dart';
 import '../pages/publish/publish_page.dart';
 import '../pages/messages/messages_page.dart';
 import '../pages/policy/policy_page.dart';
@@ -53,6 +54,7 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
             GoRoute(path: '/policy', builder: (_, __) => const PolicyPage()),
             GoRoute(
                 path: '/disaster', builder: (_, __) => const DisasterPage()),
+            GoRoute(path: '/agri', builder: (_, __) => const AgriPage()),
             GoRoute(
                 path: '/data', builder: (_, __) => const DataDashboardPage()),
             GoRoute(path: '/publish', builder: (_, __) => const PublishPage()),
