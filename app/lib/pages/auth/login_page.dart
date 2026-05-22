@@ -200,13 +200,6 @@ class _LoginPageState extends State<LoginPage> {
                         label: const Text('注册账号'),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Center(
-                      child: TextButton(
-                        onPressed: () => context.go('/auth/login/register'),
-                        child: const Text('没有账号？立即注册'),
-                      ),
-                    ),
                   ],
                 ),
               ),
