@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
@@ -194,7 +195,14 @@ class _MarketPageState extends State<MarketPage> {
     final visibleProducts = _products.isEmpty ? _fallback : _products;
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(),
+      appBar: FarmAppBar(actions: [
+        IconButton(
+          tooltip: '流通服务',
+          onPressed: () => context.go('/market/service'),
+          icon: const Icon(Icons.dashboard_customize_outlined,
+              color: AppColors.onSurfaceVariant),
+        ),
+      ]),
       body: Stack(
         children: [
           RefreshIndicator(
