@@ -6,7 +6,7 @@ export default function Placeholder({ title, group }) {
       <div className="page-heading">
         <div>
           <Typography.Title level={3}>{title}</Typography.Title>
-          <Typography.Text type="secondary">该模块将在后续分段接入完整管理页面。</Typography.Text>
+          <Typography.Text type="secondary">该模块正在接入完整管理页面。</Typography.Text>
         </div>
         <Tag color="blue">{group}</Tag>
       </div>
@@ -21,7 +21,7 @@ export default function Placeholder({ title, group }) {
             <span>后续直接调用 `/api/v1` 下的业务接口。</span>
           </div>
           <div>
-            <strong>离线可演示</strong>
+            <strong>离线可用</strong>
             <span>管理台与后端均可在本机运行。</span>
           </div>
         </div>

@@ -102,8 +102,8 @@ class _MarketServicePageState extends State<MarketServicePage> {
                       if (_fromCache)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),
-                          child: AlertBanner('当前为离线缓存数据，请检查后端连接',
-                              critical: false),
+                          child:
+                              AlertBanner('当前为离线缓存数据，请检查后端连接', critical: false),
                         ),
                       const SectionTitle('实时行情'),
                       _priceList(),
@@ -199,8 +199,8 @@ class _MarketServicePageState extends State<MarketServicePage> {
                       color: AppColors.goldContainer.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(R.md),
                     ),
-                    child: const Icon(Icons.store,
-                        color: AppColors.goldContainer),
+                    child:
+                        const Icon(Icons.store, color: AppColors.goldContainer),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -235,7 +235,9 @@ class _MarketServicePageState extends State<MarketServicePage> {
 
   // ── 农资团购 ──────────────────────────────
   Widget _groupbuyList() {
-    if (_groupbuys.isEmpty) return const AppCard(child: Text('暂无团购，点击「发起」组织一次集采'));
+    if (_groupbuys.isEmpty) {
+      return const AppCard(child: Text('暂无团购，点击「发起」组织一次集采'));
+    }
     return Column(
       children: [
         for (final g in _groupbuys)
@@ -253,8 +255,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
                             style: const TextStyle(
                                 fontSize: 15, fontWeight: FontWeight.w600)),
                       ),
-                      StatusChip(
-                          '${g['status'] == 'SUCCESS' ? '已成团' : '进行中'}',
+                      StatusChip(g['status'] == 'SUCCESS' ? '已成团' : '进行中',
                           color: g['status'] == 'SUCCESS'
                               ? AppColors.onSurfaceVariant
                               : AppColors.primary),
@@ -295,12 +296,16 @@ class _MarketServicePageState extends State<MarketServicePage> {
       _field(target, '目标人数', number: true),
     ]);
     if (ok != true) return;
-    await _submit('/market/groupbuy', {
-      'title': title.text.trim(),
-      'itemName': item.text.trim(),
-      'unitPrice': double.tryParse(price.text) ?? 0,
-      'targetCount': int.tryParse(target.text) ?? 0,
-    }, 'group_buy', '团购已发起');
+    await _submit(
+        '/market/groupbuy',
+        {
+          'title': title.text.trim(),
+          'itemName': item.text.trim(),
+          'unitPrice': double.tryParse(price.text) ?? 0,
+          'targetCount': int.tryParse(target.text) ?? 0,
+        },
+        'group_buy',
+        '团购已发起');
   }
 
   Future<void> _joinGroupbuy(Map<String, dynamic> g) async {
@@ -409,8 +414,8 @@ class _MarketServicePageState extends State<MarketServicePage> {
   Future<void> _gradeDetect() async {
     final src = await _pickSource();
     if (src == null) return;
-    final img = await _picker.pickImage(
-        source: src, imageQuality: 82, maxWidth: 1600);
+    final img =
+        await _picker.pickImage(source: src, imageQuality: 82, maxWidth: 1600);
     if (img == null) return;
     final bytes = await img.readAsBytes();
     if (!mounted) return;
@@ -420,8 +425,9 @@ class _MarketServicePageState extends State<MarketServicePage> {
         builder: (_) => const Center(
             child: CircularProgressIndicator(color: AppColors.primary)));
     try {
-      final r = _m(await ApiClient.upload('/market/grade/detect', bytes,
-          img.name, fields: const {'productName': '农产品'}));
+      final r = _m(await ApiClient.upload(
+          '/market/grade/detect', bytes, img.name,
+          fields: const {'productName': '农产品'}));
       if (!mounted) return;
       Navigator.pop(context);
       _infoSheet('AI 质量分级',
@@ -456,8 +462,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text('$s',
-                      style: const TextStyle(
-                          fontSize: 14, height: 1.6)),
+                      style: const TextStyle(fontSize: 14, height: 1.6)),
                 ),
             ],
           ));
@@ -491,12 +496,10 @@ class _MarketServicePageState extends State<MarketServicePage> {
   // ── 溯源 / 物流 ───────────────────────────
   Future<void> _traceSheet() async {
     final code = TextEditingController();
-    final ok = await _formSheet(
-        title: '溯源查询', fields: [_field(code, '溯源码')]);
+    final ok = await _formSheet(title: '溯源查询', fields: [_field(code, '溯源码')]);
     if (ok != true) return;
     try {
-      final r =
-          _m(await ApiClient.get('/market/trace/${code.text.trim()}'));
+      final r = _m(await ApiClient.get('/market/trace/${code.text.trim()}'));
       final records = (r['records'] as List? ?? []).cast<dynamic>();
       final product = _m(r['product']);
       if (!mounted) return;
@@ -524,12 +527,10 @@ class _MarketServicePageState extends State<MarketServicePage> {
 
   Future<void> _logisticsSheet() async {
     final no = TextEditingController();
-    final ok = await _formSheet(
-        title: '冷链物流查询', fields: [_field(no, '物流单号')]);
+    final ok = await _formSheet(title: '冷链物流查询', fields: [_field(no, '物流单号')]);
     if (ok != true) return;
     try {
-      final r =
-          _m(await ApiClient.get('/market/logistics/${no.text.trim()}'));
+      final r = _m(await ApiClient.get('/market/logistics/${no.text.trim()}'));
       final traces = (r['traces'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
       _sheet('物流追踪 · ${r['company'] ?? ''}',

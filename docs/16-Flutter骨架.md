@@ -55,7 +55,7 @@ APK 构建验证通过。
 
 ## 配置提示
 
-比赛现场需修改 `app/lib/core/constants.dart` 的 `kBaseUrl` 为后端笔记本局域网 IP。
+本地联调时需修改 `app/lib/core/constants.dart` 的 `kBaseUrl` 为后端笔记本局域网 IP。
 
 ## 下一步
 

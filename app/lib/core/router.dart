@@ -12,6 +12,7 @@ import '../pages/machinery/machinery_page.dart';
 import '../pages/disaster/disaster_page.dart';
 import '../pages/agri/agri_page.dart';
 import '../pages/market/market_service_page.dart';
+import '../pages/machinery/machinery_service_page.dart';
 import '../pages/publish/publish_page.dart';
 import '../pages/messages/messages_page.dart';
 import '../pages/policy/policy_page.dart';
@@ -52,6 +53,9 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
             GoRoute(path: '/market', builder: (_, __) => const MarketPage()),
             GoRoute(
                 path: '/machinery', builder: (_, __) => const MachineryPage()),
+            GoRoute(
+                path: '/machinery/service',
+                builder: (_, __) => const MachineryServicePage()),
             GoRoute(path: '/policy', builder: (_, __) => const PolicyPage()),
             GoRoute(
                 path: '/disaster', builder: (_, __) => const DisasterPage()),

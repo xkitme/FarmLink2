@@ -107,8 +107,8 @@ class _DisasterPageState extends State<DisasterPage> {
                       if (_fromCache)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),
-                          child: AlertBanner('当前为离线缓存数据，请检查后端连接',
-                              critical: false),
+                          child:
+                              AlertBanner('当前为离线缓存数据，请检查后端连接', critical: false),
                         ),
                       _alertSection(),
                       const SectionTitle('风险指数'),
@@ -140,9 +140,9 @@ class _DisasterPageState extends State<DisasterPage> {
   // ── 当前预警 ──────────────────────────────
   Widget _alertSection() {
     if (_alerts.isEmpty) {
-      return AppCard(
+      return const AppCard(
         child: Row(
-          children: const [
+          children: [
             Icon(Icons.verified, color: AppColors.primary),
             SizedBox(width: 10),
             Expanded(
@@ -578,8 +578,8 @@ class _DisasterPageState extends State<DisasterPage> {
     }
   }
 
-  Future<void> _submit(
-      String path, Map<String, dynamic> payload, String table, String okMsg) async {
+  Future<void> _submit(String path, Map<String, dynamic> payload, String table,
+      String okMsg) async {
     try {
       await ApiClient.post(path, body: payload);
       if (!mounted) return;
@@ -593,11 +593,10 @@ class _DisasterPageState extends State<DisasterPage> {
   }
 
   // ── 通用弹层 ──────────────────────────────
-  void _infoSheet(String title, String body) =>
-      _sheet(title,
-          child: Text(body,
-              style: const TextStyle(
-                  fontSize: 14, height: 1.7, color: AppColors.onSurface)));
+  void _infoSheet(String title, String body) => _sheet(title,
+      child: Text(body,
+          style: const TextStyle(
+              fontSize: 14, height: 1.7, color: AppColors.onSurface)));
 
   void _sheet(String title, {required Widget child}) {
     showModalBottomSheet(
@@ -671,8 +670,8 @@ class _DisasterPageState extends State<DisasterPage> {
     );
   }
 
-  Widget _chips(
-      List<String> options, ValueNotifier<String> sel, void Function(void Function()) setS) {
+  Widget _chips(List<String> options, ValueNotifier<String> sel,
+      void Function(void Function()) setS) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Wrap(

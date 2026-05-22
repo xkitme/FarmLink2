@@ -455,8 +455,7 @@ class _AiPageState extends State<AiPage> {
                     foregroundColor: AppColors.onSurfaceVariant,
                     fixedSize: const Size(36, 36),
                   ),
-                  onPressed: () =>
-                      toast(context, '语音问答接口已保留，Flutter 语音输入将在后续分段接入'),
+                  onPressed: () => toast(context, '语音问答正在接入本地识别服务'),
                   icon: const Icon(Icons.add, size: 20),
                 ),
                 const SizedBox(width: 8),

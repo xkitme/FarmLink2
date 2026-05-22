@@ -239,7 +239,7 @@ class PlaceholderPanel extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     color: AppColors.onSurface)),
             const SizedBox(height: 6),
-            const Text('功能页面将于后续分段实现',
+            const Text('功能正在接入本地服务',
                 style: TextStyle(color: AppColors.outline, fontSize: 13)),
           ],
         ),

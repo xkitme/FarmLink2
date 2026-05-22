@@ -50,7 +50,7 @@ export const API_CATALOG = [
         path: '/agri/record',
         auth: false,
         description: '创建播种、施肥、打药、灌溉、收获等农事记录。',
-        bodyNote: 'recordType、cropType、content、recordDate 是演示时最关键字段。',
+        bodyNote: 'recordType、cropType、content、recordDate 是创建农事记录的关键字段。',
         body: {
           userId: 1,
           plotId: 1,
@@ -133,7 +133,7 @@ export const API_CATALOG = [
         method: 'POST',
         path: '/policy/ai/ask',
         auth: true,
-        description: '基于本地 RAG/SQLite 知识库回答政策问题，断网可演示。',
+        description: '基于本地 RAG/SQLite 知识库回答政策问题，断网可用。',
         bodyNote: 'question 必填，regionCode 可用于区域政策过滤。',
         body: {
           question: '种植玉米有没有补贴，怎么申请？',

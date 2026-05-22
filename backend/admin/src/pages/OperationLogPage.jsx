@@ -158,7 +158,7 @@ export default function OperationLogPage() {
       <div className="page-heading">
         <div>
           <Typography.Title level={3}>系统操作日志</Typography.Title>
-          <Typography.Text type="secondary">审计后台和业务侧非 GET API 调用，便于比赛现场追踪演示行为。</Typography.Text>
+          <Typography.Text type="secondary">审计后台和业务侧非 GET API 调用，便于追踪业务操作行为。</Typography.Text>
         </div>
         <Tag color="purple">非 GET 自动记录</Tag>
       </div>
