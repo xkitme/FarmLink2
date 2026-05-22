@@ -1,12 +1,155 @@
 import 'package:flutter/material.dart';
+import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 
-class MachineryPage extends StatelessWidget {
+class MachineryPage extends StatefulWidget {
   const MachineryPage({super.key});
 
   @override
+  State<MachineryPage> createState() => _MachineryPageState();
+}
+
+class _Machine {
+  final int? id;
+  final String image;
+  final String name;
+  final String type;
+  final double price;
+  final double deposit;
+  final double rating;
+  final String owner;
+  final String distance;
+  final bool fromApi;
+
+  const _Machine({
+    this.id,
+    required this.image,
+    required this.name,
+    required this.type,
+    required this.price,
+    required this.deposit,
+    required this.rating,
+    required this.owner,
+    required this.distance,
+    this.fromApi = false,
+  });
+
+  factory _Machine.fromApi(Map<String, dynamic> json, int index) {
+    return _Machine(
+      id: json['id'] as int?,
+      image: 'assets/images/_5_2.jpg',
+      name: '${json['machineName'] ?? '共享农机'}',
+      type: '${json['machineType'] ?? '通用农机'}',
+      price: (json['dailyPrice'] as num?)?.toDouble() ?? 0,
+      deposit: (json['deposit'] as num?)?.toDouble() ?? 0,
+      rating: (json['rating'] as num?)?.toDouble() ?? 4.8,
+      owner: '机主 ${json['ownerId'] ?? '-'}',
+      distance: '${2.5 + index * 1.1} km',
+      fromApi: true,
+    );
+  }
+}
+
+class _MachineryPageState extends State<MachineryPage> {
+  static const _cacheKey = 'machinery:list';
+  static const _filters = ['附近可用', '大型拖拉机', '联合收割机', '无人机'];
+  var _activeFilter = 0;
+  var _loading = true;
+  var _fromCache = false;
+  var _booking = false;
+  String? _cacheTime;
+  String? _error;
+  List<_Machine> _machines = [];
+  _Machine? _selected;
+
+  static const _fallback = [
+    _Machine(
+      image: 'assets/images/_5_2.jpg',
+      name: '雷沃欧豹 M1004',
+      type: '100马力 轮式拖拉机',
+      price: 150,
+      deposit: 1000,
+      rating: 4.9,
+      owner: '李师傅',
+      distance: '2.5 km',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMachines();
+  }
+
+  Future<void> _loadMachines() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final type = _machineTypeQuery;
+      final data = await ApiClient.get('/machinery/list', query: {
+        'pageSize': 8,
+        'onlyAvailable': 1,
+        if (type != null) 'machineType': type,
+      });
+      final records = (data['records'] as List? ?? [])
+          .whereType<Map>()
+          .map((item) => item.cast<String, dynamic>())
+          .toList();
+      await OfflineCache.saveList('$_cacheKey:${type ?? 'all'}', records);
+      if (!mounted) return;
+      final machines = [
+        for (var i = 0; i < records.length; i++)
+          _Machine.fromApi(records[i], i),
+      ];
+      setState(() {
+        _machines = machines.isEmpty ? _fallback : machines;
+        _selected = _machines.first;
+        _fromCache = false;
+        _loading = false;
+      });
+    } catch (error) {
+      final type = _machineTypeQuery;
+      final key = '$_cacheKey:${type ?? 'all'}';
+      final cached = await OfflineCache.readList(key);
+      final cacheTime = await OfflineCache.updatedAt(key);
+      if (!mounted) return;
+      final machines = cached.isNotEmpty
+          ? [
+              for (var i = 0; i < cached.length; i++)
+                _Machine.fromApi(cached[i], i),
+            ]
+          : _fallback;
+      setState(() {
+        _machines = machines;
+        _selected = machines.first;
+        _fromCache = cached.isNotEmpty;
+        _cacheTime = cacheTime;
+        _error = cached.isNotEmpty ? null : '后端暂不可用，已展示内置农机数据';
+        _loading = false;
+      });
+    }
+  }
+
+  String? get _machineTypeQuery {
+    switch (_activeFilter) {
+      case 1:
+        return '拖拉机';
+      case 2:
+        return '收割机';
+      case 3:
+        return '无人机';
+      default:
+        return null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final selected = _selected ?? _fallback.first;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const FarmAppBar(),
@@ -36,29 +179,44 @@ class MachineryPage extends StatelessWidget {
                   _searchBar(),
                   const SizedBox(height: 14),
                   _filterRow(),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          left: 90,
-                          top: 170,
-                          child: _mapMarker(
-                            active: true,
-                            label: '￥150/h',
-                          ),
-                        ),
-                        Positioned(
-                          right: 95,
-                          top: 270,
-                          child: _mapMarker(
-                            active: false,
-                            label: null,
-                          ),
-                        ),
-                      ],
+                  if (_fromCache) ...[
+                    const SizedBox(height: 10),
+                    AlertBanner(
+                        '当前农机来自离线缓存${_cacheTime == null ? '' : ' · $_cacheTime'}',
+                        critical: false),
+                  ],
+                  if (_error != null) ...[
+                    const SizedBox(height: 10),
+                    AppCard(
+                      color: AppColors.errorContainer,
+                      child: Text(_error!,
+                          style: const TextStyle(color: AppColors.error)),
                     ),
+                  ],
+                  Expanded(
+                    child: _loading
+                        ? const Loading(text: '正在同步附近农机...')
+                        : Stack(
+                            children: [
+                              for (var i = 0; i < _machines.length; i++)
+                                Positioned(
+                                  left: 42.0 + (i % 2) * 185,
+                                  top: 125.0 + i * 54,
+                                  child: GestureDetector(
+                                    onTap: () => setState(
+                                        () => _selected = _machines[i]),
+                                    child: _mapMarker(
+                                      active: _machines[i] == selected,
+                                      label: i == 0
+                                          ? '￥${_machines[i].price.toStringAsFixed(0)}/天'
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                   ),
-                  _machineCard(context),
+                  _machineCard(context, selected),
                 ],
               ),
             ),
@@ -108,32 +266,38 @@ class MachineryPage extends StatelessWidget {
   }
 
   Widget _filterRow() {
-    const filters = ['附近可用', '大型拖拉机', '联合收割机', '无人机'];
     return SizedBox(
       height: 44,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: filters.length,
+        itemCount: _filters.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (_, index) {
-          final active = index == 0;
-          return Container(
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: active ? AppColors.primary : AppColors.surface,
-              borderRadius: BorderRadius.circular(R.sm),
-              border: active
-                  ? null
-                  : Border.all(color: AppColors.outlineVariant, width: 1.5),
-              boxShadow: active ? null : AppColors.ambientShadow,
-            ),
-            child: Text(
-              filters[index],
-              style: TextStyle(
-                color: active ? Colors.white : AppColors.onSurface,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+          final active = index == _activeFilter;
+          return InkWell(
+            onTap: () {
+              setState(() => _activeFilter = index);
+              _loadMachines();
+            },
+            borderRadius: BorderRadius.circular(R.sm),
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: active ? AppColors.primary : AppColors.surface,
+                borderRadius: BorderRadius.circular(R.sm),
+                border: active
+                    ? null
+                    : Border.all(color: AppColors.outlineVariant, width: 1.5),
+                boxShadow: active ? null : AppColors.ambientShadow,
+              ),
+              child: Text(
+                _filters[index],
+                style: TextStyle(
+                  color: active ? Colors.white : AppColors.onSurface,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           );
@@ -146,17 +310,17 @@ class MachineryPage extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width: 58,
-          height: 58,
+          width: active ? 58 : 48,
+          height: active ? 58 : 48,
           decoration: BoxDecoration(
             color: active
                 ? AppColors.primary
                 : AppColors.secondary.withValues(alpha: 0.65),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
+            border: Border.all(color: Colors.white, width: active ? 3 : 2),
             boxShadow: AppColors.ambientShadow,
           ),
-          child: const Icon(Icons.agriculture, color: Colors.white, size: 26),
+          child: const Icon(Icons.agriculture, color: Colors.white, size: 24),
         ),
         if (label != null) ...[
           const SizedBox(height: 6),
@@ -180,7 +344,7 @@ class MachineryPage extends StatelessWidget {
     );
   }
 
-  Widget _machineCard(BuildContext context) {
+  Widget _machineCard(BuildContext context, _Machine machine) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -198,7 +362,7 @@ class MachineryPage extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(R.md),
                 child: Image.asset(
-                  'assets/images/_5_2.jpg',
+                  machine.image,
                   width: 112,
                   height: 112,
                   fit: BoxFit.cover,
@@ -216,40 +380,40 @@ class MachineryPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
-                            '雷沃欧豹 M1004',
-                            style: TextStyle(
-                              fontSize: 23,
+                            machine.name,
+                            style: const TextStyle(
+                              fontSize: 22,
                               height: 1.15,
                               fontWeight: FontWeight.w700,
                               color: AppColors.onSurface,
                             ),
                           ),
                         ),
-                        Icon(Icons.verified,
+                        const Icon(Icons.verified,
                             color: AppColors.primary, size: 28),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '100马力 轮式拖拉机',
-                      style: TextStyle(
+                    Text(
+                      machine.type,
+                      style: const TextStyle(
                         color: AppColors.onSurfaceVariant,
                         fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.star, color: AppColors.gold, size: 18),
-                        SizedBox(width: 4),
+                        const Icon(Icons.star, color: AppColors.gold, size: 18),
+                        const SizedBox(width: 4),
                         Text(
-                          '4.9 (128次作业)',
-                          style: TextStyle(
+                          '${machine.rating.toStringAsFixed(1)} · 押金￥${machine.deposit.toStringAsFixed(0)}',
+                          style: const TextStyle(
                             color: AppColors.onSurfaceVariant,
                             fontSize: 13,
                           ),
@@ -258,18 +422,18 @@ class MachineryPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     RichText(
-                      text: const TextSpan(
+                      text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '￥150',
-                            style: TextStyle(
+                            text: '￥${machine.price.toStringAsFixed(0)}',
+                            style: const TextStyle(
                               color: AppColors.primary,
-                              fontSize: 30,
+                              fontSize: 29,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          TextSpan(
-                            text: ' /小时',
+                          const TextSpan(
+                            text: ' /天',
                             style: TextStyle(
                               color: AppColors.onSurface,
                               fontSize: 16,
@@ -288,39 +452,39 @@ class MachineryPage extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 22,
-                backgroundColor: Color(0xFFFDCDBC),
+                backgroundColor: const Color(0xFFFDCDBC),
                 child: Text(
-                  '李',
-                  style: TextStyle(
+                  machine.owner.isEmpty ? '机' : machine.owner[0],
+                  style: const TextStyle(
                     color: AppColors.secondary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '李师傅',
-                      style: TextStyle(
+                      machine.owner,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppColors.onSurface,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
-                        Icon(Icons.place_outlined,
+                        const Icon(Icons.place_outlined,
                             size: 16, color: AppColors.onSurfaceVariant),
-                        SizedBox(width: 2),
+                        const SizedBox(width: 2),
                         Text(
-                          '距您 2.5 km',
-                          style: TextStyle(
+                          '距您 ${machine.distance}',
+                          style: const TextStyle(
                             color: AppColors.onSurfaceVariant,
                             fontSize: 13,
                           ),
@@ -339,7 +503,7 @@ class MachineryPage extends StatelessWidget {
                 ),
                 child: IconButton(
                   icon: const Icon(Icons.call, color: AppColors.primary),
-                  onPressed: () => toast(context, '电话联系将在后续分段接入'),
+                  onPressed: () => toast(context, '已为您保留机主联系方式'),
                 ),
               ),
             ],
@@ -363,7 +527,7 @@ class MachineryPage extends StatelessWidget {
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '今天 14:00 - 18:00',
+                          '明天 - 后天',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -379,8 +543,17 @@ class MachineryPage extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               ElevatedButton(
-                onPressed: () => toast(context, '预约农机将在后续分段接入'),
-                child: const Text('立即预约'),
+                onPressed: _booking || machine.id == null
+                    ? null
+                    : () => _bookMachine(machine),
+                child: _booking
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text('立即预约'),
               ),
             ],
           ),
@@ -388,4 +561,29 @@ class MachineryPage extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _bookMachine(_Machine machine) async {
+    if (machine.id == null) {
+      toast(context, '演示农机不能真实预约，请等待后端同步');
+      return;
+    }
+    setState(() => _booking = true);
+    final start = DateTime.now().add(const Duration(days: 1));
+    final end = DateTime.now().add(const Duration(days: 2));
+    try {
+      await ApiClient.post('/machinery/booking', body: {
+        'machineryId': machine.id,
+        'startDate': _date(start),
+        'endDate': _date(end),
+        'remark': 'Flutter App 本地演示预约',
+      });
+      if (mounted) toast(context, '预约已提交，可在后台预约表查看');
+    } catch (error) {
+      if (mounted) toast(context, '预约失败：$error', error: true);
+    } finally {
+      if (mounted) setState(() => _booking = false);
+    }
+  }
 }
+
+String _date(DateTime value) => value.toIso8601String().substring(0, 10);

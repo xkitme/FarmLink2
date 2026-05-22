@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url'
 import { config } from './config/index.js'
 import { registerRoutes } from './routes/index.js'
 import { traceMiddleware, notFoundHandler, errorHandler } from './middleware/error.js'
+import { optionalAuth } from './middleware/auth.js'
 import { apiSwitchMiddleware, operationLogMiddleware, rateLimitMiddleware } from './middleware/apiControl.js'
 import { ok } from './utils/response.js'
 
@@ -16,6 +17,7 @@ app.use(cors())
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 app.use(traceMiddleware)
+app.use(optionalAuth)
 app.use(rateLimitMiddleware)
 app.use(apiSwitchMiddleware)
 app.use(operationLogMiddleware)
