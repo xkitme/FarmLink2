@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
@@ -61,8 +62,8 @@ class _PolicyPageState extends State<PolicyPage> {
     });
     try {
       final items = await _fetch(tab);
-      await OfflineCache.saveList('policy:tab$tab',
-          items.map((e) => _toCache(e)).toList());
+      await OfflineCache.saveList(
+          'policy:tab$tab', items.map((e) => _toCache(e)).toList());
       if (!mounted) return;
       setState(() {
         _data[tab] = items;
@@ -86,8 +87,7 @@ class _PolicyPageState extends State<PolicyPage> {
   /// 三个 tab 各自请求不同后端接口
   Future<List<_PolicyItem>> _fetch(int tab) async {
     if (tab == 0) {
-      final data =
-          await ApiClient.get('/policy/list', query: {'pageSize': 20});
+      final data = await ApiClient.get('/policy/list', query: {'pageSize': 20});
       final records = (data['records'] as List? ?? []);
       return [
         for (var i = 0; i < records.length; i++)
@@ -98,8 +98,7 @@ class _PolicyPageState extends State<PolicyPage> {
       final data = await ApiClient.get('/party/lesson/list');
       final list = (data as List? ?? []);
       return [
-        for (var i = 0; i < list.length; i++)
-          _partyItem(_castMap(list[i]), i)
+        for (var i = 0; i < list.length; i++) _partyItem(_castMap(list[i]), i)
       ];
     }
     final data = await ApiClient.get('/village/honor');
@@ -185,7 +184,14 @@ class _PolicyPageState extends State<PolicyPage> {
     final list = _data[_active] ?? [];
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(),
+      appBar: FarmAppBar(actions: [
+        IconButton(
+          tooltip: '政策服务',
+          onPressed: () => context.go('/policy/service'),
+          icon: const Icon(Icons.dashboard_customize_outlined,
+              color: AppColors.onSurfaceVariant),
+        ),
+      ]),
       body: Column(
         children: [
           _tabsBar(),
