@@ -18,7 +18,7 @@ export default function Placeholder({ title, group }) {
           </div>
           <div>
             <strong>后端已接入</strong>
-            <span>后续直接调用 `/api/v1` 下的业务接口。</span>
+            <span>直接调用 `/api/v1` 下的业务接口。</span>
           </div>
           <div>
             <strong>离线可用</strong>

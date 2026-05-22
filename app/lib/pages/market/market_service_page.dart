@@ -219,11 +219,10 @@ class _MarketServicePageState extends State<MarketServicePage> {
                       ],
                     ),
                   ),
-                  if ('${b['contactPhone'] ?? ''}'.isNotEmpty)
+                  if (_buyerPhone(b).isNotEmpty)
                     IconButton(
                       icon: const Icon(Icons.call, color: AppColors.primary),
-                      onPressed: () =>
-                          toast(context, '联系电话：${b['contactPhone']}'),
+                      onPressed: () => toast(context, '联系电话：${_buyerPhone(b)}'),
                     ),
                 ],
               ),
@@ -232,6 +231,9 @@ class _MarketServicePageState extends State<MarketServicePage> {
       ],
     );
   }
+
+  String _buyerPhone(Map<String, dynamic> buyer) =>
+      '${buyer['phone'] ?? buyer['contactPhone'] ?? ''}';
 
   // ── 农资团购 ──────────────────────────────
   Widget _groupbuyList() {
