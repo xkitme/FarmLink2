@@ -32,7 +32,8 @@ class ProfilePage extends StatelessWidget {
                 CircleAvatar(
                   radius: 32,
                   backgroundColor: Colors.white.withValues(alpha: 0.22),
-                  child: const Icon(Icons.person, size: 36, color: Colors.white),
+                  child:
+                      const Icon(Icons.person, size: 36, color: Colors.white),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -59,7 +60,7 @@ class ProfilePage extends StatelessWidget {
                                     color: Colors.white, fontSize: 12)),
                           ),
                           const SizedBox(width: 8),
-                          Icon(Icons.stars_rounded,
+                          const Icon(Icons.stars_rounded,
                               color: AppColors.gold, size: 16),
                           const SizedBox(width: 2),
                           Text('${user?.points ?? 0} 积分',
@@ -140,8 +141,8 @@ class ProfilePage extends StatelessWidget {
         ),
       );
 
-  Widget _divider() => Container(
-      width: 1, height: 32, color: AppColors.outlineVariant);
+  Widget _divider() =>
+      Container(width: 1, height: 32, color: AppColors.outlineVariant);
 
   Widget _line() => const Divider(height: 1, indent: 56);
 

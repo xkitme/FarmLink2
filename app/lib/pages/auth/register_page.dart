@@ -53,7 +53,8 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  Widget _field(String label, TextEditingController c, String hint, IconData icon,
+  Widget _field(
+      String label, TextEditingController c, String hint, IconData icon,
       {bool obscure = false, TextInputAction action = TextInputAction.next}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,7 +69,8 @@ class _RegisterPageState extends State<RegisterPage> {
           controller: c,
           obscureText: obscure,
           textInputAction: action,
-          onSubmitted: action == TextInputAction.done ? (_) => _register() : null,
+          onSubmitted:
+              action == TextInputAction.done ? (_) => _register() : null,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: Icon(icon, color: AppColors.outline),
@@ -104,7 +106,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       color: AppColors.onSurface)),
               const SizedBox(height: 4),
               const Text('开启你的数字助农之旅',
-                  style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14)),
+                  style: TextStyle(
+                      color: AppColors.onSurfaceVariant, fontSize: 14)),
               const SizedBox(height: 24),
               _field('昵称', _nickname, '怎么称呼你', Icons.badge_outlined),
               _field('用户名', _username, '字母 / 数字', Icons.person_outline),
@@ -113,7 +116,8 @@ class _RegisterPageState extends State<RegisterPage> {
               if (_error != null) ...[
                 Text(_error!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                    style:
+                        const TextStyle(color: AppColors.error, fontSize: 13)),
                 const SizedBox(height: 8),
               ],
               const SizedBox(height: 8),

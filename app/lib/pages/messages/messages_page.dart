@@ -6,10 +6,34 @@ class MessagesPage extends StatelessWidget {
   const MessagesPage({super.key});
 
   static const _items = [
-    (icon: Icons.thunderstorm, title: '气象预警', desc: '红色暴雨预警已发布', color: AppColors.error, time: '10:24'),
-    (icon: Icons.account_balance, title: '惠农政策', desc: '2024 年实际种粮补贴开始申报', color: AppColors.primaryContainer, time: '昨天'),
-    (icon: Icons.eco, title: '农事提醒', desc: '柑橘进入保果期，注意疏果', color: AppColors.primary, time: '昨天'),
-    (icon: Icons.campaign, title: '系统通知', desc: '田园通 v1.0 正式上线', color: AppColors.goldContainer, time: '2 天前'),
+    (
+      icon: Icons.thunderstorm,
+      title: '气象预警',
+      desc: '红色暴雨预警已发布',
+      color: AppColors.error,
+      time: '10:24'
+    ),
+    (
+      icon: Icons.account_balance,
+      title: '惠农政策',
+      desc: '2024 年实际种粮补贴开始申报',
+      color: AppColors.primaryContainer,
+      time: '昨天'
+    ),
+    (
+      icon: Icons.eco,
+      title: '农事提醒',
+      desc: '柑橘进入保果期，注意疏果',
+      color: AppColors.primary,
+      time: '昨天'
+    ),
+    (
+      icon: Icons.campaign,
+      title: '系统通知',
+      desc: '田园通 v1.0 正式上线',
+      color: AppColors.goldContainer,
+      time: '2 天前'
+    ),
   ];
 
   @override
@@ -46,7 +70,8 @@ class MessagesPage extends StatelessWidget {
                             children: [
                               Text(m.title,
                                   style: const TextStyle(
-                                      fontSize: 14, fontWeight: FontWeight.w600)),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600)),
                               const Spacer(),
                               Text(m.time,
                                   style: const TextStyle(
@@ -56,7 +81,8 @@ class MessagesPage extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(m.desc,
                               style: const TextStyle(
-                                  fontSize: 12, color: AppColors.onSurfaceVariant)),
+                                  fontSize: 12,
+                                  color: AppColors.onSurfaceVariant)),
                         ],
                       ),
                     ),

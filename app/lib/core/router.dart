@@ -7,8 +7,11 @@ import '../pages/auth/register_page.dart';
 import '../pages/home/shell_page.dart';
 import '../pages/home/home_page.dart';
 import '../pages/ai/ai_page.dart';
+import '../pages/market/market_page.dart';
+import '../pages/machinery/machinery_page.dart';
 import '../pages/publish/publish_page.dart';
 import '../pages/messages/messages_page.dart';
+import '../pages/policy/policy_page.dart';
 import '../pages/profile/profile_page.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
@@ -40,11 +43,16 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
           navigatorKey: _shellKey,
           builder: (ctx, state, child) => ShellPage(child: child),
           routes: [
-            GoRoute(path: '/home',     builder: (_, __) => const HomePage()),
-            GoRoute(path: '/ai',       builder: (_, __) => const AiPage()),
-            GoRoute(path: '/publish',  builder: (_, __) => const PublishPage()),
-            GoRoute(path: '/messages', builder: (_, __) => const MessagesPage()),
-            GoRoute(path: '/profile',  builder: (_, __) => const ProfilePage()),
+            GoRoute(path: '/home', builder: (_, __) => const HomePage()),
+            GoRoute(path: '/ai', builder: (_, __) => const AiPage()),
+            GoRoute(path: '/market', builder: (_, __) => const MarketPage()),
+            GoRoute(
+                path: '/machinery', builder: (_, __) => const MachineryPage()),
+            GoRoute(path: '/policy', builder: (_, __) => const PolicyPage()),
+            GoRoute(path: '/publish', builder: (_, __) => const PublishPage()),
+            GoRoute(
+                path: '/messages', builder: (_, __) => const MessagesPage()),
+            GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
           ],
         ),
       ],

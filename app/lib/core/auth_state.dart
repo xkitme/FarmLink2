@@ -35,9 +35,13 @@ class AuthState extends ChangeNotifier {
     await _save(data as Map<String, dynamic>);
   }
 
-  Future<void> register(String username, String password, String nickname) async {
-    final data = await ApiClient.post('/auth/register',
-        body: {'username': username, 'password': password, 'nickname': nickname});
+  Future<void> register(
+      String username, String password, String nickname) async {
+    final data = await ApiClient.post('/auth/register', body: {
+      'username': username,
+      'password': password,
+      'nickname': nickname
+    });
     await _save(data as Map<String, dynamic>);
   }
 

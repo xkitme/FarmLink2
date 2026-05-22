@@ -7,11 +7,11 @@ class ShellPage extends StatelessWidget {
   const ShellPage({super.key, required this.child});
 
   static const _tabs = [
-    (path: '/home',     icon: Icons.home_rounded,        label: '首页'),
-    (path: '/ai',       icon: Icons.smart_toy_rounded,   label: 'AI 农技'),
-    (path: '/publish',  icon: Icons.add_circle_rounded,  label: '发布'),
-    (path: '/messages', icon: Icons.mail_rounded,        label: '消息'),
-    (path: '/profile',  icon: Icons.person_rounded,      label: '我的'),
+    (path: '/home', icon: Icons.home_rounded, label: '首页'),
+    (path: '/ai', icon: Icons.smart_toy_rounded, label: 'AI 农技'),
+    (path: '/publish', icon: Icons.add_circle_rounded, label: '发布'),
+    (path: '/messages', icon: Icons.mail_rounded, label: '消息'),
+    (path: '/profile', icon: Icons.person_rounded, label: '我的'),
   ];
 
   int _index(String loc) {
@@ -88,11 +88,12 @@ class _NavItem extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 26),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(
-              fontSize: 12,
-              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              color: color,
-            )),
+            Text(label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                  color: color,
+                )),
           ],
         ),
       ),

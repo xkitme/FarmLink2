@@ -64,7 +64,8 @@ class ApiClient {
       {String field = 'image', Map<String, String>? fields}) async {
     final req = http.MultipartRequest('POST', _uri(path))
       ..headers.addAll({if (_token != null) 'Authorization': 'Bearer $_token'})
-      ..files.add(http.MultipartFile.fromBytes(field, bytes, filename: filename));
+      ..files
+          .add(http.MultipartFile.fromBytes(field, bytes, filename: filename));
     if (fields != null) req.fields.addAll(fields);
     final streamed = await req.send().timeout(const Duration(seconds: 60));
     return _parse(await http.Response.fromStream(streamed));

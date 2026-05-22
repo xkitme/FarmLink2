@@ -1,39 +1,36 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 
-/// 品牌顶栏：白底，左农机图标、居中「FarmLink 田园通」、右铃铛
+/// 品牌顶栏：白底 h64，左农机图标、居中「FarmLink 田园通」粗体绿、右铃铛
 class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final bool showLeading;
   final List<Widget>? actions;
   final VoidCallback? onBell;
-  const FarmAppBar({super.key, this.showLeading = true, this.actions, this.onBell});
+  const FarmAppBar({super.key, this.actions, this.onBell});
 
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => const Size.fromHeight(64);
 
   @override
   Widget build(BuildContext context) {
     return AppBar(
+      toolbarHeight: 64,
       automaticallyImplyLeading: false,
-      leading: showLeading
-          ? Center(
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryContainer.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(R.sm),
-                ),
-                child: const Icon(Icons.agriculture, color: AppColors.primary, size: 22),
-              ),
-            )
-          : null,
-      title: const Text('FarmLink 田园通'),
+      titleSpacing: 0,
+      leading: const Center(
+        child: Icon(Icons.agriculture, color: AppColors.primary, size: 26),
+      ),
+      title: const Text('FarmLink 田园通',
+          style: TextStyle(
+              color: AppColors.primary,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3)),
       actions: actions ??
           [
             IconButton(
               onPressed: onBell ?? () {},
-              icon: const Icon(Icons.notifications_none, color: AppColors.onSurfaceVariant),
+              icon: const Icon(Icons.notifications_none,
+                  color: AppColors.onSurfaceVariant),
             ),
           ],
     );
@@ -90,8 +87,11 @@ class SectionTitle extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(2, 20, 2, 12),
         child: Row(
           children: [
-            Text(text, style: const TextStyle(
-              fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.onSurface)),
+            Text(text,
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.onSurface)),
             const Spacer(),
             if (trailing != null) trailing!,
           ],
@@ -111,8 +111,9 @@ class StatusChip extends StatelessWidget {
           color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(R.sm),
         ),
-        child: Text(text, style: TextStyle(
-          fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+        child: Text(text,
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w600, color: color)),
       );
 }
 
@@ -128,14 +129,17 @@ class AlertBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+            const Icon(Icons.warning_amber_rounded,
+                color: Colors.white, size: 20),
             const SizedBox(width: 8),
             Expanded(
               child: Text(text,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -151,10 +155,12 @@ class Loading extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2.5),
+            const CircularProgressIndicator(
+                color: AppColors.primary, strokeWidth: 2.5),
             if (text != null) ...[
               const SizedBox(height: 12),
-              Text(text!, style: const TextStyle(color: AppColors.onSurfaceVariant)),
+              Text(text!,
+                  style: const TextStyle(color: AppColors.onSurfaceVariant)),
             ],
           ],
         ),
@@ -173,7 +179,9 @@ class EmptyView extends StatelessWidget {
           children: [
             Icon(icon, size: 56, color: AppColors.outlineVariant),
             const SizedBox(height: 12),
-            Text(text, style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14)),
+            Text(text,
+                style: const TextStyle(
+                    color: AppColors.onSurfaceVariant, fontSize: 14)),
           ],
         ),
       );
@@ -189,9 +197,11 @@ class ErrorRetry extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off, size: 56, color: AppColors.outlineVariant),
+            const Icon(Icons.cloud_off,
+                size: 56, color: AppColors.outlineVariant),
             const SizedBox(height: 12),
-            Text(message, style: const TextStyle(color: AppColors.onSurfaceVariant)),
+            Text(message,
+                style: const TextStyle(color: AppColors.onSurfaceVariant)),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: onRetry,
@@ -223,8 +233,11 @@ class PlaceholderPanel extends StatelessWidget {
               child: Icon(icon, size: 44, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
-            Text(title, style: const TextStyle(
-                fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.onSurface)),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.onSurface)),
             const SizedBox(height: 6),
             const Text('功能页面将于后续分段实现',
                 style: TextStyle(color: AppColors.outline, fontSize: 13)),

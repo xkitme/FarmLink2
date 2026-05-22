@@ -1,47 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../widgets/common.dart';
 
+/// 首页 · 气象灾害看板 — 1:1 复刻设计稿 _2
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  static const _quick = [
-    (icon: Icons.camera_alt_rounded,   label: '病害识别', color: AppColors.primary),
-    (icon: Icons.thunderstorm_rounded, label: '气象预警', color: AppColors.error),
-    (icon: Icons.trending_up_rounded,  label: '行情查询', color: AppColors.goldContainer),
-    (icon: Icons.account_balance,      label: '惠农政策', color: AppColors.primaryContainer),
-    (icon: Icons.agriculture_rounded,  label: '农机预约', color: AppColors.secondary),
-    (icon: Icons.smart_toy_rounded,    label: 'AI 问答',  color: AppColors.primary),
-    (icon: Icons.report_problem,       label: '灾情上报', color: AppColors.error),
-    (icon: Icons.grid_view_rounded,    label: '全部',     color: AppColors.onSurfaceVariant),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthState>().user;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const FarmAppBar(),
-      body: ListView(
-        padding: EdgeInsets.zero,
+      body: Column(
         children: [
-          const AlertBanner('【红色预警】预计未来 24 小时有特大暴雨，请低洼地带农户做好排水防涝准备。'),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          const AlertBanner(
+              '【红色预警】预计未来 24 小时内将有特大暴雨，请低洼地带农户及时做好排水防涝准备，暂停田间作业。'),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
               children: [
-                _greeting(user?.displayName ?? '老乡'),
-                const SizedBox(height: 16),
-                _weatherCard().animate().fadeIn(duration: 400.ms).slideY(begin: 0.15),
-                const SectionTitle('常用功能'),
-                _quickGrid(context),
-                const SectionTitle('八大板块'),
-                _sectionGrid(context),
+                _weatherBento(),
+                const SizedBox(height: 24),
+                _forecastCard(),
+                const SectionTitle('核心服务'),
+                _serviceGrid(context),
               ],
             ),
           ),
@@ -50,172 +34,359 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _greeting(String name) {
-    return Row(
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.primaryContainer.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(R.md),
-          ),
-          child: const Icon(Icons.wb_sunny_rounded, color: AppColors.goldContainer),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _serviceGrid(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: kSections.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 14,
+        crossAxisSpacing: 14,
+        childAspectRatio: 1.62,
+      ),
+      itemBuilder: (context, index) {
+        final item = kSections[index];
+        final color = item['color'] as Color;
+        return AppCard(
+          onTap: () => _openSection(context, item['key'] as String),
+          child: Row(
             children: [
-              Text('你好，$name',
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(R.md),
+                ),
+                child: Icon(item['icon'] as IconData, color: color, size: 25),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  item['label'] as String,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface)),
-              const Text('今天也是适合耕作的好天气',
-                  style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant)),
+                    color: AppColors.onSurface,
+                    fontSize: 15,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ],
           ),
-        ),
+        );
+      },
+    );
+  }
+
+  void _openSection(BuildContext context, String key) {
+    switch (key) {
+      case 'market':
+        context.go('/market');
+        return;
+      case 'machinery':
+        context.go('/machinery');
+        return;
+      case 'policy':
+        context.go('/policy');
+        return;
+      case 'ai':
+      case 'agri':
+        context.go('/ai');
+        return;
+      case 'life':
+        context.go('/publish');
+        return;
+      case 'disaster':
+        toast(context, '当前页已展示气象灾害看板');
+        return;
+      case 'data':
+        context.go('/messages');
+        return;
+      default:
+        toast(context, '功能页面正在接入');
+    }
+  }
+
+  // 气象 Bento 网格
+  Widget _weatherBento() {
+    return Column(
+      children: [
+        _heroTempCard().animate().fadeIn(duration: 400.ms).slideY(begin: 0.12),
+        const SizedBox(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _soilCard()),
+            const SizedBox(width: 16),
+            Expanded(child: _humidityCard()),
+          ],
+        ).animate(delay: 120.ms).fadeIn(duration: 400.ms).slideY(begin: 0.12),
       ],
     );
   }
 
-  Widget _weatherCard() {
+  // 主温度卡（跨两列，暴雨云实景背景）
+  Widget _heroTempCard() {
     return Container(
+      height: 168,
       decoration: BoxDecoration(
-        gradient: AppColors.heroGradient,
         borderRadius: BorderRadius.circular(R.lg),
         boxShadow: AppColors.ambientShadow,
       ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset('assets/images/_2_1.jpg',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) =>
+                  const ColoredBox(color: Color(0xFF3F4A40))),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xCC2A2E27), Color(0x992A2E27)],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('当前气况 · 实验田 A 区',
+                              style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  letterSpacing: 1)),
+                          SizedBox(height: 6),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text('26°C',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.w700)),
+                              SizedBox(width: 8),
+                              Text('/ 32°C 最高',
+                                  style: TextStyle(
+                                      color: Colors.white70, fontSize: 14)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.thunderstorm,
+                        color: AppColors.primaryDim, size: 40),
+                  ],
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    _glassChip(Icons.air, '阵风 8 级'),
+                    const SizedBox(width: 12),
+                    _glassChip(Icons.water_drop, '降水率 95%'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _glassChip(IconData icon, String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(R.md),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppColors.onSurface),
+            const SizedBox(width: 4),
+            Text(text,
+                style:
+                    const TextStyle(fontSize: 12, color: AppColors.onSurface)),
+          ],
+        ),
+      );
+
+  // 土壤墒情卡（麦金描边）
+  Widget _soilCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.lg),
+        border: Border.all(color: AppColors.gold),
+        boxShadow: AppColors.ambientShadow,
+      ),
+      padding: const EdgeInsets.all(16),
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text('当前气况 · 实验田 A 区',
-                  style: TextStyle(color: Colors.white70, fontSize: 12, letterSpacing: 0.5)),
-              const Spacer(),
-              const Icon(Icons.cloud_rounded, color: Colors.white, size: 28),
+              Icon(Icons.grass, size: 18, color: AppColors.tertiary),
+              SizedBox(width: 6),
+              Text('土壤墒情 (AI分析)',
+                  style: TextStyle(
+                      fontSize: 12,
+                      letterSpacing: 0.4,
+                      color: AppColors.tertiary)),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text('过饱和',
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.onSurface)),
+          SizedBox(height: 4),
+          Text('积水风险极高',
+              style: TextStyle(fontSize: 12, color: AppColors.error)),
+        ],
+      ),
+    );
+  }
+
+  // 相对湿度卡
+  Widget _humidityCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.lg),
+        boxShadow: AppColors.ambientShadow,
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.water_drop_outlined,
+                  size: 18, color: AppColors.onSurfaceVariant),
+              SizedBox(width: 6),
+              Text('相对湿度',
+                  style: TextStyle(
+                      fontSize: 12,
+                      letterSpacing: 0.4,
+                      color: AppColors.onSurfaceVariant)),
             ],
           ),
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: const [
-              Text('26°C',
-                  style: TextStyle(
-                      color: Colors.white, fontSize: 40, fontWeight: FontWeight.w700)),
-              SizedBox(width: 8),
-              Text('/ 32°C 最高',
-                  style: TextStyle(color: Colors.white70, fontSize: 14)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _weatherChip(Icons.air, '阵风 8 级'),
-              const SizedBox(width: 10),
-              _weatherChip(Icons.water_drop, '降水率 95%'),
-            ],
+          const Text('88%',
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.onSurface)),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: const LinearProgressIndicator(
+              value: 0.88,
+              minHeight: 8,
+              backgroundColor: AppColors.surfaceHigh,
+              color: AppColors.primary,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _weatherChip(IconData icon, String text) {
+  // 24 小时趋势预判
+  Widget _forecastCard() {
+    const bars = [
+      ('现在', 90.0, AppColors.error),
+      ('14:00', 100.0, AppColors.error),
+      ('16:00', 70.0, AppColors.errorContainer),
+      ('18:00', 40.0, Color(0x802E7D32)),
+      ('20:00', 20.0, Color(0x4D2E7D32)),
+      ('22:00', 10.0, Color(0x332E7D32)),
+    ];
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(R.md),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.lg),
+        boxShadow: AppColors.ambientShadow,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white, size: 14),
-          const SizedBox(width: 4),
-          Text(text, style: const TextStyle(color: Colors.white, fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
-  Widget _quickGrid(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      child: GridView.count(
-        crossAxisCount: 4,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 14,
-        childAspectRatio: 0.88,
-        children: [
-          for (final e in _quick)
-            InkWell(
-              onTap: () => context.go('/ai'),
-              borderRadius: BorderRadius.circular(R.sm),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('24小时趋势预判',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.onSurface)),
+              Row(
                 children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: e.color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(R.md),
-                    ),
-                    child: Icon(e.icon, color: e.color, size: 23),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(e.label,
-                      style: const TextStyle(fontSize: 12, color: AppColors.onSurface)),
+                  Text('详情',
+                      style: TextStyle(fontSize: 12, color: AppColors.primary)),
+                  Icon(Icons.chevron_right, size: 16, color: AppColors.primary),
                 ],
               ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionGrid(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.7,
-      children: [
-        for (final s in kSections)
-          AppCard(
-            padding: const EdgeInsets.all(14),
-            onTap: () => toast(context, '${s['label']} 功能页将于后续分段实现'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 120,
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: (s['color'] as Color).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(R.md),
+                for (final b in bars)
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 6),
+                          height: b.$2,
+                          decoration: BoxDecoration(
+                            color: b.$3,
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(4)),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(b.$1,
+                            style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.onSurfaceVariant)),
+                      ],
+                    ),
                   ),
-                  child: Icon(s['icon'] as IconData,
-                      color: s['color'] as Color, size: 22),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(s['label'] as String,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w600)),
-                ),
               ],
             ),
           ),
-      ],
-    );
+          const SizedBox(height: 8),
+          const Center(
+            child: Text('降水量预测 (mm)',
+                style:
+                    TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+          ),
+        ],
+      ),
+    ).animate(delay: 240.ms).fadeIn(duration: 400.ms).slideY(begin: 0.12);
   }
 }

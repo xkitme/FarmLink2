@@ -51,18 +51,18 @@ ThemeData buildAppTheme() {
     ),
 
     // 输入框：浅白填充 + 底部棕色边
-    inputDecorationTheme: InputDecorationTheme(
+    inputDecorationTheme: const InputDecorationTheme(
       filled: true,
       fillColor: AppColors.surfaceLow,
-      hintStyle: const TextStyle(color: AppColors.outline),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      enabledBorder: const UnderlineInputBorder(
+      hintStyle: TextStyle(color: AppColors.outline),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      enabledBorder: UnderlineInputBorder(
         borderSide: BorderSide(color: AppColors.secondary, width: 2),
       ),
-      focusedBorder: const UnderlineInputBorder(
+      focusedBorder: UnderlineInputBorder(
         borderSide: BorderSide(color: AppColors.primary, width: 2),
       ),
-      border: const UnderlineInputBorder(
+      border: UnderlineInputBorder(
         borderSide: BorderSide(color: AppColors.secondary, width: 2),
       ),
     ),
@@ -76,7 +76,8 @@ ThemeData buildAppTheme() {
         minimumSize: const Size(0, 52),
         padding: const EdgeInsets.symmetric(horizontal: 24),
         shape: const StadiumBorder(),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+        textStyle: const TextStyle(
+            fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5),
       ),
     ),
 
@@ -99,26 +100,54 @@ ThemeData buildAppTheme() {
     ),
 
     dividerTheme: const DividerThemeData(
-      color: AppColors.outlineVariant, thickness: 1, space: 1,
+      color: AppColors.outlineVariant,
+      thickness: 1,
+      space: 1,
     ),
 
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surfaceContainer,
-      labelStyle: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+      labelStyle:
+          const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
       side: BorderSide.none,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
     ),
 
     textTheme: const TextTheme(
-      headlineLarge:  TextStyle(color: AppColors.onSurface, fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -0.4),
-      headlineMedium: TextStyle(color: AppColors.onSurface, fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.2),
-      headlineSmall:  TextStyle(color: AppColors.onSurface, fontSize: 20, fontWeight: FontWeight.w600),
-      titleMedium:    TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600),
-      bodyLarge:      TextStyle(color: AppColors.onSurface, fontSize: 18, height: 1.55),
-      bodyMedium:     TextStyle(color: AppColors.onSurface, fontSize: 16, height: 1.5),
-      bodySmall:      TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14, height: 1.45),
-      labelLarge:     TextStyle(color: AppColors.onSurface, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.2),
-      labelSmall:     TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: 0.4),
+      headlineLarge: TextStyle(
+          color: AppColors.onSurface,
+          fontSize: 28,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.4),
+      headlineMedium: TextStyle(
+          color: AppColors.onSurface,
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.2),
+      headlineSmall: TextStyle(
+          color: AppColors.onSurface,
+          fontSize: 20,
+          fontWeight: FontWeight.w600),
+      titleMedium: TextStyle(
+          color: AppColors.onSurface,
+          fontSize: 16,
+          fontWeight: FontWeight.w600),
+      bodyLarge:
+          TextStyle(color: AppColors.onSurface, fontSize: 18, height: 1.55),
+      bodyMedium:
+          TextStyle(color: AppColors.onSurface, fontSize: 16, height: 1.5),
+      bodySmall: TextStyle(
+          color: AppColors.onSurfaceVariant, fontSize: 14, height: 1.45),
+      labelLarge: TextStyle(
+          color: AppColors.onSurface,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2),
+      labelSmall: TextStyle(
+          color: AppColors.onSurfaceVariant,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.4),
     ),
   );
 }
