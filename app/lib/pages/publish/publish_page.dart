@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-
+import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
+/// 发布 · 乡村动态 — 接入后端 /life/help + /village/affairs（样式复刻设计稿 _1）
 class PublishPage extends StatefulWidget {
   const PublishPage({super.key});
 
@@ -12,817 +14,401 @@ class PublishPage extends StatefulWidget {
 }
 
 class _PublishPageState extends State<PublishPage> {
-  final _farmContent = TextEditingController(text: '玉米地雨后补记：排水沟已疏通，准备少量追施速效肥。');
-  final _cropType = TextEditingController(text: '玉米');
-  final _cost = TextEditingController(text: '86');
-  final _disasterDescription =
-      TextEditingController(text: '北侧低洼地块积水，约 2.5 亩受影响，已拍照留档。');
-  final _affectedArea = TextEditingController(text: '2.5');
-  final _estimatedLoss = TextEditingController(text: '1800');
-  final _envDescription =
-      TextEditingController(text: '村口河沟有生活垃圾堆积，气味明显，建议安排清运。');
+  static const _cacheKey = 'life:help';
 
-  String _mode = 'farm';
-  String _recordType = '施肥';
-  String _disasterType = '暴雨';
-  String _problemType = '垃圾堆放';
-  bool _submitting = false;
-  List<SyncQueueItem> _queue = [];
-  String? _lastResult;
+  bool _loading = true;
+  bool _fromCache = false;
+  String? _cacheTime;
+  Map<String, dynamic>? _notice;
+  List<Map<String, dynamic>> _feed = [];
 
   @override
   void initState() {
     super.initState();
-    _loadQueue();
+    _load();
   }
 
-  @override
-  void dispose() {
-    _farmContent.dispose();
-    _cropType.dispose();
-    _cost.dispose();
-    _disasterDescription.dispose();
-    _affectedArea.dispose();
-    _estimatedLoss.dispose();
-    _envDescription.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadQueue() async {
-    final items = await OfflineSyncQueue.all();
-    if (mounted) setState(() => _queue = items);
-  }
-
-  Future<void> _syncNow() async {
-    if (_submitting) return;
-    setState(() => _submitting = true);
+  Future<void> _load() async {
+    setState(() => _loading = true);
     try {
-      final result = await OfflineSyncQueue.flush();
+      final results = await Future.wait<dynamic>([
+        ApiClient.get('/life/help/list', query: {'pageSize': 20}),
+        ApiClient.get('/village/affairs', query: {'pageSize': 1}),
+      ]);
+      final feed = ((results[0] as Map)['records'] as List? ?? [])
+          .whereType<Map>()
+          .map((e) => e.cast<String, dynamic>())
+          .toList();
+      final affairs = ((results[1] as Map)['records'] as List? ?? [])
+          .whereType<Map>()
+          .map((e) => e.cast<String, dynamic>())
+          .toList();
+      await OfflineCache.saveList(_cacheKey, feed);
       if (!mounted) return;
       setState(() {
-        _lastResult =
-            '本次处理 ${result.total} 条，成功 ${result.success} 条，剩余 ${result.remaining} 条';
+        _feed = feed;
+        _notice = affairs.isNotEmpty ? affairs.first : null;
+        _fromCache = false;
+        _loading = false;
       });
-      toast(context, result.remaining == 0 ? '本地队列已同步到本机后端' : '仍有数据留在本地队列');
-    } catch (e) {
-      if (mounted) toast(context, '同步失败：$e', error: true);
-    } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-        await _loadQueue();
-      }
-    }
-  }
-
-  Future<void> _submitPublish() async {
-    if (_submitting) return;
-    setState(() => _submitting = true);
-
-    try {
-      final spec = _buildPayload();
-      final result = await OfflineSyncQueue.enqueueAndFlush(
-        tableName: spec.tableName,
-        path: spec.path,
-        payload: spec.payload,
-      );
+    } catch (_) {
+      final cached = await OfflineCache.readList(_cacheKey);
+      final cacheTime = await OfflineCache.updatedAt(_cacheKey);
       if (!mounted) return;
       setState(() {
-        _lastResult =
-            result.allSynced ? '已完成本地提交并同步到 SQLite 后端' : '已进入本地队列，稍后可手动同步';
+        _feed = cached;
+        _fromCache = cached.isNotEmpty;
+        _cacheTime = cacheTime;
+        _loading = false;
       });
-      toast(context, result.allSynced ? '发布成功' : '已保存到本地队列');
-    } catch (e) {
-      if (mounted) toast(context, '提交失败：$e', error: true);
-    } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-        await _loadQueue();
-      }
     }
-  }
-
-  _PayloadSpec _buildPayload() {
-    final now = DateTime.now().toIso8601String();
-    if (_mode == 'farm') {
-      return _PayloadSpec(
-        tableName: 'farm_record',
-        path: '/agri/record',
-        payload: {
-          'recordType': _recordType,
-          'cropType': _cropType.text.trim(),
-          'content': _farmContent.text.trim(),
-          'cost': double.tryParse(_cost.text.trim()) ?? 0,
-          'recordDate': now,
-        },
-      );
-    }
-    if (_mode == 'disaster') {
-      return _PayloadSpec(
-        tableName: 'disaster_report',
-        path: '/disaster/report',
-        payload: {
-          'disasterType': _disasterType,
-          'affectedArea': double.tryParse(_affectedArea.text.trim()) ?? 0,
-          'estimatedLoss': double.tryParse(_estimatedLoss.text.trim()) ?? 0,
-          'description': _disasterDescription.text.trim(),
-          'location': {'lng': 118.74, 'lat': 32.06, 'source': 'mobile'},
-        },
-      );
-    }
-    return _PayloadSpec(
-      tableName: 'env_report',
-      path: '/life/env/report',
-      payload: {
-        'problemType': _problemType,
-        'description': _envDescription.text.trim(),
-        'location': {'lng': 118.75, 'lat': 32.05, 'source': 'mobile'},
-      },
-    );
-  }
-
-  Future<void> _clearQueue() async {
-    await OfflineSyncQueue.clear();
-    await _loadQueue();
-    if (mounted) toast(context, '本地队列已清空');
   }
 
   @override
   Widget build(BuildContext context) {
-    final pending = _queue.length;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const FarmAppBar(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _submitting ? null : _submitPublish,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openComposer,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        icon: _submitting
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Icon(Icons.cloud_upload_outlined),
-        label: Text(_submitting ? '处理中' : '发布'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
+        child: const Icon(Icons.edit),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-        children: [
-          _syncHero(pending),
-          const SizedBox(height: 16),
-          _modeSwitch(),
-          const SizedBox(height: 16),
-          _formCard(),
-          const SizedBox(height: 16),
-          _queueCard(),
-          const SectionTitle('乡村动态'),
-          _imagePost(context),
-          const SizedBox(height: 16),
-          _textPost(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _syncHero(int pending) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppColors.heroGradient,
-        borderRadius: BorderRadius.circular(R.lg),
-        boxShadow: AppColors.ambientShadow,
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(R.md),
-                ),
-                child: const Icon(Icons.sync_alt_rounded, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '发布中心',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 3),
-                    Text(
-                      '本地暂存 + 一键同步到 SQLite 后端',
-                      style: TextStyle(color: AppColors.onPrimaryContainer),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _heroStat('队列', '$pending 条'),
-              const SizedBox(width: 10),
-              _heroStat('模式', '离线优先'),
-              const Spacer(),
-              FilledButton.tonalIcon(
-                onPressed: _submitting || pending == 0 ? null : _syncNow,
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('同步'),
-              ),
-            ],
-          ),
-          if (_lastResult != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              _lastResult!,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _heroStat(String label, String value) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(R.sm),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label,
-                style: const TextStyle(
-                    color: AppColors.onPrimaryContainer, fontSize: 11)),
-            Text(value,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700)),
-          ],
-        ),
-      );
-
-  Widget _modeSwitch() {
-    final modes = [
-      ('farm', Icons.receipt_long_outlined, '农事'),
-      ('disaster', Icons.thunderstorm_outlined, '灾情'),
-      ('env', Icons.recycling_outlined, '环境'),
-    ];
-    return Row(
-      children: [
-        for (final mode in modes) ...[
-          Expanded(
-            child: InkWell(
-              onTap: () => setState(() => _mode = mode.$1),
-              borderRadius: BorderRadius.circular(999),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                height: 44,
-                decoration: BoxDecoration(
-                  color: _mode == mode.$1
-                      ? AppColors.primaryContainer
-                      : AppColors.surface,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: _mode == mode.$1
-                        ? AppColors.primaryContainer
-                        : AppColors.surfaceHigh,
-                  ),
-                  boxShadow: _mode == mode.$1 ? AppColors.ambientShadow : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(mode.$2,
-                        size: 18,
-                        color: _mode == mode.$1
-                            ? Colors.white
-                            : AppColors.primary),
-                    const SizedBox(width: 6),
-                    Text(
-                      mode.$3,
-                      style: TextStyle(
-                        color: _mode == mode.$1
-                            ? Colors.white
-                            : AppColors.onSurface,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          if (mode != modes.last) const SizedBox(width: 8),
-        ],
-      ],
-    );
-  }
-
-  Widget _formCard() {
-    if (_mode == 'farm') {
-      return AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _formHeader(
-                Icons.agriculture, '新增农事记录', '提交到 farm_record，同步日志可在后台查看'),
-            const SizedBox(height: 14),
-            _select(
-              label: '农事类型',
-              value: _recordType,
-              items: const ['播种', '施肥', '打药', '灌溉', '收获', '巡田'],
-              onChanged: (value) => setState(() => _recordType = value),
-            ),
-            const SizedBox(height: 12),
-            _field('作物', _cropType, icon: Icons.eco_outlined),
-            const SizedBox(height: 12),
-            _field('投入成本', _cost,
-                icon: Icons.payments_outlined,
-                keyboardType: TextInputType.number),
-            const SizedBox(height: 12),
-            _field('记录内容', _farmContent,
-                icon: Icons.edit_note_outlined, maxLines: 4),
-            const SizedBox(height: 14),
-            _submitButton('保存农事记录'),
-          ],
-        ),
-      );
-    }
-    if (_mode == 'disaster') {
-      return AppCard(
-        ai: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _formHeader(Icons.thunderstorm_outlined, '灾情快速上报',
-                '提交到 disaster_report，自动生成受灾等级'),
-            const SizedBox(height: 14),
-            _select(
-              label: '灾害类型',
-              value: _disasterType,
-              items: const ['暴雨', '冰雹', '干旱', '冻害', '虫灾'],
-              onChanged: (value) => setState(() => _disasterType = value),
-            ),
-            const SizedBox(height: 12),
-            _field('受灾面积（亩）', _affectedArea,
-                icon: Icons.square_foot_outlined,
-                keyboardType: TextInputType.number),
-            const SizedBox(height: 12),
-            _field('预估损失（元）', _estimatedLoss,
-                icon: Icons.price_check_outlined,
-                keyboardType: TextInputType.number),
-            const SizedBox(height: 12),
-            _field('灾情描述', _disasterDescription,
-                icon: Icons.report_problem_outlined, maxLines: 4),
-            const SizedBox(height: 14),
-            _submitButton('提交灾情上报'),
-          ],
-        ),
-      );
-    }
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _formHeader(
-              Icons.recycling_outlined, '环境问题举报', '提交到 env_report，用于乡村治理场景'),
-          const SizedBox(height: 14),
-          _select(
-            label: '问题类型',
-            value: _problemType,
-            items: const ['垃圾堆放', '水体污染', '焚烧秸秆', '噪音扰民', '其他'],
-            onChanged: (value) => setState(() => _problemType = value),
-          ),
-          const SizedBox(height: 12),
-          _field('问题描述', _envDescription,
-              icon: Icons.description_outlined, maxLines: 5),
-          const SizedBox(height: 14),
-          _submitButton('提交环境举报'),
-        ],
-      ),
-    );
-  }
-
-  Widget _formHeader(IconData icon, String title, String subtitle) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(R.md),
-            ),
-            child: Icon(icon, color: AppColors.primary),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: AppColors.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-
-  Widget _select({
-    required String label,
-    required String value,
-    required List<String> items,
-    required ValueChanged<String> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      decoration: _inputDecoration(label, Icons.tune),
-      borderRadius: BorderRadius.circular(R.md),
-      items: items
-          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-          .toList(),
-      onChanged: (value) {
-        if (value != null) onChanged(value);
-      },
-    );
-  }
-
-  Widget _field(
-    String label,
-    TextEditingController controller, {
-    IconData icon = Icons.edit_outlined,
-    int maxLines = 1,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      decoration: _inputDecoration(label, icon),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) =>
-      InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppColors.primary),
-        filled: true,
-        fillColor: AppColors.surfaceLow,
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
-          borderSide: const BorderSide(color: AppColors.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
-      );
-
-  Widget _submitButton(String label) => SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: _submitting ? null : _submitPublish,
-          icon: const Icon(Icons.save_alt_rounded, size: 18),
-          label: Text(label),
-        ),
-      );
-
-  Widget _queueCard() {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.storage_rounded, color: AppColors.primary),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  '本地同步队列',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface,
-                  ),
-                ),
-              ),
-              if (_queue.isNotEmpty)
-                TextButton(
-                  onPressed: _clearQueue,
-                  child: const Text('清空'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (_queue.isEmpty)
-            const Text(
-              '暂无待处理数据。提交表单后会先写入本地队列，再尝试同步到本机 SQLite 后端。',
-              style: TextStyle(color: AppColors.onSurfaceVariant, height: 1.5),
-            )
-          else
-            Column(
-              children: [
-                for (final item in _queue.take(4)) _queueTile(item),
-                if (_queue.length > 4)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      '还有 ${_queue.length - 4} 条数据未展示',
-                      style: const TextStyle(
-                        color: AppColors.onSurfaceVariant,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _queueTile(SyncQueueItem item) => Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceLow,
-          borderRadius: BorderRadius.circular(R.sm),
-        ),
-        child: Row(
-          children: [
-            Icon(_tableIcon(item.tableName), color: AppColors.primary),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      body: _loading
+          ? const Loading(text: '正在加载乡村动态...')
+          : RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  Text(
-                    _tableLabel(item.tableName),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.onSurface),
-                  ),
-                  Text(
-                    item.lastError ?? item.localUuid,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: AppColors.onSurfaceVariant, fontSize: 12),
-                  ),
+                  if (_fromCache)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: AlertBanner(
+                          '当前动态来自离线缓存${_cacheTime == null ? '' : ' · $_cacheTime'}',
+                          critical: false),
+                    ),
+                  _noticeCard(),
+                  const SizedBox(height: 24),
+                  const Text('乡村动态',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.onSurface)),
+                  const SizedBox(height: 16),
+                  if (_feed.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: EmptyView('还没有乡村动态，点击右下角发布第一条'),
+                    )
+                  else
+                    for (final p in _feed) ...[
+                      _postCard(p),
+                      const SizedBox(height: 16),
+                    ],
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
-            StatusChip(item.status.label,
-                color: item.status == SyncStatus.failed
-                    ? AppColors.error
-                    : item.status == SyncStatus.conflict
-                        ? AppColors.warning
-                        : AppColors.primary),
-          ],
-        ),
-      );
-
-  IconData _tableIcon(String tableName) {
-    if (tableName == 'farm_record') return Icons.receipt_long_outlined;
-    if (tableName == 'disaster_report') return Icons.thunderstorm_outlined;
-    if (tableName == 'env_report') return Icons.recycling_outlined;
-    return Icons.storage_rounded;
+    );
   }
 
-  String _tableLabel(String tableName) {
-    if (tableName == 'farm_record') return '农事记录';
-    if (tableName == 'disaster_report') return '灾情上报';
-    if (tableName == 'env_report') return '环境举报';
-    return tableName;
-  }
-
-  Widget _imagePost(BuildContext context) {
-    return AppCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  // 村委通知卡（来自 /village/affairs）
+  Widget _noticeCard() {
+    final title = '${_notice?['title'] ?? '村委信息暂无更新'}';
+    final content =
+        '${_notice?['content'] ?? '关注本页获取村委最新通知与公示信息。'}';
+    final org = '${_notice?['publishOrg'] ?? '村委会'}';
+    final date = _friendlyTime(_notice?['publishDate'] ?? _notice?['createdAt']);
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.goldContainer,
+        borderRadius: BorderRadius.circular(R.md),
+        boxShadow: AppColors.ambientShadow,
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Stack(
         children: [
-          _postHeader('王', '王大姐农场', '2 小时前 · 幸福村', AppColors.secondary,
-              avatarImage: 'assets/images/_1_1.jpg'),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Text(
-              '今年的阳光玫瑰长势特别好，多亏了 AI 推荐的施肥方案。周末可以开放采摘了，欢迎乡亲们来玩。',
-              style: TextStyle(
-                  fontSize: 16, height: 1.5, color: AppColors.onSurface),
-            ),
+          Positioned(
+            right: -16,
+            top: -16,
+            child: Icon(Icons.campaign,
+                size: 100, color: Colors.white.withValues(alpha: 0.10)),
           ),
-          AspectRatio(
-            aspectRatio: 4 / 3,
-            child: Image.asset(
-              'assets/images/_1_2.jpg',
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: AppColors.surfaceContainer,
-                child: const Icon(Icons.local_florist,
-                    size: 64, color: AppColors.primaryDim),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.campaign, color: Color(0xFFFFEFDA), size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFFFEFDA))),
+                    const SizedBox(height: 4),
+                    Text(content,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12,
+                            height: 1.5,
+                            color:
+                                const Color(0xFFFFEFDA).withValues(alpha: 0.9))),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(date,
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: const Color(0xFFFFEFDA)
+                                    .withValues(alpha: 0.75))),
+                        Text(org,
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: const Color(0xFFFFEFDA)
+                                    .withValues(alpha: 0.75))),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-          _postActions(),
         ],
       ),
     );
   }
 
-  Widget _textPost(BuildContext context) {
-    return AppCard(
-      padding: EdgeInsets.zero,
+  // 动态帖（来自 /life/help）
+  Widget _postCard(Map<String, dynamic> p) {
+    final type = '${p['type'] ?? '互助'}';
+    final title = '${p['title'] ?? ''}';
+    final content = '${p['content'] ?? ''}';
+    final phone = '${p['contactPhone'] ?? ''}';
+    final status = '${p['status'] ?? 'OPEN'}';
+    final time = _friendlyTime(p['createdAt']);
+    final color = _typeColor(type);
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.md),
+        border: Border.all(color: AppColors.surfaceHigh),
+        boxShadow: AppColors.ambientShadow,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _postHeader('赵', '老赵农机租赁', '昨天 15:30', AppColors.primary),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Text(
-              '新到两台大马力旋耕机，秋耕预约享受优惠。有需要的乡亲可以直接在农机共享页预约。',
-              style: TextStyle(
-                  fontSize: 16, height: 1.5, color: AppColors.onSurface),
-            ),
-          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                _tag('农机租赁'),
-                const SizedBox(width: 8),
-                _tag('秋耕服务'),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  alignment: Alignment.center,
+                  child: Text(type.characters.first,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('$type · 乡村互助',
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.onSurface)),
+                      Text(time,
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
+                StatusChip(status == 'DONE' ? '已响应' : '进行中',
+                    color: status == 'DONE'
+                        ? AppColors.onSurfaceVariant
+                        : AppColors.primary),
               ],
             ),
           ),
-          _postActions(showCall: true),
-        ],
-      ),
-    );
-  }
-
-  Widget _postHeader(String avatar, String name, String meta, Color avatarColor,
-      {String? avatarImage}) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          ClipOval(
-            child: avatarImage != null
-                ? Image.asset(
-                    avatarImage,
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
-                        _initialAvatar(avatar, avatarColor),
-                  )
-                : _initialAvatar(avatar, avatarColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (title.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+              child: Text(title,
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface)),
+            ),
+          if (content.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Text(content,
+                  style: const TextStyle(
+                      fontSize: 15, height: 1.5, color: AppColors.onSurface)),
+            ),
+          Container(
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: AppColors.surfaceHigh)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
               children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.onSurface,
+                const Icon(Icons.volunteer_activism,
+                    size: 18, color: AppColors.onSurfaceVariant),
+                const SizedBox(width: 6),
+                const Text('邻里互助',
+                    style: TextStyle(
+                        fontSize: 12, color: AppColors.onSurfaceVariant)),
+                const Spacer(),
+                if (phone.isNotEmpty)
+                  ElevatedButton.icon(
+                    onPressed: () => toast(context, '联系电话：$phone'),
+                    icon: const Icon(Icons.call, size: 16),
+                    label: const Text('联系 TA'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      textStyle: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
                   ),
-                ),
-                Text(
-                  meta,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                ),
               ],
             ),
           ),
-          const Icon(Icons.more_horiz, color: AppColors.primary),
         ],
       ),
     );
   }
 
-  Widget _initialAvatar(String text, Color color) => Container(
-        width: 40,
-        height: 40,
-        color: color,
-        alignment: Alignment.center,
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+  // 发布动态
+  Future<void> _openComposer() async {
+    final titleC = TextEditingController();
+    final contentC = TextEditingController();
+    final phoneC = TextEditingController();
+    var type = '求助';
+
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+      ),
+      builder: (sheetCtx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            20, 20, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + 20),
+        child: StatefulBuilder(
+          builder: (ctx, setSheet) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('发布乡村动态',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface)),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final t in ['求助', '互助', '分享', '招工'])
+                    ChoiceChip(
+                      label: Text(t),
+                      selected: type == t,
+                      onSelected: (_) => setSheet(() => type = t),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: titleC,
+                decoration: const InputDecoration(
+                    labelText: '标题', filled: true),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: contentC,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                    labelText: '详细内容', filled: true),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneC,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                    labelText: '联系电话（选填）', filled: true),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (titleC.text.trim().isEmpty) {
+                      toast(ctx, '请填写标题', error: true);
+                      return;
+                    }
+                    Navigator.pop(sheetCtx, true);
+                  },
+                  child: const Text('发布'),
+                ),
+              ),
+            ],
           ),
         ),
-      );
-
-  Widget _postActions({bool showCall = false}) {
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.surfaceHigh)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          _action(Icons.favorite_border, '128'),
-          const SizedBox(width: 20),
-          _action(Icons.chat_bubble_outline, '34'),
-          const SizedBox(width: 20),
-          _action(Icons.share_outlined, null),
-          if (showCall) ...[
-            const Spacer(),
-            ElevatedButton.icon(
-              onPressed: () => toast(context, '已打开联系机主流程'),
-              icon: const Icon(Icons.call, size: 16),
-              label: const Text('联系'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(0, 36),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                textStyle:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ],
       ),
     );
+
+    if (ok != true || !mounted) return;
+    final payload = {
+      'type': type,
+      'title': titleC.text.trim(),
+      'content': contentC.text.trim(),
+      'contactPhone': phoneC.text.trim(),
+    };
+    try {
+      await ApiClient.post('/life/help', body: payload);
+      if (!mounted) return;
+      toast(context, '发布成功');
+      _load();
+    } catch (_) {
+      // 离线：写入同步队列
+      await OfflineSyncQueue.enqueue(
+        tableName: 'help_request',
+        payload: payload,
+        path: '/life/help',
+      );
+      if (!mounted) return;
+      toast(context, '当前离线，已存入同步队列，联网后自动发布');
+    }
   }
 
-  Widget _action(IconData icon, String? count) => Row(
-        children: [
-          Icon(icon, size: 20, color: AppColors.onSurfaceVariant),
-          if (count != null) ...[
-            const SizedBox(width: 4),
-            Text(
-              count,
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.onSurfaceVariant),
-            ),
-          ],
-        ],
-      );
+  Color _typeColor(String type) {
+    if (type.contains('招工')) return AppColors.goldContainer;
+    if (type.contains('分享')) return AppColors.primaryContainer;
+    if (type.contains('互助')) return AppColors.secondary;
+    return AppColors.primary;
+  }
 
-  Widget _tag(String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceHigh,
-          borderRadius: BorderRadius.circular(R.sm),
-        ),
-        child: Text(
-          text,
-          style:
-              const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
-        ),
-      );
-}
-
-class _PayloadSpec {
-  final String tableName;
-  final String path;
-  final Map<String, dynamic> payload;
-
-  const _PayloadSpec({
-    required this.tableName,
-    required this.path,
-    required this.payload,
-  });
+  String _friendlyTime(dynamic value) {
+    final text = '$value';
+    if (text.length >= 16) return text.substring(0, 16).replaceAll('T', ' ');
+    if (text.length >= 10) return text.substring(0, 10);
+    return '近期';
+  }
 }
