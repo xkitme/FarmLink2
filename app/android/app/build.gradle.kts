@@ -8,6 +8,7 @@ plugins {
 android {
     namespace = "com.farmlink.farmlink"
     compileSdk = 36
+    buildToolsVersion = "36.1.0"
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -22,7 +23,7 @@ android {
     defaultConfig {
         applicationId = "com.farmlink.farmlink"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

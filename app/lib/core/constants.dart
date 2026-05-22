@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 // ── API ──────────────────────────────────────────────
-// 本地 web 调试用 localhost；真机部署改成后端笔记本局域网 IP
-const String kBaseUrl = 'http://localhost:8000';
+// 默认连接本机后端；APK 可通过 --dart-define=FARMLINK_API_BASE_URL=... 指定局域网地址。
+const String kBaseUrl = String.fromEnvironment(
+  'FARMLINK_API_BASE_URL',
+  defaultValue: 'http://localhost:8000',
+);
 const String kApiPrefix = '/api/v1';
 
 /// 设计系统：Agro-Modernist Tech（参考 docs/设计参考.md）

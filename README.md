@@ -21,20 +21,21 @@
 | 管理面板 | Ant Design Pro（React + Vite） |
 | 移动端 | Flutter（Android APK） |
 
-> 强制离线部署，无 Docker，完整项目包可参赛。
+> 强制离线部署，无 Docker，完整项目包可独立运行。
 
 ## 目录结构
 
 ```
-village/
+FarmLink/
 ├── docs/        开发进度记录
 ├── backend/     Node.js 后端 + Ant Design Pro 管理面板
-└── app/         Flutter 移动端
+├── app/         Flutter 移动端
+└── scripts/     本机启动与 APK 构建脚本
 ```
 
 ## 快速开始
 
-```bash
+```powershell
 cd backend
 npm run install:all      # 安装后端 + 管理面板依赖
 npm run db:migrate       # 初始化数据库
@@ -43,6 +44,27 @@ npm run dev              # 开发模式（后端 + 管理面板热更新）
 ```
 
 后端 API：`http://localhost:8000/api/v1`
+
+## 本机运行
+
+```powershell
+.\scripts\start-local.ps1
+```
+
+该脚本会启动本机后端，并构建/启动 Flutter Web 预览：
+
+- 后端 API：`http://localhost:8000/api/v1`
+- 移动端 Web：`http://localhost:5000`
+
+## APK 构建
+
+真机安装时，后端地址需要填写电脑在局域网中的 IP：
+
+```powershell
+.\scripts\build-apk.ps1 -ApiBaseUrl "http://192.168.1.10:8000" -Mode release
+```
+
+构建产物输出到 `dist/FarmLink.apk`。
 
 ## 开发进度
 

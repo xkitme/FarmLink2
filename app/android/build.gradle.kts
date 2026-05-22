@@ -7,6 +7,23 @@ allprojects {
     }
 }
 
+subprojects {
+    afterEvaluate {
+        if (plugins.hasPlugin("com.android.application")) {
+            extensions.configure<com.android.build.gradle.AppExtension>("android") {
+                compileSdkVersion(36)
+                buildToolsVersion("36.1.0")
+            }
+        }
+        if (plugins.hasPlugin("com.android.library")) {
+            extensions.configure<com.android.build.gradle.LibraryExtension>("android") {
+                compileSdkVersion(36)
+                buildToolsVersion("36.1.0")
+            }
+        }
+    }
+}
+
 val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 
