@@ -4,6 +4,7 @@ import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 
+/// 惠农政策 · 党建学习 · 文明乡风 —— 三个 tab 全部接入后端
 class PolicyPage extends StatefulWidget {
   const PolicyPage({super.key});
 
@@ -13,188 +14,204 @@ class PolicyPage extends StatefulWidget {
 
 class _PolicyItem {
   final int? id;
-  final String tab;
+  final String source; // policy / party / honor
   final String image;
   final String title;
   final String summary;
+  final String body;
   final String time;
   final String tag;
   final Color tagColor;
-  final bool fromApi;
 
   const _PolicyItem({
     this.id,
-    required this.tab,
+    required this.source,
     required this.image,
     required this.title,
     required this.summary,
+    required this.body,
     required this.time,
     required this.tag,
     required this.tagColor,
-    this.fromApi = false,
   });
-
-  factory _PolicyItem.fromApi(Map<String, dynamic> json, int index) {
-    final images = ['_3_1.jpg', '_3_2.jpg', '_3_3.jpg'];
-    final category = '${json['category'] ?? '政策解读'}';
-    return _PolicyItem(
-      id: json['id'] as int?,
-      tab: '惠农政策',
-      image: 'assets/images/${images[index % images.length]}',
-      title: '${json['title'] ?? '惠农政策'}',
-      summary: '${json['summary'] ?? json['publishOrg'] ?? '本地政策服务'}',
-      time: _friendlyTime(json['createdAt']),
-      tag: category,
-      tagColor: _tagColor(category),
-      fromApi: true,
-    );
-  }
 }
 
 class _PolicyPageState extends State<PolicyPage> {
-  static const _cacheKey = 'policy:list';
   static const _tabs = ['惠农政策', '党建学习', '文明乡风'];
-  var _active = 0;
-  var _loading = true;
-  var _fromCache = false;
-  String? _cacheTime;
-  String? _error;
-  List<_PolicyItem> _policies = [];
+  static const _images = ['_3_1.jpg', '_3_2.jpg', '_3_3.jpg'];
 
-  static const _fallback = [
-    _PolicyItem(
-      tab: '惠农政策',
-      image: 'assets/images/_3_1.jpg',
-      title: '2024年中央一号文件发布：推进乡村全面振兴',
-      summary: '关注国家最新涉农政策导向',
-      time: '今天 10:00',
-      tag: '政策解读',
-      tagColor: Color(0xFFFDCDBC),
-    ),
-    _PolicyItem(
-      tab: '惠农政策',
-      image: 'assets/images/_3_2.jpg',
-      title: '农业农村部部署春耕备耕工作，确保粮食丰收',
-      summary: '保障农资供应，加强技术指导',
-      time: '昨天 14:30',
-      tag: '春耕春管',
-      tagColor: AppColors.goldContainer,
-    ),
-    _PolicyItem(
-      tab: '惠农政策',
-      image: 'assets/images/_3_3.jpg',
-      title: '关于发放2024年实际种粮农民一次性补贴的通知',
-      summary: '资金直达基层，惠及广大农户',
-      time: '3天前',
-      tag: '补贴资金',
-      tagColor: AppColors.primaryContainer,
-    ),
-    _PolicyItem(
-      tab: '党建学习',
-      image: 'assets/images/_3_1.jpg',
-      title: '基层党组织带头推进高标准农田建设',
-      summary: '学习乡村振兴一线实践案例',
-      time: '今天',
-      tag: '学习打卡',
-      tagColor: AppColors.primaryContainer,
-    ),
-    _PolicyItem(
-      tab: '文明乡风',
-      image: 'assets/images/_1_2.jpg',
-      title: '文明积分兑换启动，志愿服务可累计积分',
-      summary: '共建共享，推动移风易俗',
-      time: '本周',
-      tag: '积分激励',
-      tagColor: AppColors.goldContainer,
-    ),
-  ];
+  var _active = 0;
+  final _loading = [true, true, true];
+  final _error = <int, String?>{0: null, 1: null, 2: null};
+  final _fromCache = [false, false, false];
+  final _data = <int, List<_PolicyItem>>{0: [], 1: [], 2: []};
 
   @override
   void initState() {
     super.initState();
-    _loadPolicies();
+    _loadTab(0);
+    _loadTab(1);
+    _loadTab(2);
   }
 
-  Future<void> _loadPolicies() async {
+  Future<void> _loadTab(int tab) async {
     setState(() {
-      _loading = true;
-      _error = null;
+      _loading[tab] = true;
+      _error[tab] = null;
     });
     try {
-      final data = await ApiClient.get('/policy/list', query: {'pageSize': 12});
-      final records = (data['records'] as List? ?? [])
-          .whereType<Map>()
-          .map((item) => item.cast<String, dynamic>())
-          .toList();
-      await OfflineCache.saveList(_cacheKey, records);
+      final items = await _fetch(tab);
+      await OfflineCache.saveList('policy:tab$tab',
+          items.map((e) => _toCache(e)).toList());
       if (!mounted) return;
       setState(() {
-        _policies = [
-          for (var i = 0; i < records.length; i++)
-            _PolicyItem.fromApi(records[i], i),
-        ];
-        _fromCache = false;
-        _loading = false;
+        _data[tab] = items;
+        _fromCache[tab] = false;
+        _loading[tab] = false;
       });
-    } catch (error) {
-      final cached = await OfflineCache.readList(_cacheKey);
-      final cacheTime = await OfflineCache.updatedAt(_cacheKey);
+    } catch (e) {
+      final cached = await OfflineCache.readList('policy:tab$tab');
       if (!mounted) return;
       setState(() {
-        _policies = cached.isNotEmpty
-            ? [
-                for (var i = 0; i < cached.length; i++)
-                  _PolicyItem.fromApi(cached[i], i),
-              ]
-            : _fallback.where((item) => item.tab == '惠农政策').toList();
-        _fromCache = cached.isNotEmpty;
-        _cacheTime = cacheTime;
-        _error = cached.isNotEmpty ? null : '后端暂不可用，已展示内置数据';
-        _loading = false;
+        _data[tab] = [
+          for (var i = 0; i < cached.length; i++) _fromCacheItem(cached[i], i)
+        ];
+        _fromCache[tab] = cached.isNotEmpty;
+        _error[tab] = cached.isEmpty ? '后端连接失败：$e' : null;
+        _loading[tab] = false;
       });
     }
   }
 
+  /// 三个 tab 各自请求不同后端接口
+  Future<List<_PolicyItem>> _fetch(int tab) async {
+    if (tab == 0) {
+      final data =
+          await ApiClient.get('/policy/list', query: {'pageSize': 20});
+      final records = (data['records'] as List? ?? []);
+      return [
+        for (var i = 0; i < records.length; i++)
+          _policyItem(_castMap(records[i]), i)
+      ];
+    }
+    if (tab == 1) {
+      final data = await ApiClient.get('/party/lesson/list');
+      final list = (data as List? ?? []);
+      return [
+        for (var i = 0; i < list.length; i++)
+          _partyItem(_castMap(list[i]), i)
+      ];
+    }
+    final data = await ApiClient.get('/village/honor');
+    final list = (data as List? ?? []);
+    return [
+      for (var i = 0; i < list.length; i++) _honorItem(_castMap(list[i]), i)
+    ];
+  }
+
+  Map<String, dynamic> _castMap(dynamic v) =>
+      v is Map ? v.cast<String, dynamic>() : <String, dynamic>{};
+
+  _PolicyItem _policyItem(Map<String, dynamic> j, int i) {
+    final category = '${j['category'] ?? '政策解读'}';
+    return _PolicyItem(
+      id: j['id'] as int?,
+      source: 'policy',
+      image: 'assets/images/${_images[i % 3]}',
+      title: '${j['title'] ?? '惠农政策'}',
+      summary: '${j['summary'] ?? j['publishOrg'] ?? '本地政策服务'}',
+      body: '${j['summary'] ?? ''}',
+      time: _ymd(j['createdAt']),
+      tag: category,
+      tagColor: _tagColor(category),
+    );
+  }
+
+  _PolicyItem _partyItem(Map<String, dynamic> j, int i) {
+    final type = '${j['type'] ?? '党建学习'}';
+    return _PolicyItem(
+      id: j['id'] as int?,
+      source: 'party',
+      image: 'assets/images/${_images[i % 3]}',
+      title: '${j['title'] ?? '党建学习'}',
+      summary: '完成学习可得 ${j['pointsReward'] ?? 0} 积分'
+          '${j['learned'] == true ? ' · 已学习' : ''}',
+      body: '${j['content'] ?? ''}',
+      time: _ymd(j['publishDate']),
+      tag: type,
+      tagColor: AppColors.primaryContainer,
+    );
+  }
+
+  _PolicyItem _honorItem(Map<String, dynamic> j, int i) {
+    final type = '${j['honorType'] ?? '文明乡风'}';
+    return _PolicyItem(
+      id: j['id'] as int?,
+      source: 'honor',
+      image: 'assets/images/${_images[i % 3]}',
+      title: '${j['honoreeName'] ?? '身边榜样'} · $type',
+      summary: '${j['deed'] ?? '乡风文明事迹'}',
+      body: '${j['deed'] ?? ''}',
+      time: '获赞 ${j['votes'] ?? 0}',
+      tag: type,
+      tagColor: AppColors.goldContainer,
+    );
+  }
+
+  Map<String, dynamic> _toCache(_PolicyItem e) => {
+        'id': e.id,
+        'source': e.source,
+        'title': e.title,
+        'summary': e.summary,
+        'body': e.body,
+        'time': e.time,
+        'tag': e.tag,
+      };
+
+  _PolicyItem _fromCacheItem(Map<String, dynamic> j, int i) => _PolicyItem(
+        id: j['id'] as int?,
+        source: '${j['source'] ?? 'policy'}',
+        image: 'assets/images/${_images[i % 3]}',
+        title: '${j['title'] ?? ''}',
+        summary: '${j['summary'] ?? ''}',
+        body: '${j['body'] ?? ''}',
+        time: '${j['time'] ?? ''}',
+        tag: '${j['tag'] ?? '政策'}',
+        tagColor: _tagColor('${j['tag'] ?? ''}'),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final activeTab = _tabs[_active];
-    final list = activeTab == '惠农政策'
-        ? _policies
-        : _fallback.where((item) => item.tab == activeTab).toList();
-
+    final list = _data[_active] ?? [];
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const FarmAppBar(),
       body: Column(
         children: [
           _tabsBar(),
-          if (_fromCache)
-            AlertBanner(
-                '当前政策来自离线缓存${_cacheTime == null ? '' : ' · $_cacheTime'}',
-                critical: false),
+          if (_fromCache[_active])
+            const AlertBanner('当前内容来自离线缓存，请检查后端连接', critical: false),
           Expanded(
-            child: _loading
-                ? const Loading(text: '正在同步惠农政策...')
-                : RefreshIndicator(
-                    color: AppColors.primary,
-                    onRefresh: _loadPolicies,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-                      itemCount: list.length + (_error == null ? 0 : 1),
-                      separatorBuilder: (_, __) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        if (_error != null && index == 0) {
-                          return AppCard(
-                            color: AppColors.errorContainer,
-                            child: Text(_error!,
-                                style: const TextStyle(color: AppColors.error)),
-                          );
-                        }
-                        final offset = _error == null ? index : index - 1;
-                        return _policyCard(context, list[offset]);
-                      },
-                    ),
-                  ),
+            child: _loading[_active]
+                ? const Loading(text: '正在从后端同步...')
+                : _error[_active] != null
+                    ? ErrorRetry(
+                        message: _error[_active]!,
+                        onRetry: () => _loadTab(_active))
+                    : list.isEmpty
+                        ? const EmptyView('暂无内容')
+                        : RefreshIndicator(
+                            color: AppColors.primary,
+                            onRefresh: () => _loadTab(_active),
+                            child: ListView.separated(
+                              padding:
+                                  const EdgeInsets.fromLTRB(20, 24, 20, 32),
+                              itemCount: list.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 16),
+                              itemBuilder: (_, i) => _card(context, list[i]),
+                            ),
+                          ),
           ),
         ],
       ),
@@ -245,10 +262,10 @@ class _PolicyPageState extends State<PolicyPage> {
     );
   }
 
-  Widget _policyCard(BuildContext context, _PolicyItem item) {
+  Widget _card(BuildContext context, _PolicyItem item) {
     return AppCard(
       padding: const EdgeInsets.all(14),
-      onTap: () => _openPolicy(context, item),
+      onTap: () => _openDetail(context, item),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -287,7 +304,7 @@ class _PolicyPageState extends State<PolicyPage> {
                 const SizedBox(height: 8),
                 Text(
                   item.summary,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 14,
@@ -318,85 +335,103 @@ class _PolicyPageState extends State<PolicyPage> {
     );
   }
 
-  Future<void> _openPolicy(BuildContext context, _PolicyItem item) async {
-    if (item.id == null) {
-      toast(context, '${item.tag}详情将在后续分段接入');
-      return;
-    }
-    try {
-      final detail =
-          await ApiClient.get('/policy/${item.id}') as Map<String, dynamic>;
-      if (!context.mounted) return;
-      showModalBottomSheet(
-        context: context,
-        showDragHandle: true,
-        backgroundColor: AppColors.surface,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-        ),
-        builder: (_) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _tag('${detail['category'] ?? item.tag}', item.tagColor),
-              const SizedBox(height: 12),
-              Text('${detail['title'] ?? item.title}',
-                  style: const TextStyle(
-                      fontSize: 22,
-                      height: 1.25,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface)),
-              const SizedBox(height: 10),
-              Text('${detail['summary'] ?? item.summary}',
-                  style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.55,
-                      color: AppColors.onSurfaceVariant)),
-              const SizedBox(height: 14),
-              Text('${detail['applyGuide'] ?? '请按政策要求准备材料，向当地农业农村部门咨询办理。'}',
-                  style: const TextStyle(
-                      fontSize: 14, height: 1.6, color: AppColors.onSurface)),
-            ],
-          ),
-        ),
-      );
-    } catch (error) {
-      if (context.mounted) toast(context, '政策详情读取失败：$error', error: true);
-    }
-  }
+  Future<void> _openDetail(BuildContext context, _PolicyItem item) async {
+    var body = item.body;
+    var title = item.title;
+    var category = item.tag;
+    String? guide;
 
-  Widget _tag(String text, Color color) {
-    final darkText =
-        color == const Color(0xFFFDCDBC) ? AppColors.secondary : Colors.white;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(999),
+    // 惠农政策可拉详情接口
+    if (item.source == 'policy' && item.id != null) {
+      try {
+        final detail =
+            await ApiClient.get('/policy/${item.id}') as Map<String, dynamic>;
+        title = '${detail['title'] ?? title}';
+        body = '${detail['content'] ?? detail['summary'] ?? body}';
+        category = '${detail['category'] ?? category}';
+        guide = detail['applyGuide'] as String?;
+      } catch (e) {
+        if (context.mounted) toast(context, '政策详情读取失败：$e', error: true);
+        return;
+      }
+    }
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: darkText,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        builder: (_, controller) => ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          children: [
+            _tag(category, item.tagColor),
+            const SizedBox(height: 12),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 22,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onSurface)),
+            const SizedBox(height: 12),
+            Text(body.isEmpty ? '暂无更多内容' : body,
+                style: const TextStyle(
+                    fontSize: 15, height: 1.7, color: AppColors.onSurface)),
+            if (guide != null && guide.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Text('申请指引',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary)),
+              const SizedBox(height: 6),
+              Text(guide,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: AppColors.onSurfaceVariant)),
+            ],
+          ],
         ),
       ),
     );
   }
+
+  Widget _tag(String text, Color color) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+      );
 }
 
 Color _tagColor(String category) {
-  if (category.contains('金融')) return AppColors.secondary;
-  if (category.contains('补贴')) return AppColors.primaryContainer;
-  if (category.contains('农机')) return AppColors.goldContainer;
-  return const Color(0xFFFDCDBC);
+  if (category.contains('金融') || category.contains('补贴')) {
+    return AppColors.primaryContainer;
+  }
+  if (category.contains('农机') || category.contains('春耕')) {
+    return AppColors.goldContainer;
+  }
+  if (category.contains('党')) return AppColors.error;
+  return AppColors.secondary;
 }
 
-String _friendlyTime(dynamic value) {
+String _ymd(dynamic value) {
   final text = '$value';
   if (text.length >= 10) return text.substring(0, 10);
-  return '本地政策';
+  return '近期';
 }

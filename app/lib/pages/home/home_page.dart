@@ -483,7 +483,7 @@ class _HomePageState extends State<HomePage> {
       case 'data':
         context.go('/data');
       case 'disaster':
-        toast(context, '当前页已展示气象灾害看板');
+        context.go('/disaster');
       default:
         toast(context, '功能页面正在接入');
     }

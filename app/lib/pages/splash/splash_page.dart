@@ -19,7 +19,7 @@ class _Slide {
 class _SplashPageState extends State<SplashPage> {
   final _pc = PageController();
   int _page = 0;
-  bool _ready = false;
+  bool _skip = false; // 已看过引导，跳过 onboarding
 
   static const _slides = [
     _Slide('assets/images/_3_1.jpg', 'AI 智慧种田', '病虫害拍照识别、精细气象预警，田间难题随手解决'),
@@ -30,9 +30,11 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    context.read<AuthState>().init().then((_) {
-      if (mounted) setState(() => _ready = true);
-    });
+    // auth 已在 main.dart 启动时初始化完成
+    if (context.read<AuthState>().onboardingSeen) {
+      _skip = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _go());
+    }
   }
 
   @override
@@ -41,9 +43,17 @@ class _SplashPageState extends State<SplashPage> {
     super.dispose();
   }
 
-  void _finish() {
+  /// 按登录态进入首页或登录页
+  void _go() {
+    if (!mounted) return;
     final auth = context.read<AuthState>();
     context.go(auth.isLoggedIn ? '/home' : '/auth/login');
+  }
+
+  /// 引导页结束（立即开启 / 跳过）：标记已看过，不再展示
+  Future<void> _finish() async {
+    await context.read<AuthState>().markOnboardingSeen();
+    _go();
   }
 
   void _next() {
@@ -57,6 +67,10 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 已看过引导：展示纯色背景，postFrame 已触发跳转
+    if (_skip) {
+      return const Scaffold(backgroundColor: AppColors.background);
+    }
     final isLast = _page == _slides.length - 1;
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -117,16 +131,10 @@ class _SplashPageState extends State<SplashPage> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: (isLast && !_ready) ? null : _next,
-                    child: (isLast && !_ready)
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2))
-                        : Text(isLast ? '立即开启' : '下一步',
-                            style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.w600)),
+                    onPressed: _next,
+                    child: Text(isLast ? '立即开启' : '下一步',
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ],

@@ -18,6 +18,9 @@ class ApiClient {
   static String baseUrl = kBaseUrl;
   static String? _token;
 
+  /// token 失效（40101）时触发，由 AuthState 注册：清登录态 → 路由回登录页
+  static void Function()? onUnauthorized;
+
   static void setToken(String? t) => _token = t;
   static String? get token => _token;
 
@@ -98,6 +101,8 @@ class ApiClient {
       throw ApiException(res.statusCode, '服务器响应异常');
     }
     final code = body['code'] as int? ?? res.statusCode;
+    // 40101 未登录/token 失效 —— 通知上层退出登录并回到登录页
+    if (code == 40101) onUnauthorized?.call();
     if (code != 200) {
       throw ApiException(code, body['msg'] as String? ?? '请求失败');
     }
