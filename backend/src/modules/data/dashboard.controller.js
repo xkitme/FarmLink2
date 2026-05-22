@@ -34,7 +34,7 @@ function ndviForPlot(plot) {
   return Number(Math.min(0.91, Math.max(0.28, 0.43 + cropBias + seed * 0.2)).toFixed(2))
 }
 
-/** 农情数据看板：全部来自本地 SQLite，适合离线比赛演示。 */
+/** 农情数据看板：全部来自本地 SQLite，适合离线运行。 */
 export async function dashboard(req, res) {
   const regionWhere = whereByRegion(req)
   const userWhere = req.user.role === 'ADMIN' || req.user.role === 'VILLAGE' ? {} : { userId: req.user.id }
@@ -132,12 +132,12 @@ export async function dashboard(req, res) {
     offlineReady: {
       database: 'SQLite',
       mode: 'LOCAL_ONLY',
-      message: '当前看板数据来自本机 SQLite，可在断网比赛环境下运行。',
+      message: '当前看板数据来自本机 SQLite，可在断网环境下运行。',
     },
   })
 }
 
-/** 遥感图像分析：比赛离线版使用地块数据生成 NDVI 诊断，不依赖外部遥感服务。 */
+/** 遥感图像分析：离线模式使用地块数据生成 NDVI 诊断，不依赖外部遥感服务。 */
 export async function remoteSensing(req, res) {
   const plotWhere = {
     ...whereByRegion(req),

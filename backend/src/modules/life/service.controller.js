@@ -25,7 +25,7 @@ export async function expressQuery(req, res) {
       { time: new Date(Date.now() - 86400000), desc: '运输中，已发往目的地' },
       { time: new Date(), desc: '快件已到达【松华村快递服务点】，请凭取件码取件' },
     ],
-    tip: '离线演示数据；实际请以快递公司信息为准。',
+    tip: '本地离线数据；实际请以快递公司信息为准。',
   })
 }
 

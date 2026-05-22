@@ -1,7 +1,7 @@
 import { prisma } from '../../db.js'
 import { ok, errors } from '../../utils/response.js'
 
-/** 收购站地图（带坐标，缺失坐标则在区域中心附近生成演示坐标） */
+/** 收购站地图（带坐标，缺失坐标则在区域中心附近生成默认坐标） */
 export async function buyerMap(req, res) {
   const where = {}
   if (req.query.regionCode) where.regionCode = { startsWith: req.query.regionCode.slice(0, 6) }

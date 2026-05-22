@@ -167,7 +167,7 @@ export async function qaRecords(req, res) {
   okPage(res, { records, total, pageNum, pageSize })
 }
 
-/** 离线语音识别演示：支持上传音频，也支持直接传 text 做比赛演示。 */
+/** 离线语音识别：支持上传音频，也支持直接传 text。 */
 export async function voiceRecognize(req, res) {
   const text = String(req.body.text || req.body.transcript || '').trim()
   const transcript = text || '请帮我查询水稻病虫害防治办法'
@@ -183,9 +183,9 @@ export async function voiceRecognize(req, res) {
     data: {
       userId: req.user.id,
       scene: 'VOICE',
-      question: req.file ? `音频识别：${req.file.originalname}` : '文本语音演示',
+      question: req.file ? `音频识别：${req.file.originalname}` : '文本语音识别',
       answer: transcript,
-      modelUsed: 'local-whisper-adapter-demo',
+      modelUsed: 'local-whisper-adapter',
       isOffline: true,
       referencesJson: JSON.stringify({ intent }),
     },
@@ -196,7 +196,7 @@ export async function voiceRecognize(req, res) {
     intent,
     confidence: text ? 0.99 : 0.86,
     audioUrl: req.file ? `/uploads/${req.file.filename}` : null,
-    mode: 'offline-voice-demo',
+    mode: 'offline-voice',
     note: '当前后端提供离线语音识别适配接口；接入 whisper.cpp 原生插件后可替换 transcript 来源。',
   }, '语音识别完成')
 }

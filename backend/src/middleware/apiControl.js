@@ -143,7 +143,7 @@ export async function apiSwitchMiddleware(req, res, next) {
       return fail(res, CODES.FORBIDDEN, `功能已关闭：${sw.name}`)
     }
   } catch {
-    // SQLite 本地开关读取失败时放行，避免比赛现场因管理表异常导致全站不可用。
+    // SQLite 本地开关读取失败时放行，避免因管理表异常导致全站不可用。
   }
   next()
 }

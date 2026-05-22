@@ -1,0 +1,860 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+import '../../core/api_client.dart';
+import '../../core/constants.dart';
+import '../../core/offline_sync_queue.dart';
+import '../../widgets/common.dart';
+
+class DataDashboardPage extends StatefulWidget {
+  const DataDashboardPage({super.key});
+
+  @override
+  State<DataDashboardPage> createState() => _DataDashboardPageState();
+}
+
+class _DataDashboardPageState extends State<DataDashboardPage> {
+  bool _loading = true;
+  bool _syncing = false;
+  String? _error;
+  Map<String, dynamic> _dashboard = {};
+  Map<String, dynamic> _syncStatus = {};
+  Map<String, dynamic> _aiStatus = {};
+  Map<String, dynamic> _remoteSensing = {};
+  List<SyncQueueItem> _localQueue = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final results = await Future.wait<dynamic>([
+        ApiClient.get('/data/dashboard'),
+        ApiClient.get('/data/sync/status'),
+        ApiClient.get('/ai/status'),
+        ApiClient.get('/data/remote-sensing'),
+        OfflineSyncQueue.all(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _dashboard = _map(results[0]);
+        _syncStatus = _map(results[1]);
+        _aiStatus = _map(results[2]);
+        _remoteSensing = _map(results[3]);
+        _localQueue = (results[4] as List<SyncQueueItem>);
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _flushQueue() async {
+    if (_syncing) return;
+    setState(() => _syncing = true);
+    try {
+      final result = await OfflineSyncQueue.flush();
+      if (!mounted) return;
+      toast(
+        context,
+        result.total == 0
+            ? '本地队列暂无待处理数据'
+            : '已处理 ${result.total} 条，成功 ${result.success} 条',
+      );
+      await _load();
+    } catch (e) {
+      if (mounted) toast(context, '同步失败：$e', error: true);
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: FarmAppBar(
+        actions: [
+          IconButton(
+            onPressed: _loading ? null : _load,
+            icon: const Icon(Icons.refresh, color: AppColors.onSurfaceVariant),
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Loading(text: '正在汇总本机数据')
+          : _error != null
+              ? ErrorRetry(message: _error!, onRetry: _load)
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  color: AppColors.primary,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                    children: [
+                      _heroCard(),
+                      const SizedBox(height: 16),
+                      _metricGrid(),
+                      const SizedBox(height: 16),
+                      _syncCard(),
+                      const SizedBox(height: 16),
+                      _aiCard(),
+                      const SectionTitle('种植结构'),
+                      _cropAreaCard(),
+                      const SectionTitle('农事与灾情'),
+                      _recordAndDisasterCards(),
+                      const SectionTitle('遥感诊断'),
+                      _remoteCard(),
+                      const SectionTitle('最近数据'),
+                      _latestDataCard(),
+                    ],
+                  ),
+                ),
+    );
+  }
+
+  Widget _heroCard() {
+    final cards = _map(_dashboard['cards']);
+    final offline = _map(_dashboard['offlineReady']);
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppColors.heroGradient,
+        borderRadius: BorderRadius.circular(R.lg),
+        boxShadow: AppColors.ambientShadow,
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(R.md),
+                ),
+                child: const Icon(Icons.insights_rounded,
+                    color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '农情数据看板',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '地块、农事、流通、灾情与 AI 服务统一汇总',
+                      style: TextStyle(
+                        color: AppColors.onPrimaryContainer,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                  child: _heroStat('地块面积', '${_num(cards['totalAreaMu'])} 亩')),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _heroStat('农事记录', '${_int(cards['recordCount'])} 条')),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _heroStat('AI 调用', '${_int(cards['aiCallCount'])} 次')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(Icons.storage_rounded,
+                  color: AppColors.onPrimaryContainer, size: 18),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _text(offline['message'], fallback: '当前数据来自本机 SQLite'),
+                  style: const TextStyle(
+                    color: AppColors.onPrimaryContainer,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroStat(String label, String value) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(R.sm),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: AppColors.onPrimaryContainer, fontSize: 11)),
+            const SizedBox(height: 2),
+            Text(value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700)),
+          ],
+        ),
+      );
+
+  Widget _metricGrid() {
+    final cards = _map(_dashboard['cards']);
+    final metrics = [
+      (
+        Icons.people_alt_outlined,
+        '用户',
+        '${_int(cards['userCount'])}',
+        AppColors.primary
+      ),
+      (
+        Icons.map_outlined,
+        '地块',
+        '${_int(cards['plotCount'])}',
+        AppColors.secondary
+      ),
+      (
+        Icons.storefront_outlined,
+        '商品',
+        '${_int(cards['productCount'])}',
+        AppColors.goldContainer
+      ),
+      (
+        Icons.shopping_bag_outlined,
+        '订单',
+        '${_int(cards['orderCount'])}',
+        AppColors.primaryContainer
+      ),
+      (
+        Icons.payments_outlined,
+        '成交额',
+        '￥${_num(cards['orderAmount'])}',
+        AppColors.tertiary
+      ),
+      (
+        Icons.warning_amber_rounded,
+        '灾情',
+        '${_int(cards['disasterCount'])}',
+        AppColors.error
+      ),
+    ];
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: metrics.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.72,
+      ),
+      itemBuilder: (context, index) {
+        final item = metrics[index];
+        return AppCard(
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: item.$4.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(R.md),
+                ),
+                child: Icon(item.$1, color: item.$4),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.$2,
+                        style: const TextStyle(
+                            color: AppColors.onSurfaceVariant, fontSize: 12)),
+                    const SizedBox(height: 3),
+                    Text(
+                      item.$3,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.onSurface,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _syncCard() {
+    final total = _int(_syncStatus['total']);
+    final success = _int(_syncStatus['success']);
+    final conflict = _int(_syncStatus['conflict']);
+    final failed = _int(_syncStatus['failed']);
+    final waiting =
+        _localQueue.where((item) => item.status != SyncStatus.synced).length;
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.sync_alt_rounded, color: AppColors.primary),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  '离线同步状态',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: _syncing ? null : _flushQueue,
+                icon: _syncing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh, size: 18),
+                label: Text(_syncing ? '同步中' : '同步'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _smallStat('本地队列', '$waiting'),
+              _thinDivider(),
+              _smallStat('同步日志', '$total'),
+              _thinDivider(),
+              _smallStat('成功', '$success'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              StatusChip('冲突 $conflict', color: AppColors.warning),
+              const SizedBox(width: 8),
+              StatusChip('失败 $failed',
+                  color: failed > 0 ? AppColors.error : AppColors.primary),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _aiCard() {
+    final ollama = _map(_aiStatus['ollama']);
+    final counters = _map(_aiStatus['counters']);
+    final online = ollama['online'] == true;
+    return AppCard(
+      ai: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(R.md),
+                ),
+                child: const Icon(Icons.smart_toy_outlined,
+                    color: AppColors.tertiary),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '本地 AI 服务',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.onSurface,
+                      ),
+                    ),
+                    Text(
+                      online ? 'Ollama 已连接' : '本地规则与知识库兜底可用',
+                      style: const TextStyle(
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              StatusChip(online ? '模型在线' : '离线兜底',
+                  color: online ? AppColors.primary : AppColors.goldContainer),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _pill('问答 ${_int(counters['qaCount'])}'),
+              _pill('图像 ${_int(counters['detectCount'])}'),
+              _pill('政策切片 ${_int(counters['policyChunks'])}'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '主模型：${_text(ollama['primaryModel'], fallback: 'qwen2.5 本地模型')}',
+            style: const TextStyle(
+              color: AppColors.onSurfaceVariant,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cropAreaCard() {
+    final items = _list(_dashboard['cropArea']);
+    if (items.isEmpty) {
+      return const AppCard(
+        child: Text('暂无地块面积数据',
+            style: TextStyle(color: AppColors.onSurfaceVariant)),
+      );
+    }
+    final maxArea = items
+        .map((item) => _double(item['areaMu']))
+        .fold<double>(0, (max, v) => v > max ? v : max);
+    return AppCard(
+      child: Column(
+        children: [
+          for (final item in items.take(5))
+            _barRow(
+              label: _text(item['cropType'], fallback: '未填写'),
+              value: '${_num(item['areaMu'])} 亩',
+              ratio: maxArea == 0 ? 0 : _double(item['areaMu']) / maxArea,
+              color: _cropColor(_text(item['cropType'])),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _recordAndDisasterCards() {
+    final records = _list(_dashboard['farmRecordTypes']);
+    final disasters = _list(_dashboard['disasterStats']);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('农事类型',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                const SizedBox(height: 12),
+                if (records.isEmpty)
+                  const Text('暂无记录',
+                      style: TextStyle(color: AppColors.onSurfaceVariant))
+                else
+                  for (final item in records.take(4))
+                    _compactLine(
+                        _text(item['type']), '${_int(item['count'])} 次'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('灾情统计',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                const SizedBox(height: 12),
+                if (disasters.isEmpty)
+                  const Text('暂无灾情',
+                      style: TextStyle(color: AppColors.onSurfaceVariant))
+                else
+                  for (final item in disasters.take(4))
+                    _compactLine(
+                      _text(item['type']),
+                      '￥${_num(item['loss'])}',
+                      color: AppColors.error,
+                    ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _remoteCard() {
+    final records = _list(_remoteSensing['records']);
+    final avg = _num(_remoteSensing['avgNdvi']);
+    final abnormal = _int(_remoteSensing['abnormalCount']);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _smallStat('平均 NDVI', avg),
+              _thinDivider(),
+              _smallStat('地块', '${_int(_remoteSensing['totalPlots'])}'),
+              _thinDivider(),
+              _smallStat('异常', '$abnormal'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (records.isEmpty)
+            const Text('暂无遥感诊断数据',
+                style: TextStyle(color: AppColors.onSurfaceVariant))
+          else
+            for (final item in records.take(3)) _remoteTile(item),
+        ],
+      ),
+    );
+  }
+
+  Widget _latestDataCard() {
+    final reports = _list(_dashboard['latestStatReports']);
+    final logs = _list(_dashboard['latestSyncLogs']);
+    return AppCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          _latestHeader('统计上报', Icons.assignment_turned_in_outlined),
+          if (reports.isEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('暂无统计上报',
+                    style: TextStyle(color: AppColors.onSurfaceVariant)),
+              ),
+            )
+          else
+            for (final item in reports.take(3)) _reportTile(item),
+          const Divider(height: 1),
+          _latestHeader('同步日志', Icons.history_rounded),
+          if (logs.isEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('暂无同步日志',
+                    style: TextStyle(color: AppColors.onSurfaceVariant)),
+              ),
+            )
+          else
+            for (final item in logs.take(4)) _syncLogTile(item),
+        ],
+      ),
+    );
+  }
+
+  Widget _latestHeader(String title, IconData icon) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(title,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      );
+
+  Widget _reportTile(Map<String, dynamic> item) => ListTile(
+        dense: true,
+        visualDensity: VisualDensity.compact,
+        title: Text(
+          '${_text(item['reportType'], fallback: '统计数据')} · ${_text(item['cropType'], fallback: '综合')}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle:
+            Text('${_num(item['areaMu'])} 亩 / ${_num(item['yieldKg'])} 公斤'),
+        trailing: Text(_date(item['createdAt']),
+            style: const TextStyle(color: AppColors.outline, fontSize: 11)),
+      );
+
+  Widget _syncLogTile(Map<String, dynamic> item) {
+    final status = _text(item['syncStatus'], fallback: 'SUCCESS');
+    return ListTile(
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      title: Text(_tableLabel(_text(item['tableName'])),
+          maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(_date(item['syncedAt'])),
+      trailing: StatusChip(_syncLabel(status), color: _syncColor(status)),
+    );
+  }
+
+  Widget _remoteTile(Map<String, dynamic> item) {
+    final level = _text(item['healthLevel']);
+    final color = level == '异常'
+        ? AppColors.error
+        : level == '偏弱'
+            ? AppColors.warning
+            : AppColors.primary;
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLow,
+        borderRadius: BorderRadius.circular(R.sm),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.satellite_alt_outlined, color: color, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _text(item['plotName'], fallback: '地块'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Text('NDVI ${_num(item['ndvi'])} · ${_text(item['cropType'])}',
+                    style: const TextStyle(
+                        color: AppColors.onSurfaceVariant, fontSize: 12)),
+              ],
+            ),
+          ),
+          StatusChip(level, color: color),
+        ],
+      ),
+    );
+  }
+
+  Widget _barRow({
+    required String label,
+    required String value,
+    required double ratio,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+              ),
+              Text(value,
+                  style: const TextStyle(
+                      color: AppColors.onSurfaceVariant, fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 7),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: ratio.clamp(0.04, 1),
+              minHeight: 9,
+              backgroundColor: AppColors.surfaceHigh,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _compactLine(String label, String value,
+      {Color color = AppColors.primary}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: AppColors.onSurfaceVariant)),
+          ),
+          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+
+  Widget _smallStat(String label, String value) => Expanded(
+        child: Column(
+          children: [
+            Text(value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700)),
+            const SizedBox(height: 2),
+            Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: AppColors.onSurfaceVariant, fontSize: 12)),
+          ],
+        ),
+      );
+
+  Widget _thinDivider() =>
+      Container(width: 1, height: 30, color: AppColors.outlineVariant);
+
+  Widget _pill(String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLow,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: AppColors.onSurfaceVariant,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+
+  Color _cropColor(String crop) {
+    if (crop.contains('水稻') || crop.contains('玉米')) return AppColors.primary;
+    if (crop.contains('小麦') || crop.contains('油菜')) {
+      return AppColors.goldContainer;
+    }
+    if (crop.contains('茶') || crop.contains('柑橘')) return AppColors.secondary;
+    return AppColors.primaryContainer;
+  }
+
+  String _tableLabel(String tableName) {
+    if (tableName == 'farm_record') return '农事记录';
+    if (tableName == 'disaster_report') return '灾情上报';
+    if (tableName == 'land_plot') return '地块管理';
+    if (tableName == 'env_report') return '环境举报';
+    return tableName.isEmpty ? '业务数据' : tableName;
+  }
+
+  String _syncLabel(String status) {
+    if (status == 'SUCCESS') return '成功';
+    if (status == 'CONFLICT') return '冲突';
+    if (status == 'FAILED') return '失败';
+    return status;
+  }
+
+  Color _syncColor(String status) {
+    if (status == 'CONFLICT') return AppColors.warning;
+    if (status == 'FAILED') return AppColors.error;
+    return AppColors.primary;
+  }
+
+  static Map<String, dynamic> _map(dynamic value) {
+    if (value is Map) {
+      return value.map((key, value) => MapEntry('$key', value));
+    }
+    return {};
+  }
+
+  static List<Map<String, dynamic>> _list(dynamic value) {
+    if (value is List) {
+      return value.whereType<Map>().map(_map).toList();
+    }
+    return [];
+  }
+
+  static int _int(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse('$value') ?? 0;
+  }
+
+  static double _double(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse('$value') ?? 0;
+  }
+
+  static String _num(dynamic value) {
+    final n = _double(value);
+    if (n == n.roundToDouble()) return n.toStringAsFixed(0);
+    return n.toStringAsFixed(2);
+  }
+
+  static String _text(dynamic value, {String fallback = ''}) {
+    final text = '${value ?? ''}'.trim();
+    return text.isEmpty || text == 'null' ? fallback : text;
+  }
+
+  static String _date(dynamic value) {
+    final raw = _text(value);
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return raw.isEmpty ? '-' : raw;
+    return DateFormat('MM-dd HH:mm').format(parsed.toLocal());
+  }
+}

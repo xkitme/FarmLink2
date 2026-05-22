@@ -39,7 +39,7 @@ ThemeData buildAppTheme() {
         color: AppColors.primary,
         fontSize: 20,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
+        letterSpacing: 0,
       ),
       iconTheme: IconThemeData(color: AppColors.onSurfaceVariant),
     ),
@@ -118,12 +118,12 @@ ThemeData buildAppTheme() {
           color: AppColors.onSurface,
           fontSize: 28,
           fontWeight: FontWeight.w700,
-          letterSpacing: -0.4),
+          letterSpacing: 0),
       headlineMedium: TextStyle(
           color: AppColors.onSurface,
           fontSize: 24,
           fontWeight: FontWeight.w600,
-          letterSpacing: -0.2),
+          letterSpacing: 0),
       headlineSmall: TextStyle(
           color: AppColors.onSurface,
           fontSize: 20,

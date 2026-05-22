@@ -50,7 +50,7 @@ export async function pricePredict(req, res) {
   ok(res, list)
 }
 
-/** 期货行情参考（离线演示数据） */
+/** 期货行情参考（本地离线数据） */
 export async function futures(req, res) {
   const base = [
     { contract: '玉米 2609',   exchange: '大连商品交易所', anchor: 2480 },

@@ -119,7 +119,7 @@ async function replay(item) {
   return { replayed: false }
 }
 
-/** 离线数据同步：核心表真实回放，其余表记录日志，保证比赛断网可演示。 */
+/** 离线数据同步：核心表真实回放，其余表记录日志，保证断网环境可用。 */
 export async function syncData(req, res) {
   const rawItems = parseItems(req.body)
   if (!rawItems.length) throw errors.param('同步队列不能为空')

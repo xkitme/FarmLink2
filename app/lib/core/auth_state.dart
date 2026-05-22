@@ -16,6 +16,7 @@ class AuthState extends ChangeNotifier {
   bool get loading => _loading;
 
   Future<void> init() async {
+    if (!_loading) return;
     final sp = await SharedPreferences.getInstance();
     _token = sp.getString('token');
     final us = sp.getString('user');

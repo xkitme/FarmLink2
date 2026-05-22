@@ -187,7 +187,7 @@ async function lifeRefs(question, limit) {
   return refs.filter((r) => r.score > 0).sort((a, b) => b.score - a.score).slice(0, limit)
 }
 
-/** 本地 SQLite 知识检索，比赛断网可用。 */
+/** 本地 SQLite 知识检索，断网环境可用。 */
 export async function searchLocalKnowledge(scene, question, limit = 5) {
   const normalized = String(scene || 'GENERAL').toUpperCase()
   if (normalized === 'POLICY') return policyRefs(question, limit)

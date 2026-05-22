@@ -104,7 +104,7 @@ class HomePage extends StatelessWidget {
         toast(context, '当前页已展示气象灾害看板');
         return;
       case 'data':
-        context.go('/messages');
+        context.go('/data');
         return;
       default:
         toast(context, '功能页面正在接入');

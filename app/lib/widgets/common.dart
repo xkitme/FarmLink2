@@ -24,7 +24,7 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
               color: AppColors.primary,
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              letterSpacing: -0.3)),
+              letterSpacing: 0)),
       actions: actions ??
           [
             IconButton(
