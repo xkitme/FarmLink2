@@ -190,32 +190,17 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    const Row(
-                      children: [
-                        Expanded(
-                            child: Divider(color: AppColors.outlineVariant)),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('其他方式登录',
-                              style: TextStyle(
-                                  fontSize: 12, color: AppColors.outline)),
-                        ),
-                        Expanded(
-                            child: Divider(color: AppColors.outlineVariant)),
-                      ],
-                    ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _socialBtn(Icons.forum, const Color(0xFF07C160)),
-                        const SizedBox(width: 24),
-                        _socialBtn(Icons.account_balance_wallet,
-                            const Color(0xFF1677FF)),
-                      ],
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.go('/auth/login/register'),
+                        icon: const Icon(Icons.person_add_alt_1, size: 20),
+                        label: const Text('注册账号'),
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Center(
                       child: TextButton(
                         onPressed: () => context.go('/auth/login/register'),
@@ -279,18 +264,4 @@ class _LoginPageState extends State<LoginPage> {
       ],
     );
   }
-
-  Widget _socialBtn(IconData icon, Color color) => InkWell(
-        onTap: () => toast(context, '该登录方式暂未开通'),
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.outlineVariant),
-          ),
-          child: Icon(icon, color: color, size: 22),
-        ),
-      );
 }
