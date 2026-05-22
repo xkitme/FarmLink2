@@ -564,7 +564,7 @@ class _MachineryPageState extends State<MachineryPage> {
 
   Future<void> _bookMachine(_Machine machine) async {
     if (machine.id == null) {
-      toast(context, '演示农机不能真实预约，请等待后端同步');
+      toast(context, '内置农机暂不能预约，请等待后端同步');
       return;
     }
     setState(() => _booking = true);
@@ -575,7 +575,7 @@ class _MachineryPageState extends State<MachineryPage> {
         'machineryId': machine.id,
         'startDate': _date(start),
         'endDate': _date(end),
-        'remark': 'Flutter App 本地演示预约',
+        'remark': 'Flutter App 本地预约',
       });
       if (mounted) toast(context, '预约已提交，可在后台预约表查看');
     } catch (error) {

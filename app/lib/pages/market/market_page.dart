@@ -325,7 +325,7 @@ class _MarketPageState extends State<MarketPage> {
     final inCart = product.id != null ? (_cart[product.id] ?? 0) : 0;
     return AppCard(
       padding: EdgeInsets.zero,
-      onTap: () => toast(context, product.fromApi ? '来自后端商品数据' : '内置演示商品'),
+      onTap: () => toast(context, product.fromApi ? '来自后端商品数据' : '内置商品'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -491,7 +491,7 @@ class _MarketPageState extends State<MarketPage> {
 
   void _addCart(_Product product) {
     if (product.id == null) {
-      toast(context, '演示商品不能真实下单，请等待后端商品同步');
+      toast(context, '内置商品暂不能下单，请等待后端商品同步');
       return;
     }
     setState(() {
@@ -594,11 +594,11 @@ class _MarketPageState extends State<MarketPage> {
         'productId': first.key,
         'quantity': first.value,
         'receiverInfo': {
-          'name': '比赛演示用户',
+          'name': '本地用户',
           'phone': '13800000000',
-          'address': '本地离线演示地址',
+          'address': '本地收货地址',
         },
-        'remark': 'Flutter App 本地演示下单',
+        'remark': 'Flutter App 本地下单',
       });
       if (!mounted) return;
       setState(() => _cart.clear());

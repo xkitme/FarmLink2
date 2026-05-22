@@ -21,7 +21,7 @@ class _AiPageState extends State<AiPage> {
     const _ChatMessage(
       fromUser: false,
       text:
-          '您好，我是您的本地农技助手。断网比赛环境下，我会优先使用 SQLite 知识库和本地规则兜底；如果 Ollama 已启动，就会调用本地模型增强回答。',
+          '您好，我是您的本地农技助手。离线环境下，我会优先使用 SQLite 知识库和本地规则兜底；如果 Ollama 已启动，就会调用本地模型增强回答。',
     ),
     const _ChatMessage(
       fromUser: true,
@@ -165,7 +165,7 @@ class _AiPageState extends State<AiPage> {
         _messages.add(const _ChatMessage(
           fromUser: false,
           text:
-              '当前问答接口不可用。比赛断网演示时请确认后端已启动，并已登录账号；Ollama 未启动时后端仍会用 SQLite RAG 和本地规则兜底。',
+              '当前问答接口不可用。离线运行时请确认后端已启动，并已登录账号；Ollama 未启动时后端仍会用 SQLite RAG 和本地规则兜底。',
         ));
       });
       toast(context, '问答失败：$e', error: true);

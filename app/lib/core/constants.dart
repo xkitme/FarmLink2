@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 // ── API ──────────────────────────────────────────────
-// 本地 web 调试用 localhost；比赛真机改成后端笔记本局域网 IP
+// 本地 web 调试用 localhost；真机部署改成后端笔记本局域网 IP
 const String kBaseUrl = 'http://localhost:8000';
 const String kApiPrefix = '/api/v1';
 

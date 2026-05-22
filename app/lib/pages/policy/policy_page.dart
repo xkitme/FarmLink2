@@ -149,7 +149,7 @@ class _PolicyPageState extends State<PolicyPage> {
             : _fallback.where((item) => item.tab == '惠农政策').toList();
         _fromCache = cached.isNotEmpty;
         _cacheTime = cacheTime;
-        _error = cached.isNotEmpty ? null : '后端暂不可用，已展示内置演示数据';
+        _error = cached.isNotEmpty ? null : '后端暂不可用，已展示内置数据';
         _loading = false;
       });
     }

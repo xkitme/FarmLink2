@@ -63,7 +63,7 @@ class _PublishPageState extends State<PublishPage> {
         _lastResult =
             '本次处理 ${result.total} 条，成功 ${result.success} 条，剩余 ${result.remaining} 条';
       });
-      toast(context, result.remaining == 0 ? '演示队列已同步到本机后端' : '仍有数据留在本地队列');
+      toast(context, result.remaining == 0 ? '本地队列已同步到本机后端' : '仍有数据留在本地队列');
     } catch (e) {
       if (mounted) toast(context, '同步失败：$e', error: true);
     } finally {
@@ -74,7 +74,7 @@ class _PublishPageState extends State<PublishPage> {
     }
   }
 
-  Future<void> _submitDemo() async {
+  Future<void> _submitPublish() async {
     if (_submitting) return;
     setState(() => _submitting = true);
 
@@ -88,7 +88,7 @@ class _PublishPageState extends State<PublishPage> {
       if (!mounted) return;
       setState(() {
         _lastResult =
-            result.allSynced ? '已完成本地提交并同步到 SQLite 后端' : '已进入本地演示队列，稍后可手动同步';
+            result.allSynced ? '已完成本地提交并同步到 SQLite 后端' : '已进入本地队列，稍后可手动同步';
       });
       toast(context, result.allSynced ? '发布成功' : '已保存到本地队列');
     } catch (e) {
@@ -125,7 +125,7 @@ class _PublishPageState extends State<PublishPage> {
           'affectedArea': double.tryParse(_affectedArea.text.trim()) ?? 0,
           'estimatedLoss': double.tryParse(_estimatedLoss.text.trim()) ?? 0,
           'description': _disasterDescription.text.trim(),
-          'location': {'lng': 118.74, 'lat': 32.06, 'source': 'demo'},
+          'location': {'lng': 118.74, 'lat': 32.06, 'source': 'mobile'},
         },
       );
     }
@@ -135,7 +135,7 @@ class _PublishPageState extends State<PublishPage> {
       payload: {
         'problemType': _problemType,
         'description': _envDescription.text.trim(),
-        'location': {'lng': 118.75, 'lat': 32.05, 'source': 'demo'},
+        'location': {'lng': 118.75, 'lat': 32.05, 'source': 'mobile'},
       },
     );
   }
@@ -143,7 +143,7 @@ class _PublishPageState extends State<PublishPage> {
   Future<void> _clearQueue() async {
     await OfflineSyncQueue.clear();
     await _loadQueue();
-    if (mounted) toast(context, '演示队列已清空');
+    if (mounted) toast(context, '本地队列已清空');
   }
 
   @override
@@ -153,7 +153,7 @@ class _PublishPageState extends State<PublishPage> {
       backgroundColor: AppColors.background,
       appBar: const FarmAppBar(),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _submitting ? null : _submitDemo,
+        onPressed: _submitting ? null : _submitPublish,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: _submitting
@@ -166,7 +166,7 @@ class _PublishPageState extends State<PublishPage> {
                 ),
               )
             : const Icon(Icons.cloud_upload_outlined),
-        label: Text(_submitting ? '处理中' : '发布演示'),
+        label: Text(_submitting ? '处理中' : '发布'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
@@ -215,7 +215,7 @@ class _PublishPageState extends State<PublishPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '比赛演示发布中心',
+                      '发布中心',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -343,7 +343,7 @@ class _PublishPageState extends State<PublishPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _formHeader(
-                Icons.agriculture, '新增农事记录', '演示提交到 farm_record，同步日志可在后台查看'),
+                Icons.agriculture, '新增农事记录', '提交到 farm_record，同步日志可在后台查看'),
             const SizedBox(height: 14),
             _select(
               label: '农事类型',
@@ -373,7 +373,7 @@ class _PublishPageState extends State<PublishPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _formHeader(Icons.thunderstorm_outlined, '灾情快速上报',
-                '演示提交到 disaster_report，自动生成受灾等级'),
+                '提交到 disaster_report，自动生成受灾等级'),
             const SizedBox(height: 14),
             _select(
               label: '灾害类型',
@@ -403,7 +403,7 @@ class _PublishPageState extends State<PublishPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _formHeader(
-              Icons.recycling_outlined, '环境问题举报', '演示提交到 env_report，用于乡村治理场景'),
+              Icons.recycling_outlined, '环境问题举报', '提交到 env_report，用于乡村治理场景'),
           const SizedBox(height: 14),
           _select(
             label: '问题类型',
@@ -513,7 +513,7 @@ class _PublishPageState extends State<PublishPage> {
   Widget _submitButton(String label) => SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          onPressed: _submitting ? null : _submitDemo,
+          onPressed: _submitting ? null : _submitPublish,
           icon: const Icon(Icons.save_alt_rounded, size: 18),
           label: Text(label),
         ),
@@ -559,7 +559,7 @@ class _PublishPageState extends State<PublishPage> {
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      '还有 ${_queue.length - 4} 条演示数据未展示',
+                      '还有 ${_queue.length - 4} 条数据未展示',
                       style: const TextStyle(
                         color: AppColors.onSurfaceVariant,
                         fontSize: 12,
@@ -672,7 +672,7 @@ class _PublishPageState extends State<PublishPage> {
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Text(
-              '新到两台大马力旋耕机，秋耕预约享受演示折扣。有需要的乡亲可以直接在农机共享页预约。',
+              '新到两台大马力旋耕机，秋耕预约享受优惠。有需要的乡亲可以直接在农机共享页预约。',
               style: TextStyle(
                   fontSize: 16, height: 1.5, color: AppColors.onSurface),
             ),
@@ -771,7 +771,7 @@ class _PublishPageState extends State<PublishPage> {
           if (showCall) ...[
             const Spacer(),
             ElevatedButton.icon(
-              onPressed: () => toast(context, '比赛演示：已打开联系机主流程'),
+              onPressed: () => toast(context, '已打开联系机主流程'),
               icon: const Icon(Icons.call, size: 16),
               label: const Text('联系'),
               style: ElevatedButton.styleFrom(
