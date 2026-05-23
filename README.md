@@ -37,7 +37,7 @@
 - **思政融入**：惠农政策推送、党建学习打卡、文明乡风榜、乡村振兴积分等模块
   紧扣国家乡村振兴战略
 - **统一设计语言**：移动端采用「Agro-Modernist Tech」农业现代科技风设计系统
-- **轻量可交付**：SQLite 单文件数据库，无 Docker 依赖，完整项目包即可独立部署演示
+- **轻量可交付**：SQLite 单文件数据库，无 Docker 依赖，完整项目包即可独立部署运行
 
 ---
 
@@ -155,37 +155,54 @@ FarmLink/
 - Flutter 3.3+（如需构建移动端）
 - Ollama（可选，用于 AI 增强；未启动时自动走本地规则兜底）
 
-### 1. 启动后端 + 管理面板
+### 1. 首次准备依赖
 
 ```powershell
 cd backend
 npm run install:all      # 安装后端 + 管理面板依赖
 npm run db:migrate       # 初始化 SQLite 数据库
 npm run db:seed          # 写入种子数据
-npm run dev              # 开发模式（后端 + 管理面板热更新）
 ```
 
-- 后端 API：`http://localhost:8000/api/v1`
-- 管理面板：`http://localhost:8000/admin`（生产构建）或 Vite 端口（开发）
-
-### 2. 运行移动端（Web 预览）
+移动端首次运行前：
 
 ```powershell
 cd app
 flutter pub get
-flutter build web
-node serve_web.mjs       # → http://localhost:5000
 ```
 
-### 3. 一键本机运行
+### 2. 一键启动全部本机服务
+
+在项目根目录运行一条命令：
+
+```powershell
+.\start.bat
+```
+
+等价 PowerShell 命令：
 
 ```powershell
 .\scripts\start-local.ps1
 ```
 
-同时启动后端与移动端 Web 预览。
+脚本会自动启动：
 
-### 4. 构建 Android APK
+- 后端 API：`http://localhost:8000/api/v1`
+- 管理面板：`http://localhost:5173/admin/`
+- 移动端 Web：`http://localhost:5000`
+
+日志输出在 `.runtime/`。再次执行 `.\start.bat` 会先清理占用的默认端口再重新启动。
+
+常用参数：
+
+```powershell
+.\start.bat -SkipWebBuild
+.\start.bat -BackendPort 8000 -AdminPort 5173 -WebPort 5000
+.\start.bat -SkipAdmin
+.\start.bat -SkipMobile
+```
+
+### 3. 构建 Android APK
 
 真机安装时后端地址需填写电脑在局域网中的 IP：
 
@@ -197,7 +214,7 @@ node serve_web.mjs       # → http://localhost:5000
 
 ---
 
-## 七、演示账号
+## 七、内置账号
 
 | 账号 | 密码 | 角色 |
 |---|---|---|
@@ -247,4 +264,4 @@ node serve_web.mjs       # → http://localhost:5000
 
 ## 十一、许可
 
-本项目用于乡村振兴数字化场景的完整方案演示，可在单机环境独立部署运行。
+本项目用于乡村振兴数字化场景的完整方案应用，可在单机环境独立部署运行。

@@ -9,7 +9,7 @@
 
 - APK 构建时可指定后端地址。
 - Android 构建链路适配本机 SDK / JDK。
-- 后端与移动端 Web 预览可一键启动。
+- 后端、管理面板与移动端 Web 预览可一键启动。
 - README 与进度文档同步更新。
 
 ## 已完成内容
@@ -71,9 +71,16 @@
 能力：
 
 - 启动后端服务：`http://localhost:8000/api/v1`
+- 启动管理面板：`http://localhost:5173/admin/`
 - 构建并启动 Flutter Web：`http://localhost:5000`
 - 输出局域网 API 地址，便于 APK 构建时填写。
 - 运行日志写入 `.runtime/`，不进入 Git。
+
+分段 29 已补充根目录入口：
+
+```powershell
+.\start.bat
+```
 
 ### 5. 文档与忽略规则
 
@@ -109,6 +116,7 @@ node --check backend/src/middleware/apiControl.js
   - 大小约 56 MB
 - 本机启动脚本可启动：
   - 后端端口 `8000`
+  - 管理面板端口 `5173`
   - 移动端 Web 端口 `5000`
 
 接口烟测：
