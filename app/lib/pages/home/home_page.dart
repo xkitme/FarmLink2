@@ -91,7 +91,8 @@ class _HomePageState extends State<HomePage> {
                     '【${_alerts.first['alertLevel'] ?? '预警'}】${_alerts.first['title'] ?? _alerts.first['content'] ?? '请注意防范'}',
                   )
                 else if (_fromCache)
-                  AlertBanner('当前气象来自离线缓存${_cacheTime == null ? '' : ' · $_cacheTime'}',
+                  AlertBanner(
+                      '当前气象来自离线缓存${_cacheTime == null ? '' : ' · $_cacheTime'}',
                       critical: false),
                 Expanded(
                   child: RefreshIndicator(
@@ -480,7 +481,7 @@ class _HomePageState extends State<HomePage> {
       case 'ai':
         context.go('/ai');
       case 'life':
-        context.go('/publish');
+        context.go('/life');
       case 'data':
         context.go('/data');
       case 'disaster':
