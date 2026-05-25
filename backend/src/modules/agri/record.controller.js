@@ -2,7 +2,7 @@ import { prisma } from '../../db.js'
 import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams, parseJson } from '../../utils/page.js'
 
-/** 各作物固碳系数（吨 CO₂ / 亩 / 季，本地估值） */
+/** 各作物固碳系数（吨 CO₂ / 亩 / 季，区域估值） */
 const CARBON_FACTOR = {
   水稻: 0.45, 小麦: 0.38, 玉米: 0.52, 柑橘: 0.85, 油菜: 0.40,
   蔬菜: 0.25, 茶叶: 0.70, 猕猴桃: 0.78,

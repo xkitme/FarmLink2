@@ -1,7 +1,7 @@
 import { prisma } from '../../db.js'
 import { ok, errors } from '../../utils/response.js'
 
-/** 离线规则与模板能力：质量分级、包装文案、直播话术均可本地运行。 */
+/** 规则与模板能力：质量分级、包装文案、直播话术。 */
 
 const rand = (a, b) => a + Math.random() * (b - a)
 const GRADES = ['特级', '一级', '二级', '等外']

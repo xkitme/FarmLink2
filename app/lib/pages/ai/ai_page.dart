@@ -20,8 +20,7 @@ class _AiPageState extends State<AiPage> {
   final List<_ChatMessage> _messages = [
     const _ChatMessage(
       fromUser: false,
-      text:
-          '您好，我是您的本地农技助手。离线环境下，我会优先使用 SQLite 知识库和本地规则兜底；如果 Ollama 已启动，就会调用本地模型增强回答。',
+      text: '您好，我是您的智能农技助手。可以问我政策、农技、病虫害、行情等问题，也可以上传图片让我识别。',
     ),
     const _ChatMessage(
       fromUser: true,
@@ -77,7 +76,7 @@ class _AiPageState extends State<AiPage> {
                 leading: const Icon(Icons.photo_library_outlined,
                     color: AppColors.secondary),
                 title: const Text('上传图片'),
-                subtitle: const Text('选择已有田间照片进行本地诊断'),
+                subtitle: const Text('选择已有田间照片进行智能诊断'),
                 onTap: () => Navigator.pop(context, ImageSource.gallery),
               ),
             ],
@@ -125,7 +124,7 @@ class _AiPageState extends State<AiPage> {
           name: name,
           confidence: confidence,
           advice: advice,
-          mode: '本地离线规则识别',
+          mode: '智能识别',
         );
       });
     } catch (e) {
@@ -150,13 +149,12 @@ class _AiPageState extends State<AiPage> {
         'scene': 'AGRI',
         'question': question,
       }) as Map<String, dynamic>;
-      final answer = '${data['answer'] ?? '本地知识库已收到问题，但暂无更完整答案。'}';
-      final mode = '${data['mode'] ?? 'local'}';
+      final answer = '${data['answer'] ?? '已收到问题，暂无更完整答案，请稍后再试。'}';
       if (!mounted) return;
       setState(() {
         _messages.add(_ChatMessage(
           fromUser: false,
-          text: '$answer\n\n来源：$mode',
+          text: answer,
         ));
       });
     } catch (e) {
@@ -164,8 +162,7 @@ class _AiPageState extends State<AiPage> {
       setState(() {
         _messages.add(const _ChatMessage(
           fromUser: false,
-          text:
-              '当前问答接口不可用。离线运行时请确认后端已启动，并已登录账号；Ollama 未启动时后端仍会用 SQLite RAG 和本地规则兜底。',
+          text: '当前服务暂时不可用。请确认账号已登录，稍后再试。',
         ));
       });
       toast(context, '问答失败：$e', error: true);
@@ -219,7 +216,7 @@ class _AiPageState extends State<AiPage> {
           ),
           const SizedBox(height: 8),
           const Text(
-            '拍照或上传作物叶片，后端会在本机完成识别记录、知识库匹配与防治建议生成。',
+            '拍照或上传作物叶片，平台会完成识别记录、知识匹配与防治建议生成。',
             style: TextStyle(fontSize: 16, color: AppColors.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
@@ -246,7 +243,7 @@ class _AiPageState extends State<AiPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _detecting ? '正在本地识别...' : '点击拍照或上传图片',
+                          _detecting ? '正在识别...' : '点击拍照或上传图片',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -421,7 +418,7 @@ class _AiPageState extends State<AiPage> {
                   ),
                 ),
                 Spacer(),
-                StatusChip('离线优先'),
+                StatusChip('AI 助手'),
               ],
             ),
           ),
@@ -437,7 +434,7 @@ class _AiPageState extends State<AiPage> {
                 ],
                 if (_asking) ...[
                   const SizedBox(height: 16),
-                  _botBubble('正在调用本地后端知识库，请稍等...'),
+                  _botBubble('正在处理中，请稍等...'),
                 ],
               ],
             ),
@@ -455,7 +452,7 @@ class _AiPageState extends State<AiPage> {
                     foregroundColor: AppColors.onSurfaceVariant,
                     fixedSize: const Size(36, 36),
                   ),
-                  onPressed: () => toast(context, '语音问答正在接入本地识别服务'),
+                  onPressed: () => toast(context, '语音问答服务正在准备中，请稍后再试'),
                   icon: const Icon(Icons.add, size: 20),
                 ),
                 const SizedBox(width: 8),

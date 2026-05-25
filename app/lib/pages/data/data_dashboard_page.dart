@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
@@ -69,7 +70,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
       toast(
         context,
         result.total == 0
-            ? '本地队列暂无待处理数据'
+            ? '待发送队列暂无待处理数据'
             : '已处理 ${result.total} 条，成功 ${result.success} 条',
       );
       await _load();
@@ -87,13 +88,18 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
       appBar: FarmAppBar(
         actions: [
           IconButton(
+            tooltip: '数据管理服务',
+            onPressed: () => context.go('/data/service'),
+            icon: const Icon(Icons.tune, color: AppColors.onSurfaceVariant),
+          ),
+          IconButton(
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh, color: AppColors.onSurfaceVariant),
           ),
         ],
       ),
       body: _loading
-          ? const Loading(text: '正在汇总本机数据')
+          ? const Loading(text: '正在汇总数据')
           : _error != null
               ? ErrorRetry(message: _error!, onRetry: _load)
               : RefreshIndicator(
@@ -196,7 +202,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  _text(offline['message'], fallback: '当前数据来自本机 SQLite'),
+                  _text(offline['message'], fallback: '数据已更新'),
                   style: const TextStyle(
                     color: AppColors.onPrimaryContainer,
                     fontSize: 13,
@@ -347,7 +353,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
-                  '离线同步状态',
+                  '数据同步状态',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -371,7 +377,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
           const SizedBox(height: 12),
           Row(
             children: [
-              _smallStat('本地队列', '$waiting'),
+              _smallStat('待发送', '$waiting'),
               _thinDivider(),
               _smallStat('同步日志', '$total'),
               _thinDivider(),
@@ -419,7 +425,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      '本地 AI 服务',
+                      'AI 服务',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -427,7 +433,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
                       ),
                     ),
                     Text(
-                      online ? 'Ollama 已连接' : '本地规则与知识库兜底可用',
+                      online ? '智能模型在线' : '服务运行中',
                       style: const TextStyle(
                         color: AppColors.onSurfaceVariant,
                         fontSize: 12,
@@ -436,7 +442,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
                   ],
                 ),
               ),
-              StatusChip(online ? '模型在线' : '离线兜底',
+              StatusChip(online ? '在线' : '运行中',
                   color: online ? AppColors.primary : AppColors.goldContainer),
             ],
           ),
@@ -452,7 +458,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            '主模型：${_text(ollama['primaryModel'], fallback: 'qwen2.5 本地模型')}',
+            '主模型：${_text(ollama['primaryModel'], fallback: 'qwen2.5')}',
             style: const TextStyle(
               color: AppColors.onSurfaceVariant,
               height: 1.45,

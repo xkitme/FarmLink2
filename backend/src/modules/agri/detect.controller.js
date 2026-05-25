@@ -3,7 +3,7 @@ import { ok, errors } from '../../utils/response.js'
 import { pageParams } from '../../utils/page.js'
 
 /**
- * 注意：本段为离线规则版识别（从知识库匹配）。
+ * 注意：本段为规则版识别（从知识库匹配）。
  * 分段 11 将接入 Ollama 视觉模型（minicpm-v）做真实图像推理。
  */
 

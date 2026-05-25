@@ -73,7 +73,8 @@ class _PublishPageState extends State<PublishPage> {
         onPressed: _openComposer,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
         child: const Icon(Icons.edit),
       ),
       body: _loading
@@ -88,7 +89,7 @@ class _PublishPageState extends State<PublishPage> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: AlertBanner(
-                          '当前动态来自离线缓存${_cacheTime == null ? '' : ' · $_cacheTime'}',
+                          '动态数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
                           critical: false),
                     ),
                   _noticeCard(),
@@ -119,10 +120,10 @@ class _PublishPageState extends State<PublishPage> {
   // 村委通知卡（来自 /village/affairs）
   Widget _noticeCard() {
     final title = '${_notice?['title'] ?? '村委信息暂无更新'}';
-    final content =
-        '${_notice?['content'] ?? '关注本页获取村委最新通知与公示信息。'}';
+    final content = '${_notice?['content'] ?? '关注本页获取村委最新通知与公示信息。'}';
     final org = '${_notice?['publishOrg'] ?? '村委会'}';
-    final date = _friendlyTime(_notice?['publishDate'] ?? _notice?['createdAt']);
+    final date =
+        _friendlyTime(_notice?['publishDate'] ?? _notice?['createdAt']);
     return Container(
       decoration: BoxDecoration(
         color: AppColors.goldContainer,
@@ -159,8 +160,8 @@ class _PublishPageState extends State<PublishPage> {
                         style: TextStyle(
                             fontSize: 12,
                             height: 1.5,
-                            color:
-                                const Color(0xFFFFEFDA).withValues(alpha: 0.9))),
+                            color: const Color(0xFFFFEFDA)
+                                .withValues(alpha: 0.9))),
                     const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -213,7 +214,8 @@ class _PublishPageState extends State<PublishPage> {
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  decoration:
+                      BoxDecoration(color: color, shape: BoxShape.circle),
                   alignment: Alignment.center,
                   child: Text(type.characters.first,
                       style: const TextStyle(
@@ -336,22 +338,22 @@ class _PublishPageState extends State<PublishPage> {
               const SizedBox(height: 12),
               TextField(
                 controller: titleC,
-                decoration: const InputDecoration(
-                    labelText: '标题', filled: true),
+                decoration:
+                    const InputDecoration(labelText: '标题', filled: true),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: contentC,
                 maxLines: 3,
-                decoration: const InputDecoration(
-                    labelText: '详细内容', filled: true),
+                decoration:
+                    const InputDecoration(labelText: '详细内容', filled: true),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: phoneC,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                    labelText: '联系电话（选填）', filled: true),
+                decoration:
+                    const InputDecoration(labelText: '联系电话（选填）', filled: true),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -387,14 +389,14 @@ class _PublishPageState extends State<PublishPage> {
       toast(context, '发布成功');
       _load();
     } catch (_) {
-      // 离线：写入同步队列
+      // 加入待发送队列
       await OfflineSyncQueue.enqueue(
         tableName: 'help_request',
         payload: payload,
         path: '/life/help',
       );
       if (!mounted) return;
-      toast(context, '当前离线，已存入同步队列，联网后自动发布');
+      toast(context, '已加入待发送队列，将自动发布');
     }
   }
 

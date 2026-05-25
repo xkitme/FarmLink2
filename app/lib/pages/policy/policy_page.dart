@@ -118,7 +118,7 @@ class _PolicyPageState extends State<PolicyPage> {
       source: 'policy',
       image: 'assets/images/${_images[i % 3]}',
       title: '${j['title'] ?? '惠农政策'}',
-      summary: '${j['summary'] ?? j['publishOrg'] ?? '本地政策服务'}',
+      summary: '${j['summary'] ?? j['publishOrg'] ?? '政策服务'}',
       body: '${j['summary'] ?? ''}',
       time: _ymd(j['createdAt']),
       tag: category,
@@ -196,7 +196,7 @@ class _PolicyPageState extends State<PolicyPage> {
         children: [
           _tabsBar(),
           if (_fromCache[_active])
-            const AlertBanner('当前内容来自离线缓存，请检查后端连接', critical: false),
+            const AlertBanner('数据更新中，下拉刷新可重试', critical: false),
           Expanded(
             child: _loading[_active]
                 ? const Loading(text: '正在从后端同步...')

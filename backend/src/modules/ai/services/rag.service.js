@@ -187,7 +187,7 @@ async function lifeRefs(question, limit) {
   return refs.filter((r) => r.score > 0).sort((a, b) => b.score - a.score).slice(0, limit)
 }
 
-/** 本地 SQLite 知识检索，断网环境可用。 */
+/** SQLite 知识检索。 */
 export async function searchLocalKnowledge(scene, question, limit = 5) {
   const normalized = String(scene || 'GENERAL').toUpperCase()
   if (normalized === 'POLICY') return policyRefs(question, limit)
@@ -208,7 +208,7 @@ export async function searchLocalKnowledge(scene, question, limit = 5) {
 }
 
 export function referencesToPrompt(references) {
-  if (!references.length) return '（本地知识库未检索到直接片段）'
+  if (!references.length) return '（平台知识库未检索到直接片段）'
   return references
     .map((r, i) => `[${i + 1}] ${r.title}\n${r.content}`)
     .join('\n\n')

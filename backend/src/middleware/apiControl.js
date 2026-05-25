@@ -95,7 +95,7 @@ function incrRate(plan) {
   }
 }
 
-/** 全局限流：NodeCache 内存计数，适合本机离线部署。 */
+/** 全局限流：NodeCache 内存计数，适合轻量化运行。 */
 export function rateLimitMiddleware(req, res, next) {
   if (!req.originalUrl.startsWith(config.apiPrefix)) return next()
   const plan = ratePlan(req)
@@ -143,7 +143,7 @@ export async function apiSwitchMiddleware(req, res, next) {
       return fail(res, CODES.FORBIDDEN, `功能已关闭：${sw.name}`)
     }
   } catch {
-    // SQLite 本地开关读取失败时放行，避免因管理表异常导致全站不可用。
+    // SQLite 开关读取失败时放行，避免因管理表异常导致全站不可用。
   }
   next()
 }

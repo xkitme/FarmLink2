@@ -87,14 +87,14 @@ export const RESOURCE_CONFIGS = {
     model: 'landPlot',
     searchFields: ['plotName', 'cropType', 'soilType', 'regionCode'],
     listFields: ['id', 'plotName', 'userId', 'areaMu', 'cropType', 'soilType', 'regionCode', 'createdAt'],
-    fields: [field('userId', '用户ID', 'int', { required: true }), field('plotName', '地块名称', 'string', { required: true }), field('areaMu', '面积亩', 'float'), field('boundaryGeojson', '边界GeoJSON', 'json'), field('cropType', '作物'), field('soilType', '土壤'), field('regionCode', '区域编码'), field('localUuid', '本地UUID')],
+    fields: [field('userId', '用户ID', 'int', { required: true }), field('plotName', '地块名称', 'string', { required: true }), field('areaMu', '面积亩', 'float'), field('boundaryGeojson', '边界GeoJSON', 'json'), field('cropType', '作物'), field('soilType', '土壤'), field('regionCode', '区域编码'), field('localUuid', '客户端UUID')],
   },
   farmRecord: {
     title: '农事记录',
     model: 'farmRecord',
     searchFields: ['recordType', 'cropType', 'content'],
     listFields: ['id', 'userId', 'plotId', 'recordType', 'cropType', 'cost', 'recordDate', 'createdAt'],
-    fields: [field('userId', '用户ID', 'int', { required: true }), field('plotId', '地块ID', 'int'), field('recordType', '农事类型', 'select', { options: ['播种', '施肥', '打药', '灌溉', '收获', '其他'] }), field('cropType', '作物'), field('content', '内容', 'textarea'), field('cost', '成本', 'float'), field('images', '图片JSON', 'json'), field('recordDate', '记录日期', 'date'), field('localUuid', '本地UUID')],
+    fields: [field('userId', '用户ID', 'int', { required: true }), field('plotId', '地块ID', 'int'), field('recordType', '农事类型', 'select', { options: ['播种', '施肥', '打药', '灌溉', '收获', '其他'] }), field('cropType', '作物'), field('content', '内容', 'textarea'), field('cost', '成本', 'float'), field('images', '图片JSON', 'json'), field('recordDate', '记录日期', 'date'), field('localUuid', '客户端UUID')],
   },
   diseaseKnowledge: {
     title: '病害知识库',
@@ -108,7 +108,7 @@ export const RESOURCE_CONFIGS = {
     model: 'aiDetectRecord',
     searchFields: ['detectType', 'resultLabel', 'adviceText'],
     listFields: ['id', 'userId', 'detectType', 'resultLabel', 'confidence', 'isOffline', 'createdAt'],
-    fields: [field('userId', '用户ID', 'int', { required: true }), field('detectType', '识别类型'), field('imageUrl', '图片URL', 'string', { required: true }), field('resultLabel', '结果标签'), field('confidence', '置信度', 'float'), field('adviceText', '建议', 'textarea'), field('isOffline', '离线', 'boolean'), field('feedback', '反馈', 'int'), field('localUuid', '本地UUID')],
+    fields: [field('userId', '用户ID', 'int', { required: true }), field('detectType', '识别类型'), field('imageUrl', '图片URL', 'string', { required: true }), field('resultLabel', '结果标签'), field('confidence', '置信度', 'float'), field('adviceText', '建议', 'textarea'), field('isOffline', '终端生成', 'boolean'), field('feedback', '反馈', 'int'), field('localUuid', '客户端UUID')],
   },
   yieldPrediction: {
     title: '产量预测',
@@ -178,7 +178,7 @@ export const RESOURCE_CONFIGS = {
     model: 'disasterReport',
     searchFields: ['disasterType', 'description', 'status', 'regionCode'],
     listFields: ['id', 'userId', 'disasterType', 'affectedArea', 'estimatedLoss', 'status', 'createdAt'],
-    fields: [field('userId', '用户ID', 'int', { required: true }), field('disasterType', '灾害类型', 'string', { required: true }), field('plotId', '地块ID', 'int'), field('affectedArea', '受灾面积', 'float'), field('estimatedLoss', '预估损失', 'float'), field('description', '描述', 'textarea'), field('images', '图片JSON', 'json'), field('location', '位置JSON', 'json'), field('aiLossLevel', 'AI等级'), field('status', '状态', 'select', { options: ['REPORTED', 'REVIEWING', 'PROCESSED'] }), field('regionCode', '区域'), field('localUuid', '本地UUID')],
+    fields: [field('userId', '用户ID', 'int', { required: true }), field('disasterType', '灾害类型', 'string', { required: true }), field('plotId', '地块ID', 'int'), field('affectedArea', '受灾面积', 'float'), field('estimatedLoss', '预估损失', 'float'), field('description', '描述', 'textarea'), field('images', '图片JSON', 'json'), field('location', '位置JSON', 'json'), field('aiLossLevel', 'AI等级'), field('status', '状态', 'select', { options: ['REPORTED', 'REVIEWING', 'PROCESSED'] }), field('regionCode', '区域'), field('localUuid', '客户端UUID')],
   },
   weatherAlert: {
     title: '天气预警',
@@ -293,18 +293,18 @@ export const RESOURCE_CONFIGS = {
     fields: [field('regionCode', '区域'), field('reporterId', '上报人ID', 'int'), field('statType', '统计类型'), field('year', '年份', 'int', { required: true }), field('period', '周期'), field('dataJson', '数据JSON', 'json'), field('status', '状态', 'select', { options: ['DRAFT', 'SUBMITTED', 'CONFIRMED'] })],
   },
   syncLog: {
-    title: '离线同步日志',
+    title: '同步日志',
     model: 'syncLog',
     searchFields: ['tableName', 'operation', 'syncStatus', 'localUuid'],
     listFields: ['id', 'userId', 'tableName', 'operation', 'localUuid', 'syncStatus', 'syncedAt'],
-    fields: [field('userId', '用户ID', 'int', { required: true }), field('tableName', '表名', 'string', { required: true }), field('operation', '操作', 'select', { options: ['INSERT', 'UPDATE', 'DELETE'] }), field('localUuid', '本地UUID'), field('syncStatus', '同步状态', 'select', { options: ['SUCCESS', 'CONFLICT', 'FAILED'] }), field('conflictDetail', '冲突详情', 'textarea'), field('syncedAt', '同步时间', 'date')],
+    fields: [field('userId', '用户ID', 'int', { required: true }), field('tableName', '表名', 'string', { required: true }), field('operation', '操作', 'select', { options: ['INSERT', 'UPDATE', 'DELETE'] }), field('localUuid', '客户端UUID'), field('syncStatus', '同步状态', 'select', { options: ['SUCCESS', 'CONFLICT', 'FAILED'] }), field('conflictDetail', '冲突详情', 'textarea'), field('syncedAt', '同步时间', 'date')],
   },
   aiQaRecord: {
     title: 'AI 问答记录',
     model: 'aiQaRecord',
     searchFields: ['scene', 'question', 'answer', 'modelUsed'],
     listFields: ['id', 'userId', 'scene', 'question', 'modelUsed', 'isOffline', 'createdAt'],
-    fields: [field('userId', '用户ID', 'int', { required: true }), field('scene', '场景'), field('question', '问题', 'textarea', { required: true }), field('answer', '答案', 'textarea', { required: true }), field('modelUsed', '模型'), field('isOffline', '离线', 'boolean'), field('referencesJson', '引用JSON', 'json')],
+    fields: [field('userId', '用户ID', 'int', { required: true }), field('scene', '场景'), field('question', '问题', 'textarea', { required: true }), field('answer', '答案', 'textarea', { required: true }), field('modelUsed', '模型'), field('isOffline', '终端生成', 'boolean'), field('referencesJson', '引用JSON', 'json')],
   },
 }
 

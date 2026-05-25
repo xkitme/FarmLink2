@@ -76,7 +76,7 @@ export async function subsidyList(req, res) {
   })))
 }
 
-// ── 政策 AI 问答（P11：SQLite RAG + Ollama + 规则兜底） ──
+// ── 政策 AI 问答（P11：SQLite RAG + Ollama + 规则引擎） ──
 
 export async function aiAsk(req, res) {
   const { question } = req.body
@@ -85,7 +85,7 @@ export async function aiAsk(req, res) {
   ok(res, result)
 }
 
-// ── 法律援助咨询（P11：本地 AI 编排） ──
+// ── 法律援助咨询（P11：AI 编排） ──
 
 export async function legalAsk(req, res) {
   const { question } = req.body

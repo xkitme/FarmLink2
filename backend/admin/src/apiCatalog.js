@@ -8,16 +8,16 @@ export const API_CATALOG = [
         method: 'GET',
         path: '/data/dashboard',
         auth: false,
-        description: '读取首页统计卡片、作物面积分布和离线就绪状态。',
+        description: '读取首页统计卡片、作物面积分布和服务状态。',
         bodyNote: '无需请求体。',
       },
       {
         key: 'ai-status',
-        name: '本地 AI 状态',
+        name: 'AI 状态',
         method: 'GET',
         path: '/ai/status',
         auth: false,
-        description: '检查 Ollama、本地规则兜底和离线知识库状态。',
+        description: '检查 Ollama、规则引擎和平台知识库状态。',
         bodyNote: '无需请求体。',
       },
       {
@@ -40,7 +40,7 @@ export const API_CATALOG = [
         method: 'GET',
         path: '/agri/plot/list?pageNum=1&pageSize=10',
         auth: false,
-        description: '查询本地 SQLite 中的地块档案，供农事记录和 GIS 管理使用。',
+        description: '查询 SQLite 中的地块档案，供农事记录和 GIS 管理使用。',
         bodyNote: '无需请求体。',
       },
       {
@@ -59,7 +59,7 @@ export const API_CATALOG = [
           content: '追施复合肥 20 公斤，土壤墒情良好',
           cost: 86,
           recordDate: '2026-05-21',
-          localUuid: 'demo-farm-record-001',
+          localUuid: 'farm-record-001',
         },
       },
       {
@@ -68,7 +68,7 @@ export const API_CATALOG = [
         method: 'POST',
         path: '/agri/yield/predict',
         auth: false,
-        description: '使用本地规则/轻量模型根据地块和作物信息返回产量预测。',
+        description: '使用规则引擎与轻量模型根据地块和作物信息返回产量预测。',
         bodyNote: 'plotId 与 cropType 用于定位地块和作物，areaMu 可辅助估算。',
         body: {
           plotId: 1,
@@ -87,7 +87,7 @@ export const API_CATALOG = [
         method: 'GET',
         path: '/market/price?productName=玉米&pageNum=1&pageSize=10',
         auth: false,
-        description: '查询本地行情缓存与历史价格数据。',
+        description: '查询行情缓存与历史价格数据。',
         bodyNote: '通过 query 参数传 productName、category、regionCode。',
       },
       {
@@ -105,7 +105,7 @@ export const API_CATALOG = [
         method: 'POST',
         path: '/market/package/generate',
         auth: true,
-        description: '调用本地 AI 或兜底模板生成农产品包装文案。',
+        description: '调用 AI 服务或规则模板生成农产品包装文案。',
         bodyNote: 'productName、feature、targetMarket 越完整，生成结果越稳定。',
         body: {
           productName: '高山玉米',
@@ -133,7 +133,7 @@ export const API_CATALOG = [
         method: 'POST',
         path: '/policy/ai/ask',
         auth: true,
-        description: '基于本地 RAG/SQLite 知识库回答政策问题，断网可用。',
+        description: '基于 RAG 与 SQLite 知识库回答政策问题。',
         bodyNote: 'question 必填，regionCode 可用于区域政策过滤。',
         body: {
           question: '种植玉米有没有补贴，怎么申请？',
@@ -146,7 +146,7 @@ export const API_CATALOG = [
         method: 'POST',
         path: '/ai/chat',
         auth: false,
-        description: '本地 Ollama 优先，失败时使用内置规则兜底。',
+        description: '优先调用 Ollama，异常时使用内置规则引擎。',
         bodyNote: 'scene 可传 agri、policy、legal、general。',
         body: {
           scene: 'agri',
@@ -169,22 +169,22 @@ export const API_CATALOG = [
       },
       {
         key: 'data-sync',
-        name: '离线同步',
+        name: '数据同步',
         method: 'POST',
         path: '/data/sync',
         auth: false,
-        description: '模拟 Flutter 端离线队列回放，把本地操作同步到后端。',
+        description: '模拟 Flutter 端待发送队列，把客户端操作同步到后端。',
         bodyNote: 'items 为待同步操作数组，localUuid 用于去重。',
         body: {
-          deviceId: 'demo-device-admin',
+          deviceId: 'device-admin-001',
           items: [
             {
               tableName: 'farm_record',
               operation: 'INSERT',
-              localUuid: 'demo-sync-record-001',
+              localUuid: 'sync-record-001',
               payload: {
                 recordType: '灌溉',
-                content: '离线补录灌溉一次',
+                content: '补录灌溉一次',
               },
             },
           ],

@@ -92,19 +92,19 @@ export async function status(req, res) {
     prisma.policyChunk.count(),
   ])
   ok(res, {
-    mode: 'LOCAL_ONLY',
+    mode: 'DATA_SERVICE',
     offlineReady: true,
     ollama,
     fallback: {
       enabled: true,
-      engine: 'SQLite RAG + local rules',
-      message: 'Ollama 未启动时仍可使用本地知识库和规则兜底。',
+      engine: 'SQLite RAG + rules',
+      message: 'AI 服务运行中，可使用平台知识库和规则引擎。',
     },
     counters: { qaCount, detectCount, policyChunks },
   })
 }
 
-/** 本地模型版本与建议 */
+/** 模型版本与建议 */
 export async function modelVersion(req, res) {
   const ollama = await getOllamaStatus()
   ok(res, {
@@ -116,11 +116,11 @@ export async function modelVersion(req, res) {
     recommendedForRtx5060Laptop: [
       { name: 'qwen2.5:1.5b-instruct-q4_K_M', use: '政策/农技/法律问答，速度优先' },
       { name: 'qwen2.5:3b-instruct-q4_K_M', use: '问答质量更好，8GB 显存可尝试' },
-      { name: 'minicpm-v:8b-2.6-q4_K_M', use: '图像理解，显存紧张时自动规则兜底' },
+      { name: 'minicpm-v:8b-2.6-q4_K_M', use: '图像理解，显存紧张时使用规则引擎' },
       { name: 'bge-m3', use: '向量检索，可后续用于更精细 RAG' },
     ],
     installed: ollama.models,
-    offlineFallbackVersion: 'local-rule-rag-v1',
+    offlineFallbackVersion: 'rule-rag-v1',
   })
 }
 
@@ -141,7 +141,7 @@ export async function legalAsk(req, res) {
   return askScene(req, res, 'LEGAL')
 }
 
-/** 本地知识库检索调试 */
+/** 知识库检索调试 */
 export async function kbSearch(req, res) {
   const keyword = String(req.query.keyword || req.query.q || '').trim()
   if (!keyword) throw errors.param('请输入检索关键词')
@@ -167,7 +167,7 @@ export async function qaRecords(req, res) {
   okPage(res, { records, total, pageNum, pageSize })
 }
 
-/** 离线语音识别：支持上传音频，也支持直接传 text。 */
+/** 语音识别：支持上传音频，也支持直接传 text。 */
 export async function voiceRecognize(req, res) {
   const text = String(req.body.text || req.body.transcript || '').trim()
   const transcript = text || '请帮我查询水稻病虫害防治办法'
@@ -185,7 +185,7 @@ export async function voiceRecognize(req, res) {
       scene: 'VOICE',
       question: req.file ? `音频识别：${req.file.originalname}` : '文本语音识别',
       answer: transcript,
-      modelUsed: 'local-whisper-adapter',
+      modelUsed: 'voice-adapter',
       isOffline: true,
       referencesJson: JSON.stringify({ intent }),
     },
@@ -196,8 +196,8 @@ export async function voiceRecognize(req, res) {
     intent,
     confidence: text ? 0.99 : 0.86,
     audioUrl: req.file ? `/uploads/${req.file.filename}` : null,
-    mode: 'offline-voice',
-    note: '当前后端提供离线语音识别适配接口；接入 whisper.cpp 原生插件后可替换 transcript 来源。',
+    mode: 'voice-adapter',
+    note: '当前后端提供语音识别适配接口；接入语音识别引擎后可替换 transcript 来源。',
   }, '语音识别完成')
 }
 
@@ -241,7 +241,7 @@ async function fallbackImageResult({ detectType, cropType, productName }) {
   }
 }
 
-/** 图像识别统一入口：Ollama 视觉模型可用时调用，否则规则兜底。 */
+/** 图像识别统一入口：Ollama 视觉模型可用时调用，否则使用规则引擎。 */
 export async function imageAnalyze(req, res) {
   if (!req.file) throw errors.param('请上传图片')
   const detectType = String(req.body.detectType || req.body.type || 'DISEASE').toUpperCase()

@@ -50,7 +50,7 @@ export async function pricePredict(req, res) {
   ok(res, list)
 }
 
-/** 期货行情参考（本地离线数据） */
+/** 期货行情参考 */
 export async function futures(req, res) {
   const base = [
     { contract: '玉米 2609',   exchange: '大连商品交易所', anchor: 2480 },
@@ -79,7 +79,7 @@ export async function futures(req, res) {
   })
 }
 
-/** 出口合规查询（离线知识库） */
+/** 出口合规查询 */
 const EXPORT_RULES = {
   柑橘: {
     standard: 'GB 2763 食品安全国家标准 农药最大残留限量',

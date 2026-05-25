@@ -151,7 +151,7 @@ export async function maintainRemind(req, res) {
   ok(res, reminders)
 }
 
-// ── 故障 AI 诊断（离线规则版，分段 11 接入 LLM） ──
+// ── 故障 AI 诊断 ──
 
 const FAULT_RULES = [
   { keys: ['启动', '打不着', '不着火', '无法启动'], causes: ['电瓶电量不足', '燃油不足或油路堵塞', '启动马达故障'],
@@ -187,6 +187,6 @@ export async function faultDiagnose(req, res) {
     machineType: machineType || '通用农机',
     symptom,
     ...result,
-    tip: '本诊断为离线规则版，仅供参考；复杂故障请联系专业维修人员。',
+    tip: '本诊断仅供参考；复杂故障请联系专业维修人员。',
   }, '诊断完成')
 }

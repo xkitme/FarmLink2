@@ -22,7 +22,7 @@ async function postJson(path, body, timeoutMs = 60000) {
   return res
 }
 
-/** 查询 Ollama 服务与本地模型列表。 */
+/** 查询 Ollama 服务与模型列表。 */
 export async function getOllamaStatus(timeoutMs = 1500) {
   try {
     const res = await fetch(`${baseUrl()}/api/tags`, { signal: timeoutSignal(timeoutMs) })
@@ -53,7 +53,7 @@ export async function getOllamaStatus(timeoutMs = 1500) {
   }
 }
 
-/** 非流式本地大模型生成。 */
+/** 非流式大模型生成。 */
 export async function generateText({ prompt, system, model, images, temperature = 0.2, timeoutMs = 90000 }) {
   const started = Date.now()
   const res = await postJson('/api/generate', {

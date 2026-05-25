@@ -3,7 +3,7 @@ import { ok, errors } from '../../utils/response.js'
 
 /**
  * 保险智能理赔。
- * 本段为离线规则版 AI 评估；分段 11 接入视觉模型做灾损图像评估。
+ * 本段为规则版 AI 评估；分段 11 接入视觉模型做灾损图像评估。
  */
 
 function assessLevel(amount) {

@@ -36,7 +36,7 @@ export function registerRoutes(app, prefix) {
   router.use(lifeRoutes)
   // 板块七 data：数据与智能管理
   router.use(dataRoutes)
-  // AI 能力：本地 Ollama + SQLite RAG + 离线兜底
+  // AI 能力：Ollama + SQLite RAG + 规则引擎
   router.use(aiRoutes)
 
   app.use(prefix, router)

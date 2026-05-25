@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 // ── API ──────────────────────────────────────────────
-// 默认连接本机后端；APK 可通过 --dart-define=FARMLINK_API_BASE_URL=... 指定局域网地址。
+// 默认连接后端；APK 可通过 --dart-define=FARMLINK_API_BASE_URL=... 指定服务地址。
 const String kBaseUrl = String.fromEnvironment(
   'FARMLINK_API_BASE_URL',
   defaultValue: 'http://localhost:8000',

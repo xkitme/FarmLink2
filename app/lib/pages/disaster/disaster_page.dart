@@ -107,8 +107,7 @@ class _DisasterPageState extends State<DisasterPage> {
                       if (_fromCache)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),
-                          child:
-                              AlertBanner('当前为离线缓存数据，请检查后端连接', critical: false),
+                          child: AlertBanner('数据更新中，下拉刷新可重试', critical: false),
                         ),
                       _alertSection(),
                       const SectionTitle('风险指数'),
@@ -146,7 +145,7 @@ class _DisasterPageState extends State<DisasterPage> {
             Icon(Icons.verified, color: AppColors.primary),
             SizedBox(width: 10),
             Expanded(
-              child: Text('当前本地暂无生效的气象灾害预警',
+              child: Text('当前暂无生效的气象灾害预警',
                   style: TextStyle(
                       fontSize: 15, color: AppColors.onSurfaceVariant)),
             ),
@@ -529,7 +528,7 @@ class _DisasterPageState extends State<DisasterPage> {
         payload: {'sosType': type.value, 'description': desc.text.trim()},
         path: '/disaster/sos',
       );
-      if (mounted) toast(context, '当前离线，求助已存入队列，联网后自动发出');
+      if (mounted) toast(context, '求助已加入待发送队列，将自动发出');
     }
   }
 
@@ -588,7 +587,7 @@ class _DisasterPageState extends State<DisasterPage> {
     } catch (_) {
       await OfflineSyncQueue.enqueue(
           tableName: table, payload: payload, path: path);
-      if (mounted) toast(context, '当前离线，已存入同步队列，联网后自动提交');
+      if (mounted) toast(context, '已加入待发送队列，将自动重传');
     }
   }
 

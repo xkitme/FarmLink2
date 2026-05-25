@@ -190,7 +190,7 @@ class _MachineryPageState extends State<MachineryPage> {
                   if (_fromCache) ...[
                     const SizedBox(height: 10),
                     AlertBanner(
-                        '当前农机来自离线缓存${_cacheTime == null ? '' : ' · $_cacheTime'}',
+                        '农机数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
                         critical: false),
                   ],
                   if (_error != null) ...[
@@ -583,7 +583,7 @@ class _MachineryPageState extends State<MachineryPage> {
         'machineryId': machine.id,
         'startDate': _date(start),
         'endDate': _date(end),
-        'remark': 'Flutter App 本地预约',
+        'remark': 'Flutter App 预约',
       });
       if (mounted) toast(context, '预约已提交，可在后台预约表查看');
     } catch (error) {

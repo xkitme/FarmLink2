@@ -206,9 +206,9 @@ export default function ApiSwitchPage() {
       <div className="page-heading">
         <div>
           <Typography.Title level={3}>API 开关管理</Typography.Title>
-          <Typography.Text type="secondary">本地运行时可直接关闭高成本 AI、交易、同步等能力，验证后端治理能力。</Typography.Text>
+          <Typography.Text type="secondary">可直接关闭高成本 AI、交易、同步等能力，统一治理后端接口。</Typography.Text>
         </div>
-        <Tag color="green">本机 SQLite 生效</Tag>
+        <Tag color="green">SQLite 数据服务</Tag>
       </div>
 
       <Row gutter={[16, 16]}>
@@ -323,7 +323,7 @@ export default function ApiSwitchPage() {
             <Input placeholder="例如 通用 AI 对话" />
           </Form.Item>
           <Form.Item label="分类" name="category" rules={[{ required: true, message: '请填写分类' }]}>
-            <Input placeholder="例如 AI 能力 / 交易流程 / 离线同步" />
+            <Input placeholder="例如 AI 能力 / 交易流程 / 数据同步" />
           </Form.Item>
           <Form.Item label="说明" name="description">
             <Input.TextArea rows={3} placeholder="说明这个开关影响哪些接口和业务场景" />

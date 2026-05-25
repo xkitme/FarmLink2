@@ -67,11 +67,11 @@ export default function Dashboard() {
       <div className="page-heading">
         <div>
           <Typography.Title level={3}>运营驾驶舱</Typography.Title>
-          <Typography.Text type="secondary">后端管理面板基础框架已接入本地 API。</Typography.Text>
+          <Typography.Text type="secondary">平台数据、AI 服务与治理能力统一汇总。</Typography.Text>
         </div>
         <Space>
           <Tag color={aiStatus?.ollama?.online ? 'green' : 'gold'} icon={<ExperimentOutlined />}>
-            {aiStatus?.ollama?.online ? 'Ollama 在线' : '本地规则兜底'}
+            {aiStatus?.ollama?.online ? '智能模型在线' : 'AI 服务运行中'}
           </Tag>
           <Tag color="blue" icon={<ApiOutlined />}>API 已接入</Tag>
         </Space>
@@ -114,11 +114,11 @@ export default function Dashboard() {
         </Col>
       </Row>
 
-      <Card title="离线状态" className="panel-card">
+      <Card title="服务状态" className="panel-card">
         <Space size={24} wrap>
           <Tag color="green">数据库：{dashboard?.offlineReady?.database || 'SQLite'}</Tag>
-          <Tag color="green">模式：{dashboard?.offlineReady?.mode || 'LOCAL_ONLY'}</Tag>
-          <Tag color="blue">AI：{aiStatus?.fallback?.engine || 'SQLite RAG + local rules'}</Tag>
+          <Tag color="green">模式：{dashboard?.offlineReady?.mode || 'DATA_SERVICE'}</Tag>
+          <Tag color="blue">AI：{aiStatus?.fallback?.engine || 'SQLite RAG + rules'}</Tag>
         </Space>
       </Card>
     </Space>

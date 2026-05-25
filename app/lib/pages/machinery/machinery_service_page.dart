@@ -100,8 +100,7 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
                       if (_fromCache)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),
-                          child:
-                              AlertBanner('当前为离线缓存数据，请检查后端连接', critical: false),
+                          child: AlertBanner('数据更新中，下拉刷新可重试', critical: false),
                         ),
                       const SectionTitle('维保提醒'),
                       _reminderList(),
@@ -503,7 +502,7 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
     } catch (_) {
       await OfflineSyncQueue.enqueue(
           tableName: table, payload: payload, path: path);
-      if (mounted) toast(context, '当前离线，已存入同步队列，联网后自动提交');
+      if (mounted) toast(context, '已加入待发送队列，将自动重传');
     }
   }
 

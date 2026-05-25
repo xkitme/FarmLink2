@@ -19,6 +19,7 @@ import '../pages/publish/publish_page.dart';
 import '../pages/messages/messages_page.dart';
 import '../pages/policy/policy_page.dart';
 import '../pages/data/data_dashboard_page.dart';
+import '../pages/data/data_service_page.dart';
 import '../pages/profile/profile_page.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
@@ -71,6 +72,9 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
                 builder: (_, __) => const MarketServicePage()),
             GoRoute(
                 path: '/data', builder: (_, __) => const DataDashboardPage()),
+            GoRoute(
+                path: '/data/service',
+                builder: (_, __) => const DataServicePage()),
             GoRoute(path: '/publish', builder: (_, __) => const PublishPage()),
             GoRoute(
                 path: '/messages', builder: (_, __) => const MessagesPage()),

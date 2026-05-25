@@ -213,7 +213,7 @@ class ErrorRetry extends StatelessWidget {
       );
 }
 
-/// 占位面板（板块功能页于分段 17+ 实现）
+/// 通用服务状态面板
 class PlaceholderPanel extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -239,7 +239,7 @@ class PlaceholderPanel extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     color: AppColors.onSurface)),
             const SizedBox(height: 6),
-            const Text('功能正在接入本地服务',
+            const Text('服务暂时不可用，请稍后重试',
                 style: TextStyle(color: AppColors.outline, fontSize: 13)),
           ],
         ),

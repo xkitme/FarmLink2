@@ -141,8 +141,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
                       if (_fromCache)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),
-                          child:
-                              AlertBanner('当前为离线缓存数据，请检查后端连接', critical: false),
+                          child: AlertBanner('数据更新中，下拉刷新可重试', critical: false),
                         ),
                       const SectionTitle('补贴与问答'),
                       _toolRow([
@@ -482,7 +481,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
                         TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
                 for (final ref in refs.take(3))
-                  Text('· ${ref['title'] ?? ref['policyTitle'] ?? '本地知识库'}',
+                  Text('· ${ref['title'] ?? ref['policyTitle'] ?? '政策知识库'}',
                       style: const TextStyle(
                           fontSize: 12, color: AppColors.onSurfaceVariant)),
               ],
@@ -624,7 +623,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
     } catch (_) {
       await OfflineSyncQueue.enqueue(
           tableName: table, payload: payload, path: path);
-      if (mounted) toast(context, '当前离线，已存入同步队列，联网后自动提交');
+      if (mounted) toast(context, '已加入待发送队列，将自动重传');
     }
   }
 

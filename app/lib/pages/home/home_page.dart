@@ -92,7 +92,7 @@ class _HomePageState extends State<HomePage> {
                   )
                 else if (_fromCache)
                   AlertBanner(
-                      '当前气象来自离线缓存${_cacheTime == null ? '' : ' · $_cacheTime'}',
+                      '气象数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
                       critical: false),
                 Expanded(
                   child: RefreshIndicator(
@@ -182,7 +182,7 @@ class _HomePageState extends State<HomePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('当前气况 · 本地农区',
+                          const Text('当前气况 · 所在农区',
                               style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 12,
@@ -487,7 +487,7 @@ class _HomePageState extends State<HomePage> {
       case 'disaster':
         context.go('/disaster');
       default:
-        toast(context, '功能页面正在接入');
+        toast(context, '该服务暂时不可用，请稍后重试');
     }
   }
 }

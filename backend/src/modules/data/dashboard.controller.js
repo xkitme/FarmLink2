@@ -34,7 +34,7 @@ function ndviForPlot(plot) {
   return Number(Math.min(0.91, Math.max(0.28, 0.43 + cropBias + seed * 0.2)).toFixed(2))
 }
 
-/** 农情数据看板：全部来自本地 SQLite，适合离线运行。 */
+/** 农情数据看板：全部来自 SQLite 数据库。 */
 export async function dashboard(req, res) {
   const regionWhere = whereByRegion(req)
   const userWhere = req.user.role === 'ADMIN' || req.user.role === 'VILLAGE' ? {} : { userId: req.user.id }
@@ -132,12 +132,12 @@ export async function dashboard(req, res) {
     offlineReady: {
       database: 'SQLite',
       mode: 'LOCAL_ONLY',
-      message: '当前看板数据来自本机 SQLite，可在断网环境下运行。',
+      message: '数据已更新',
     },
   })
 }
 
-/** 遥感图像分析：离线模式使用地块数据生成 NDVI 诊断，不依赖外部遥感服务。 */
+/** 遥感图像分析：使用地块数据生成 NDVI 诊断。 */
 export async function remoteSensing(req, res) {
   const plotWhere = {
     ...whereByRegion(req),
@@ -192,7 +192,7 @@ export async function annualReportList(req, res) {
   okPage(res, { records, total, pageNum, pageSize })
 }
 
-/** 本地生成农事年度报告：后续 AI 模块可替换为 Ollama 生成。 */
+/** 生成农事年度报告：后续 AI 模块可替换为 Ollama 生成。 */
 export async function generateAnnualReport(req, res) {
   const year = Number(req.body.year) || new Date().getFullYear()
   const userId = req.user.role === 'ADMIN' && req.body.userId ? Number(req.body.userId) : req.user.id

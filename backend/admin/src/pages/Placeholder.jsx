@@ -6,23 +6,23 @@ export default function Placeholder({ title, group }) {
       <div className="page-heading">
         <div>
           <Typography.Title level={3}>{title}</Typography.Title>
-          <Typography.Text type="secondary">该模块正在接入完整管理页面。</Typography.Text>
+          <Typography.Text type="secondary">请选择左侧菜单进入对应管理页面。</Typography.Text>
         </div>
         <Tag color="blue">{group}</Tag>
       </div>
       <Card className="panel-card">
         <div className="placeholder-grid">
           <div>
-            <strong>路由已预留</strong>
-            <span>菜单、布局、鉴权和请求封装已经可用。</span>
+            <strong>统一入口</strong>
+            <span>菜单、布局、鉴权和请求封装保持一致。</span>
           </div>
           <div>
-            <strong>后端已接入</strong>
+            <strong>接口已接入</strong>
             <span>直接调用 `/api/v1` 下的业务接口。</span>
           </div>
           <div>
-            <strong>离线可用</strong>
-            <span>管理台与后端均可在本机运行。</span>
+            <strong>数据可管理</strong>
+            <span>业务数据、状态和日志均可在后台治理。</span>
           </div>
         </div>
       </Card>

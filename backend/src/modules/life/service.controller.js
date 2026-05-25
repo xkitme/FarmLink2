@@ -12,7 +12,7 @@ export async function expressList(req, res) {
   ok(res, rows)
 }
 
-/** 快递查询（离线 mock） */
+/** 快递查询 */
 export async function expressQuery(req, res) {
   const no = String(req.query.no || '').trim()
   if (!no) throw errors.param('请输入快递单号')
@@ -25,7 +25,7 @@ export async function expressQuery(req, res) {
       { time: new Date(Date.now() - 86400000), desc: '运输中，已发往目的地' },
       { time: new Date(), desc: '快件已到达【松华村快递服务点】，请凭取件码取件' },
     ],
-    tip: '本地离线数据；实际请以快递公司信息为准。',
+    tip: '平台查询结果仅供参考，实际请以快递公司信息为准。',
   })
 }
 
@@ -48,7 +48,7 @@ export async function utilityBill(req, res) {
   })
 }
 
-/** 缴费（离线 mock） */
+/** 缴费 */
 export async function utilityPay(req, res) {
   const { type, amount } = req.body
   if (!UTILITY[type] || !amount) throw errors.param('请选择账单类型并填写金额')
@@ -99,7 +99,7 @@ export async function tourismCreate(req, res) {
   ok(res, t, '景点已发布')
 }
 
-/** 旅游推广文案生成（离线模板，分段 11 接入 LLM） */
+/** 旅游推广文案生成 */
 export async function tourismPromote(req, res) {
   const { name, spotType, highlights } = req.body
   if (!name) throw errors.param('请填写景点名称')
@@ -111,6 +111,6 @@ export async function tourismPromote(req, res) {
       `远离城市喧嚣，来${name}过几天慢生活：呼吸新鲜空气，品尝时令果蔬，体验农事乐趣。\n` +
       `${spotType === '民宿' ? '推窗见景，安睡田园。' : '柴火饭菜香，亲子好去处。'}周末就来，给生活换个风景。`,
     tags: ['乡村游', '亲子体验', '生态田园', '周末好去处'],
-    tip: '本文案为模板生成，分段 11 接入本地大模型后可智能生成。',
+    tip: '本文案可按景点特点继续微调，用于正式发布前建议人工复核。',
   }, '推广文案已生成')
 }

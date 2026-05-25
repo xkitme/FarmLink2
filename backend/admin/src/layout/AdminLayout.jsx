@@ -52,7 +52,7 @@ const menuItems = [
     icon: <RobotOutlined />,
     label: 'AI 能力',
     children: [
-      { key: '/ai', icon: <ExperimentOutlined />, label: '本地 AI 状态' },
+      { key: '/ai', icon: <ExperimentOutlined />, label: 'AI 状态' },
       { key: '/api-debug', icon: <ApiOutlined />, label: 'API 在线调试' },
     ],
   },
@@ -130,7 +130,7 @@ export default function AdminLayout() {
               onClick={() => setCollapsed((value) => !value)}
             />
             <Typography.Text className="page-title">数字乡村助农后台</Typography.Text>
-            <Tag color="green">SQLite 离线部署</Tag>
+            <Tag color="green">SQLite 数据服务</Tag>
           </Space>
           <Space size={16}>
             <Button type="text" icon={<BellOutlined />} aria-label="通知" />

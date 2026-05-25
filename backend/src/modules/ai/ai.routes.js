@@ -12,7 +12,7 @@ router.use('/ai', requireAuth)
 router.get('/ai/status', wrap(ai.status))
 router.get('/ai/model/version', wrap(ai.modelVersion))
 
-// ── 本地大模型问答 ──────────────────────────
+// ── 大模型问答 ──────────────────────────────
 router.post('/ai/chat', wrap(ai.chat))
 router.post('/ai/policy/ask', wrap(ai.policyAsk))
 router.post('/ai/agri/ask', wrap(ai.agriAsk))

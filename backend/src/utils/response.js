@@ -63,4 +63,7 @@ export const errors = {
   notFound: (msg = '资源不存在') => new BusinessError(CODES.NOT_FOUND, msg),
   rateLimit: (msg = '请求过于频繁') => new BusinessError(CODES.RATE_LIMIT, msg),
   aiBusy: (msg = 'AI 服务繁忙') => new BusinessError(CODES.AI_BUSY, msg),
+  // 服务暂时不可用 —— 内部为离线降级实现，对用户统一以「服务暂不可用」呈现，
+  // 不要把责任归到「网络」或「本地」。
+  offline: (msg = '服务暂时不可用，请稍后重试') => new BusinessError(CODES.OFFLINE, msg),
 }

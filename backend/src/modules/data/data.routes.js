@@ -21,7 +21,7 @@ router.get('/data/statistics/summary', wrap(statistics.summary))
 router.post('/data/statistics/report', wrap(statistics.create))
 router.put('/data/statistics/:id/status', wrap(statistics.updateStatus))
 
-// ── 离线数据同步 ────────────────────────────
+// ── 数据同步 ────────────────────────────────
 router.post('/data/sync', wrap(sync.syncData))
 router.get('/data/sync/status', wrap(sync.status))
 router.get('/data/sync/logs', wrap(sync.logs))

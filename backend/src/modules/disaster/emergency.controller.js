@@ -21,7 +21,7 @@ export async function guideDetail(req, res) {
 
 // ── 一键求助 ────────────────────────────────
 
-/** 紧急联系人（离线常备） */
+/** 紧急联系人（常备） */
 const SOS_CONTACTS = [
   { name: '村委会值班', phone: '028-88661000' },
   { name: '镇农业服务站', phone: '028-88662000' },

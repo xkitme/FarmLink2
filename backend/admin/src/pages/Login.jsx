@@ -30,7 +30,7 @@ export default function Login() {
           <SafetyCertificateOutlined />
           <div>
             <Typography.Title level={2}>田园通管理后台</Typography.Title>
-            <Typography.Text type="secondary">本机离线部署 · SQLite · 本地 AI</Typography.Text>
+            <Typography.Text type="secondary">在线服务平台 · 数据治理 · AI 能力</Typography.Text>
           </div>
         </div>
         <Form

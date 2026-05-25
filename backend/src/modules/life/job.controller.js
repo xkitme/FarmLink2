@@ -26,7 +26,7 @@ export async function jobCreate(req, res) {
     data: {
       publisherId: req.user.id,
       title,
-      jobType: jobType || '本地用工',
+      jobType: jobType || '乡村用工',
       company: company || null,
       location: location || null,
       salary: salary || null,
@@ -101,7 +101,7 @@ export async function loanAssess(req, res) {
   ok(res, {
     ...app,
     product: { bankName: product.bankName, productName: product.productName, interestRate: product.interestRate },
-    tip: '本评估为离线规则版，仅供参考，最终以银行审核为准。',
+    tip: '本评估仅供参考，最终以银行审核为准。',
   }, '贷款资质评估完成')
 }
 

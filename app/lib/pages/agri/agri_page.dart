@@ -49,8 +49,7 @@ class _AgriPageState extends State<AgriPage> {
       final r = await Future.wait<dynamic>([
         ApiClient.get('/agri/plot/list'),
         ApiClient.get('/agri/record/list', query: {'pageSize': 10}),
-        ApiClient.get('/agri/calendar',
-            query: {'month': DateTime.now().month}),
+        ApiClient.get('/agri/calendar', query: {'month': DateTime.now().month}),
       ]);
       if (!mounted) return;
       _plots = _list(r[0]);
@@ -104,8 +103,7 @@ class _AgriPageState extends State<AgriPage> {
                       if (_fromCache)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),
-                          child: AlertBanner('当前为离线缓存数据，请检查后端连接',
-                              critical: false),
+                          child: AlertBanner('数据更新中，下拉刷新可重试', critical: false),
                         ),
                       _plotSection(),
                       _recordSection(),
@@ -158,8 +156,7 @@ class _AgriPageState extends State<AgriPage> {
                           children: [
                             Text('${p['plotName'] ?? '地块'}',
                                 style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600)),
+                                    fontSize: 15, fontWeight: FontWeight.w600)),
                             Text(
                                 '${p['cropType'] ?? '未种植'} · ${p['areaMu'] ?? 0} 亩 · ${p['soilType'] ?? '—'}',
                                 style: const TextStyle(
@@ -188,12 +185,16 @@ class _AgriPageState extends State<AgriPage> {
       _field(soil, '土壤类型'),
     ]);
     if (ok != true) return;
-    await _submit('/agri/plot', {
-      'plotName': name.text.trim(),
-      'areaMu': double.tryParse(area.text) ?? 0,
-      'cropType': crop.text.trim(),
-      'soilType': soil.text.trim(),
-    }, 'land_plot', '地块已添加');
+    await _submit(
+        '/agri/plot',
+        {
+          'plotName': name.text.trim(),
+          'areaMu': double.tryParse(area.text) ?? 0,
+          'cropType': crop.text.trim(),
+          'soilType': soil.text.trim(),
+        },
+        'land_plot',
+        '地块已添加');
   }
 
   // ── 农事记录 ──────────────────────────────
@@ -248,13 +249,17 @@ class _AgriPageState extends State<AgriPage> {
       _field(cost, '投入成本（元）', number: true),
     ]);
     if (ok != true) return;
-    await _submit('/agri/record', {
-      'recordType': type.value,
-      'cropType': crop.text.trim(),
-      'content': content.text.trim(),
-      'cost': double.tryParse(cost.text) ?? 0,
-      'recordDate': DateTime.now().toIso8601String(),
-    }, 'farm_record', '农事记录已保存');
+    await _submit(
+        '/agri/record',
+        {
+          'recordType': type.value,
+          'cropType': crop.text.trim(),
+          'content': content.text.trim(),
+          'cost': double.tryParse(cost.text) ?? 0,
+          'recordDate': DateTime.now().toIso8601String(),
+        },
+        'farm_record',
+        '农事记录已保存');
   }
 
   // ── AI 田间识别 ───────────────────────────
@@ -289,8 +294,8 @@ class _AgriPageState extends State<AgriPage> {
   Future<void> _detect(String name, String path) async {
     final src = await _pickSource();
     if (src == null) return;
-    final img = await _picker.pickImage(
-        source: src, imageQuality: 82, maxWidth: 1600);
+    final img =
+        await _picker.pickImage(source: src, imageQuality: 82, maxWidth: 1600);
     if (img == null) return;
     final bytes = await img.readAsBytes();
     if (!mounted) return;
@@ -545,8 +550,7 @@ class _AgriPageState extends State<AgriPage> {
                           children: [
                             Text('${c['activity'] ?? ''}',
                                 style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600)),
+                                    fontSize: 14, fontWeight: FontWeight.w600)),
                             if ('${c['description'] ?? ''}'.isNotEmpty)
                               Text('${c['description']}',
                                   style: const TextStyle(
@@ -587,13 +591,11 @@ class _AgriPageState extends State<AgriPage> {
                       Text(
                           '防治对象：${p['targetPest'] ?? '—'} · 毒性 ${p['toxicity'] ?? '—'}',
                           style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.onSurfaceVariant)),
+                              fontSize: 12, color: AppColors.onSurfaceVariant)),
                       Text(
                           '安全用量：${p['safeDosage'] ?? '见标签'} · 间隔期 ${p['safeInterval'] ?? '—'}',
                           style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.onSurfaceVariant)),
+                              fontSize: 12, color: AppColors.onSurfaceVariant)),
                     ],
                   ),
                 ),
@@ -636,7 +638,7 @@ class _AgriPageState extends State<AgriPage> {
     } catch (_) {
       await OfflineSyncQueue.enqueue(
           tableName: table, payload: payload, path: path);
-      if (mounted) toast(context, '当前离线，已存入同步队列，联网后自动提交');
+      if (mounted) toast(context, '已加入待发送队列，将自动重传');
     }
   }
 

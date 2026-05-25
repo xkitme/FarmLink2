@@ -4,7 +4,7 @@ import { generateText } from './ollama.service.js'
 import { buildPrompt, fallbackAnswer, systemPrompt } from './fallback.service.js'
 import { searchLocalKnowledge } from './rag.service.js'
 
-/** 完整问答编排：SQLite RAG → Ollama 本地模型 → 规则兜底。 */
+/** 完整问答编排：SQLite RAG → Ollama 模型 → 规则引擎。 */
 export async function answerQuestion({ userId, scene = 'GENERAL', question }) {
   const normalized = String(scene || 'GENERAL').toUpperCase()
   const references = await searchLocalKnowledge(normalized, question, 5)
@@ -26,8 +26,8 @@ export async function answerQuestion({ userId, scene = 'GENERAL', question }) {
     modelUsed = result.model
     durationMs = result.totalDurationMs
   } catch (err) {
-    mode = 'local-rule-rag'
-    modelUsed = 'local-rule-rag'
+    mode = 'rule-rag'
+    modelUsed = 'rule-rag'
     answer = fallbackAnswer({ scene: normalized, question, references })
   }
 

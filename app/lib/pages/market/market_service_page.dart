@@ -102,8 +102,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
                       if (_fromCache)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),
-                          child:
-                              AlertBanner('当前为离线缓存数据，请检查后端连接', critical: false),
+                          child: AlertBanner('数据更新中，下拉刷新可重试', critical: false),
                         ),
                       const SectionTitle('实时行情'),
                       _priceList(),
@@ -159,7 +158,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
                         Text('${_prices[i]['productName'] ?? '农产品'}',
                             style: const TextStyle(
                                 fontSize: 15, fontWeight: FontWeight.w600)),
-                        Text('${_prices[i]['marketName'] ?? '本地市场'}',
+                        Text('${_prices[i]['marketName'] ?? '周边市场'}',
                             style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.onSurfaceVariant)),
@@ -589,7 +588,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
     } catch (_) {
       await OfflineSyncQueue.enqueue(
           tableName: table, payload: payload, path: path);
-      if (mounted) toast(context, '当前离线，已存入同步队列，联网后自动提交');
+      if (mounted) toast(context, '已加入待发送队列，将自动重传');
     }
   }
 

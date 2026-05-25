@@ -155,14 +155,14 @@ class _LifePageState extends State<LifePage> {
                       if (_fromCache)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),
-                          child: AlertBanner('当前生活服务来自离线缓存', critical: false),
+                          child: AlertBanner('生活服务数据更新中', critical: false),
                         ),
                       _heroCard(),
                       const SectionTitle('便民服务'),
                       _primaryServiceGrid(),
                       const SectionTitle('就业金融与教育'),
                       _smartToolGrid(),
-                      const SectionTitle('本地岗位'),
+                      const SectionTitle('附近岗位'),
                       _jobList(),
                       const SectionTitle('乡村旅游'),
                       _tourismList(),
@@ -353,7 +353,7 @@ class _LifePageState extends State<LifePage> {
   }
 
   Widget _jobList() {
-    if (_jobs.isEmpty) return const AppCard(child: Text('暂无本地岗位'));
+    if (_jobs.isEmpty) return const AppCard(child: Text('暂无附近岗位'));
     return Column(
       children: [
         for (final j in _jobs.take(4))
@@ -375,7 +375,7 @@ class _LifePageState extends State<LifePage> {
                                 fontSize: 15, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 3),
                         Text(
-                            '${j['company'] ?? '本地用工'} · ${j['location'] ?? '本村'}',
+                            '${j['company'] ?? '乡村用工'} · ${j['location'] ?? '本村'}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -1124,7 +1124,7 @@ class _LifePageState extends State<LifePage> {
     } catch (_) {
       await OfflineSyncQueue.enqueue(
           tableName: tableName, payload: payload, path: path);
-      if (mounted) toast(context, '当前离线，已存入同步队列，联网后自动提交');
+      if (mounted) toast(context, '已加入待发送队列，将自动重传');
     }
   }
 

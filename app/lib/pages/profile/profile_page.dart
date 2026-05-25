@@ -66,7 +66,7 @@ class _ProfilePageState extends State<ProfilePage> {
       toast(
         context,
         result.total == 0
-            ? '本地队列暂无待处理数据'
+            ? '待发送队列暂无待处理数据'
             : '已处理 ${result.total} 条，成功 ${result.success} 条',
       );
       await _load();
@@ -245,7 +245,7 @@ class _ProfilePageState extends State<ProfilePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '离线同步',
+                  '数据同步',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -254,7 +254,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '本地队列 $waiting 条，失败 $failed 条，冲突 $conflict 条',
+                  '待发送 $waiting 条，失败 $failed 条，冲突 $conflict 条',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: AppColors.onSurfaceVariant),
@@ -300,7 +300,7 @@ class _ProfilePageState extends State<ProfilePage> {
               () => toast(context, '适老模式已在账号设置中启用')),
           _line(),
           _menuAction(context, Icons.settings_outlined, '设置',
-              () => toast(context, '设置已保持本地化配置')),
+              () => toast(context, '设置已保存')),
         ],
       ),
     );

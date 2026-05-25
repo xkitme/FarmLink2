@@ -40,7 +40,7 @@ export const RESOURCE_GROUPS = {
     resources: ['annualReport', 'statReport', 'syncLog'],
   },
   ai: {
-    title: '本地 AI 能力',
+    title: 'AI 能力',
     group: 'AI 管理',
     resources: ['aiQaRecord', 'aiDetectRecord'],
   },

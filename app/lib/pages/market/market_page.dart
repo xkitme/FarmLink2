@@ -217,7 +217,7 @@ class _MarketPageState extends State<MarketPage> {
                 if (_fromCache) ...[
                   const SizedBox(height: 12),
                   AlertBanner(
-                      '当前商品来自离线缓存${_cacheTime == null ? '' : ' · $_cacheTime'}',
+                      '商品数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
                       critical: false),
                 ],
                 if (_error != null) ...[
@@ -602,11 +602,11 @@ class _MarketPageState extends State<MarketPage> {
         'productId': first.key,
         'quantity': first.value,
         'receiverInfo': {
-          'name': '本地用户',
+          'name': '默认用户',
           'phone': '13800000000',
-          'address': '本地收货地址',
+          'address': '默认收货地址',
         },
-        'remark': 'Flutter App 本地下单',
+        'remark': 'Flutter App 下单',
       });
       if (!mounted) return;
       setState(() => _cart.clear());
