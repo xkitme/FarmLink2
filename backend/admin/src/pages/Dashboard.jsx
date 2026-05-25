@@ -116,9 +116,9 @@ export default function Dashboard() {
 
       <Card title="服务状态" className="panel-card">
         <Space size={24} wrap>
-          <Tag color="green">数据库：{dashboard?.offlineReady?.database || 'SQLite'}</Tag>
-          <Tag color="green">模式：{dashboard?.offlineReady?.mode || 'DATA_SERVICE'}</Tag>
-          <Tag color="blue">AI：{aiStatus?.fallback?.engine || 'SQLite RAG + rules'}</Tag>
+          <Tag color="green">数据源：{dashboard?.serviceStatus?.dataSource || '平台业务数据'}</Tag>
+          <Tag color="green">运行状态：{dashboard?.serviceStatus?.mode || '运行中'}</Tag>
+          <Tag color="blue">AI：{aiStatus?.capability?.engine || '智能问答服务'}</Tag>
         </Space>
       </Card>
     </Space>

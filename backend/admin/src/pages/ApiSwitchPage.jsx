@@ -208,7 +208,7 @@ export default function ApiSwitchPage() {
           <Typography.Title level={3}>API 开关管理</Typography.Title>
           <Typography.Text type="secondary">可直接关闭高成本 AI、交易、同步等能力，统一治理后端接口。</Typography.Text>
         </div>
-        <Tag color="green">SQLite 数据服务</Tag>
+        <Tag color="green">平台数据服务</Tag>
       </div>
 
       <Row gutter={[16, 16]}>

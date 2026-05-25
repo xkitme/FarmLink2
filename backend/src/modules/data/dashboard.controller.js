@@ -34,7 +34,7 @@ function ndviForPlot(plot) {
   return Number(Math.min(0.91, Math.max(0.28, 0.43 + cropBias + seed * 0.2)).toFixed(2))
 }
 
-/** 农情数据看板：全部来自 SQLite 数据库。 */
+/** 农情数据看板：汇总平台业务数据。 */
 export async function dashboard(req, res) {
   const regionWhere = whereByRegion(req)
   const userWhere = req.user.role === 'ADMIN' || req.user.role === 'VILLAGE' ? {} : { userId: req.user.id }
@@ -129,9 +129,9 @@ export async function dashboard(req, res) {
     disasterStats: [...disasterMap.values()].sort((a, b) => b.loss - a.loss),
     latestStatReports: statReports,
     latestSyncLogs: syncLogs,
-    offlineReady: {
-      database: 'SQLite',
-      mode: 'LOCAL_ONLY',
+    serviceStatus: {
+      dataSource: '平台业务数据',
+      mode: '运行中',
       message: '数据已更新',
     },
   })
@@ -173,7 +173,7 @@ export async function remoteSensing(req, res) {
     ? Number((records.reduce((sum, r) => sum + r.ndvi, 0) / records.length).toFixed(2))
     : 0
   ok(res, {
-    mode: 'offline-simulated-ndvi',
+    analysisType: 'NDVI 长势诊断',
     avgNdvi,
     totalPlots: records.length,
     abnormalCount: records.filter((r) => r.healthLevel === '异常').length,

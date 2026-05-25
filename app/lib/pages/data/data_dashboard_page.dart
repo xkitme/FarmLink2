@@ -131,7 +131,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
 
   Widget _heroCard() {
     final cards = _map(_dashboard['cards']);
-    final offline = _map(_dashboard['offlineReady']);
+    final service = _map(_dashboard['serviceStatus']);
     return Container(
       decoration: BoxDecoration(
         gradient: AppColors.heroGradient,
@@ -202,7 +202,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  _text(offline['message'], fallback: '数据已更新'),
+                  _text(service['message'], fallback: '数据已更新'),
                   style: const TextStyle(
                     color: AppColors.onPrimaryContainer,
                     fontSize: 13,

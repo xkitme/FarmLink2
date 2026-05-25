@@ -23,7 +23,7 @@ async function bootstrap() {
   if (ollamaOk) {
     console.log(`✓ Ollama 在线 [${config.ollama.primaryModel}]`)
   } else {
-    console.warn('⚠ Ollama 未连接，本地知识库与规则兜底可用；如需大模型推理请运行: ollama serve')
+    console.warn('⚠ Ollama 未连接，平台知识库与规则服务可用；如需大模型推理请运行: ollama serve')
   }
 
   app.listen(PORT, () => {

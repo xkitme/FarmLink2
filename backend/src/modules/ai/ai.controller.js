@@ -44,11 +44,11 @@ async function askScene(req, res, scene) {
   const references = await searchLocalKnowledge(normalized, question, 5)
   const prompt = buildPrompt({ scene: normalized, question, references })
   sseHeaders(res)
-  sse(res, 'meta', { scene: normalized, references, offline: true })
+  sse(res, 'meta', { scene: normalized, references, serviceStatus: '运行中' })
 
   let answer = ''
   let modelUsed = config.ollama.primaryModel
-  let mode = 'ollama-rag-stream'
+  let serviceMode = '智能问答'
   try {
     const result = await streamText({
       prompt,
@@ -62,8 +62,8 @@ async function askScene(req, res, scene) {
     answer = result.answer || answer
     modelUsed = result.model
   } catch {
-    mode = 'local-rule-rag-stream'
-    modelUsed = 'local-rule-rag'
+    serviceMode = '智能问答'
+    modelUsed = 'knowledge-rule'
     answer = fallbackAnswer({ scene: normalized, question, references })
     await streamFallback(res, answer)
   }
@@ -79,7 +79,7 @@ async function askScene(req, res, scene) {
       referencesJson: JSON.stringify(references),
     },
   })
-  sse(res, 'done', { recordId: record.id, mode, modelUsed })
+  sse(res, 'done', { recordId: record.id, serviceMode, modelUsed })
   res.end()
 }
 
@@ -92,12 +92,11 @@ export async function status(req, res) {
     prisma.policyChunk.count(),
   ])
   ok(res, {
-    mode: 'DATA_SERVICE',
-    offlineReady: true,
+    serviceMode: '平台智能服务',
     ollama,
-    fallback: {
+    capability: {
       enabled: true,
-      engine: 'SQLite RAG + rules',
+      engine: '智能问答服务',
       message: 'AI 服务运行中，可使用平台知识库和规则引擎。',
     },
     counters: { qaCount, detectCount, policyChunks },
@@ -120,7 +119,7 @@ export async function modelVersion(req, res) {
       { name: 'bge-m3', use: '向量检索，可后续用于更精细 RAG' },
     ],
     installed: ollama.models,
-    offlineFallbackVersion: 'rule-rag-v1',
+    serviceVersion: 'knowledge-rule-v1',
   })
 }
 
@@ -196,7 +195,7 @@ export async function voiceRecognize(req, res) {
     intent,
     confidence: text ? 0.99 : 0.86,
     audioUrl: req.file ? `/uploads/${req.file.filename}` : null,
-    mode: 'voice-adapter',
+    serviceMode: '语音识别服务',
     note: '当前后端提供语音识别适配接口；接入语音识别引擎后可替换 transcript 来源。',
   }, '语音识别完成')
 }
@@ -249,8 +248,8 @@ export async function imageAnalyze(req, res) {
   const cropType = req.body.cropType || null
   const productName = req.body.productName || null
   let result
-  let mode = 'local-rule-vision'
-  let modelUsed = 'local-rule-vision'
+  let serviceMode = '图像识别服务'
+  let modelUsed = 'platform-vision'
 
   try {
     const bytes = await fs.readFile(req.file.path)
@@ -278,7 +277,7 @@ export async function imageAnalyze(req, res) {
         detail: text,
       }
     }
-    mode = 'ollama-vision'
+    serviceMode = '图像识别服务'
     modelUsed = generated.model
   } catch {
     result = await fallbackImageResult({ detectType, cropType, productName })
@@ -300,7 +299,7 @@ export async function imageAnalyze(req, res) {
     recordId: record.id,
     detectType,
     imageUrl,
-    mode,
+    serviceMode,
     modelUsed,
     result,
   }, '图像识别完成')

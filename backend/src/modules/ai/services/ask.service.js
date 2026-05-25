@@ -11,7 +11,7 @@ export async function answerQuestion({ userId, scene = 'GENERAL', question }) {
   const prompt = buildPrompt({ scene: normalized, question, references })
 
   let answer
-  let mode = 'ollama-rag'
+  let serviceMode = '智能问答'
   let modelUsed = config.ollama.primaryModel
   let durationMs = null
 
@@ -26,8 +26,8 @@ export async function answerQuestion({ userId, scene = 'GENERAL', question }) {
     modelUsed = result.model
     durationMs = result.totalDurationMs
   } catch (err) {
-    mode = 'rule-rag'
-    modelUsed = 'rule-rag'
+    serviceMode = '智能问答'
+    modelUsed = 'knowledge-rule'
     answer = fallbackAnswer({ scene: normalized, question, references })
   }
 
@@ -49,9 +49,9 @@ export async function answerQuestion({ userId, scene = 'GENERAL', question }) {
     question,
     answer,
     references,
-    mode,
+    serviceMode,
     modelUsed,
     durationMs,
-    offline: true,
+    serviceStatus: '运行中',
   }
 }
