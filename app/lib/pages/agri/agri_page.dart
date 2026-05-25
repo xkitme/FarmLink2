@@ -67,7 +67,7 @@ class _AgriPageState extends State<AgriPage> {
       if (!mounted) return;
       setState(() {
         _fromCache = _plots.isNotEmpty || _records.isNotEmpty;
-        _error = _fromCache ? null : '后端连接失败：$e';
+        _error = _fromCache ? null : '服务暂时不可用，请稍后重试';
         _loading = false;
       });
     }

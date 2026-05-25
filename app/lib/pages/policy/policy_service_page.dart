@@ -105,7 +105,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
       ].any((list) => list.isNotEmpty);
       setState(() {
         _fromCache = hasCache;
-        _error = hasCache ? null : '后端连接失败：$e';
+        _error = hasCache ? null : '服务暂时不可用，请稍后重试';
         _loading = false;
       });
     }
@@ -192,7 +192,8 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 fontSize: 15, fontWeight: FontWeight.w600)),
-                        Text('状态：${s['status'] ?? 'SUBMITTED'}',
+                        Text(
+                            '状态：${_subsidyStatusLabel('${s['status'] ?? ''}')}',
                             style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.onSurfaceVariant)),
@@ -734,5 +735,20 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
         ),
       ),
     );
+  }
+
+  String _subsidyStatusLabel(String status) {
+    switch (status) {
+      case 'SUBMITTED':
+        return '已提交';
+      case 'REVIEWING':
+        return '审核中';
+      case 'APPROVED':
+        return '已通过';
+      case 'REJECTED':
+        return '未通过';
+      default:
+        return status.isEmpty ? '已提交' : status;
+    }
   }
 }

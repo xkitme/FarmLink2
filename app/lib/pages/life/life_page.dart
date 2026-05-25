@@ -83,7 +83,7 @@ class _LifePageState extends State<LifePage> {
       if (cached.isEmpty) {
         setState(() {
           _loading = false;
-          _error = errors.isEmpty ? '暂无生活服务数据' : '后端连接失败：${errors.first}';
+          _error = errors.isEmpty ? '暂无生活服务数据' : '服务暂时不可用，请稍后重试';
         });
         return;
       }

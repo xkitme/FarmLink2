@@ -71,7 +71,7 @@ class _DisasterPageState extends State<DisasterPage> {
       if (!mounted) return;
       setState(() {
         _fromCache = _alerts.isNotEmpty || _guides.isNotEmpty;
-        _error = _fromCache ? null : '后端连接失败：$e';
+        _error = _fromCache ? null : '服务暂时不可用，请稍后重试';
         _loading = false;
       });
     }
@@ -552,7 +552,7 @@ class _DisasterPageState extends State<DisasterPage> {
                 ...reports.map((r) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Text(
-                          '· ${r['disasterType']} · 受灾${r['affectedArea']}亩 · ${r['status']}',
+                          '· ${r['disasterType']} · 受灾${r['affectedArea']}亩 · ${_reportStatusLabel('${r['status'] ?? ''}')}',
                           style: const TextStyle(fontSize: 13)),
                     )),
               const SizedBox(height: 14),
@@ -567,7 +567,7 @@ class _DisasterPageState extends State<DisasterPage> {
                 ...claims.map((c) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Text(
-                          '· ${c['claimType']} · 等级${c['aiAssessLevel']} · ${c['status']}',
+                          '· ${c['claimType']} · 等级${c['aiAssessLevel']} · ${_claimStatusLabel('${c['status'] ?? ''}')}',
                           style: const TextStyle(fontSize: 13)),
                     )),
             ],
@@ -698,5 +698,33 @@ class _DisasterPageState extends State<DisasterPage> {
         decoration: InputDecoration(labelText: label, filled: true),
       ),
     );
+  }
+
+  String _reportStatusLabel(String status) {
+    switch (status) {
+      case 'REPORTED':
+        return '已上报';
+      case 'REVIEWING':
+        return '处理中';
+      case 'PROCESSED':
+        return '已处理';
+      default:
+        return status.isEmpty ? '已上报' : status;
+    }
+  }
+
+  String _claimStatusLabel(String status) {
+    switch (status) {
+      case 'SUBMITTED':
+        return '已提交';
+      case 'ASSESSING':
+        return '评估中';
+      case 'APPROVED':
+        return '已通过';
+      case 'REJECTED':
+        return '未通过';
+      default:
+        return status.isEmpty ? '已提交' : status;
+    }
   }
 }

@@ -78,7 +78,7 @@ class _PolicyPageState extends State<PolicyPage> {
           for (var i = 0; i < cached.length; i++) _fromCacheItem(cached[i], i)
         ];
         _fromCache[tab] = cached.isNotEmpty;
-        _error[tab] = cached.isEmpty ? '后端连接失败：$e' : null;
+        _error[tab] = cached.isEmpty ? '服务暂时不可用，请稍后重试' : null;
         _loading[tab] = false;
       });
     }

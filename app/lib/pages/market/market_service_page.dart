@@ -66,7 +66,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
       if (!mounted) return;
       setState(() {
         _fromCache = _prices.isNotEmpty || _buyers.isNotEmpty;
-        _error = _fromCache ? null : '后端连接失败：$e';
+        _error = _fromCache ? null : '服务暂时不可用，请稍后重试';
         _loading = false;
       });
     }
@@ -538,7 +538,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('状态：${r['status'] ?? '—'}',
+              Text('状态：${_logisticsStatusLabel('${r['status'] ?? ''}')}',
                   style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 10),
               for (final t in traces)
@@ -705,5 +705,22 @@ class _MarketServicePageState extends State<MarketServicePage> {
         decoration: InputDecoration(labelText: label, filled: true),
       ),
     );
+  }
+
+  String _logisticsStatusLabel(String status) {
+    switch (status) {
+      case 'CREATED':
+        return '已创建';
+      case 'PICKED':
+        return '已揽收';
+      case 'TRANSIT':
+        return '运输中';
+      case 'ARRIVED':
+        return '已到站';
+      case 'DELIVERED':
+        return '已签收';
+      default:
+        return status.isEmpty ? '运输中' : status;
+    }
   }
 }
