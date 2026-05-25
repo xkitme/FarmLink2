@@ -627,19 +627,28 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
         ),
       );
 
-  Widget _reportTile(Map<String, dynamic> item) => ListTile(
-        dense: true,
-        visualDensity: VisualDensity.compact,
-        title: Text(
-          '${_text(item['reportType'], fallback: '统计数据')} · ${_text(item['cropType'], fallback: '综合')}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle:
-            Text('${_num(item['areaMu'])} 亩 / ${_num(item['yieldKg'])} 公斤'),
-        trailing: Text(_date(item['createdAt']),
-            style: const TextStyle(color: AppColors.outline, fontSize: 11)),
-      );
+  Widget _reportTile(Map<String, dynamic> item) {
+    final data = _map(item['dataJson']);
+    final crop = _text(item['cropType'],
+        fallback: _text(data['cropType'], fallback: '综合'));
+    final area = item.containsKey('areaMu') ? item['areaMu'] : data['areaMu'];
+    final yield =
+        item.containsKey('yieldKg') ? item['yieldKg'] : data['yieldKg'];
+    return ListTile(
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      title: Text(
+        '${_text(item['statType'], fallback: '统计数据')} · $crop',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        '${_num(area)} 亩 / ${_num(yield)} 公斤 · ${_statusLabel(_text(item['status']))}',
+      ),
+      trailing: Text(_date(item['createdAt']),
+          style: const TextStyle(color: AppColors.outline, fontSize: 11)),
+    );
+  }
 
   Widget _syncLogTile(Map<String, dynamic> item) {
     final status = _text(item['syncStatus'], fallback: 'SUCCESS');
@@ -814,6 +823,13 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
     if (status == 'CONFLICT') return '冲突';
     if (status == 'FAILED') return '失败';
     return status;
+  }
+
+  String _statusLabel(String status) {
+    if (status == 'DRAFT') return '草稿';
+    if (status == 'SUBMITTED') return '已上报';
+    if (status == 'CONFIRMED') return '已确认';
+    return status.isEmpty ? '已上报' : status;
   }
 
   Color _syncColor(String status) {

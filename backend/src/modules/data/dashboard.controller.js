@@ -1,6 +1,6 @@
 import { prisma } from '../../db.js'
 import { ok, okPage } from '../../utils/response.js'
-import { pageParams } from '../../utils/page.js'
+import { pageParams, parseJson } from '../../utils/page.js'
 
 function startOfYear(year) {
   return new Date(`${year}-01-01T00:00:00.000+08:00`)
@@ -32,6 +32,17 @@ function ndviForPlot(plot) {
   }[plot.cropType] ?? 0.04
   const seed = ((plot.id * 37) % 100) / 100
   return Number(Math.min(0.91, Math.max(0.28, 0.43 + cropBias + seed * 0.2)).toFixed(2))
+}
+
+function normalizeStatReport(row) {
+  const data = parseJson(row.dataJson, {})
+  return {
+    ...row,
+    dataJson: data,
+    cropType: data.cropType || '综合',
+    areaMu: Number(data.areaMu) || 0,
+    yieldKg: Number(data.yieldKg) || 0,
+  }
 }
 
 /** 农情数据看板：汇总平台业务数据。 */
@@ -127,7 +138,7 @@ export async function dashboard(req, res) {
     cropArea: [...cropMap.values()].sort((a, b) => b.areaMu - a.areaMu),
     farmRecordTypes: [...recordTypeMap.entries()].map(([type, count]) => ({ type, count })),
     disasterStats: [...disasterMap.values()].sort((a, b) => b.loss - a.loss),
-    latestStatReports: statReports,
+    latestStatReports: statReports.map(normalizeStatReport),
     latestSyncLogs: syncLogs,
     serviceStatus: {
       dataSource: '平台业务数据',
