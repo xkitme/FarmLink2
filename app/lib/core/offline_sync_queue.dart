@@ -90,13 +90,13 @@ class OfflineSyncQueue {
           conflict++;
           remaining.add(item.next(
             SyncStatus.conflict,
-            lastError: result.detail ?? '服务端数据更新，需要人工合并',
+            lastError: _detailOr(result.detail, '服务端数据更新，需要人工合并'),
           ));
         } else {
           failed++;
           remaining.add(item.next(
             SyncStatus.failed,
-            lastError: result.detail ?? '同步失败',
+            lastError: _detailOr(result.detail, '同步失败'),
           ));
         }
       } catch (e) {
@@ -134,7 +134,9 @@ class OfflineSyncQueue {
         if (first is Map) {
           final status = '${first['status']}';
           final detail = first['detail'] == null ? null : '${first['detail']}';
-          if (status == 'SUCCESS') return const _SubmitResult(SyncStatus.synced);
+          if (status == 'SUCCESS') {
+            return const _SubmitResult(SyncStatus.synced);
+          }
           if (status == 'CONFLICT') {
             return _SubmitResult(SyncStatus.conflict, detail);
           }
@@ -157,6 +159,11 @@ class OfflineSyncQueue {
       _key,
       jsonEncode(items.map((item) => item.toJson()).toList()),
     );
+  }
+
+  static String _detailOr(String? detail, String fallback) {
+    final normalized = detail?.trim();
+    return normalized == null || normalized.isEmpty ? fallback : normalized;
   }
 
   static String _uuid() {

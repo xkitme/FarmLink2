@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -30,6 +31,9 @@ class _DataServicePageState extends State<DataServicePage> {
   Map<String, dynamic> _statSummary = {};
   Map<String, dynamic> _syncStatus = {};
   List<SyncQueueItem> _localQueue = [];
+  final ValueNotifier<List<SyncQueueItem>> _localQueueNotifier =
+      ValueNotifier<List<SyncQueueItem>>([]);
+  final ValueNotifier<bool> _flushingNotifier = ValueNotifier<bool>(false);
 
   bool _generating = false;
   bool _flushing = false;
@@ -38,6 +42,13 @@ class _DataServicePageState extends State<DataServicePage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _localQueueNotifier.dispose();
+    _flushingNotifier.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -65,6 +76,7 @@ class _DataServicePageState extends State<DataServicePage> {
         _statSummary = _map(results[2]);
         _syncStatus = _map(results[3]);
         _localQueue = results[4] as List<SyncQueueItem>;
+        _localQueueNotifier.value = _localQueue;
         _loading = false;
       });
       // 缓存（仅业务表，summary/status 失败时清零，不缓存）
@@ -86,6 +98,7 @@ class _DataServicePageState extends State<DataServicePage> {
         _statSummary = {};
         _syncStatus = {};
         _localQueue = queue;
+        _localQueueNotifier.value = _localQueue;
         _loading = false;
         _error = serviceUnavailableMessage;
       });
@@ -96,6 +109,7 @@ class _DataServicePageState extends State<DataServicePage> {
   Future<void> _flushQueue() async {
     if (_flushing) return;
     setState(() => _flushing = true);
+    _flushingNotifier.value = true;
     try {
       final result = await OfflineSyncQueue.flush();
       if (!mounted) return;
@@ -109,6 +123,7 @@ class _DataServicePageState extends State<DataServicePage> {
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('同步', e), error: true);
     } finally {
+      _flushingNotifier.value = false;
       if (mounted) setState(() => _flushing = false);
     }
   }
@@ -287,9 +302,9 @@ class _DataServicePageState extends State<DataServicePage> {
         maxChildSize: 0.92,
         builder: (ctx, scrollCtrl) => _SyncLogsSheet(
           scrollController: scrollCtrl,
-          localQueue: _localQueue,
+          localQueueListenable: _localQueueNotifier,
           onFlush: _flushQueue,
-          flushing: _flushing,
+          flushingListenable: _flushingNotifier,
         ),
       ),
     );
@@ -709,7 +724,9 @@ class _DataServicePageState extends State<DataServicePage> {
                   waiting > 0 ? AppColors.warning : AppColors.outline),
               _miniStat('总计', '$total', AppColors.primary),
               _miniStat('成功', '$success', AppColors.primary),
-              _miniStat('失败', '${failed + conflict}',
+              _miniStat(
+                  '失败',
+                  '${failed + conflict}',
                   (failed + conflict) > 0
                       ? AppColors.error
                       : AppColors.outline),
@@ -794,7 +811,6 @@ class _DataServicePageState extends State<DataServicePage> {
             style: TextStyle(
                 color: color, fontSize: 12, fontWeight: FontWeight.w600)),
       );
-
 
   // ────────────────────────────────────────────────
   // helpers
@@ -1047,8 +1063,7 @@ class _StatFormSheetState extends State<_StatFormSheet> {
             children: [
               Expanded(child: _formField('面积（亩）', _areaCtrl, number: true)),
               const SizedBox(width: 10),
-              Expanded(
-                  child: _formField('产量（公斤）', _yieldCtrl, number: true)),
+              Expanded(child: _formField('产量（公斤）', _yieldCtrl, number: true)),
             ],
           ),
           const SizedBox(height: 18),
@@ -1073,14 +1088,14 @@ class _StatFormSheetState extends State<_StatFormSheet> {
 
 class _SyncLogsSheet extends StatefulWidget {
   final ScrollController scrollController;
-  final List<SyncQueueItem> localQueue;
+  final ValueListenable<List<SyncQueueItem>> localQueueListenable;
   final Future<void> Function() onFlush;
-  final bool flushing;
+  final ValueListenable<bool> flushingListenable;
   const _SyncLogsSheet({
     required this.scrollController,
-    required this.localQueue,
+    required this.localQueueListenable,
     required this.onFlush,
-    required this.flushing,
+    required this.flushingListenable,
   });
 
   @override
@@ -1128,9 +1143,23 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final waiting = widget.localQueue
-        .where((item) => item.status != SyncStatus.synced)
-        .length;
+    return ValueListenableBuilder<List<SyncQueueItem>>(
+      valueListenable: widget.localQueueListenable,
+      builder: (context, localQueue, _) => ValueListenableBuilder<bool>(
+        valueListenable: widget.flushingListenable,
+        builder: (context, flushing, _) =>
+            _content(context, localQueue, flushing),
+      ),
+    );
+  }
+
+  Widget _content(
+    BuildContext context,
+    List<SyncQueueItem> localQueue,
+    bool flushing,
+  ) {
+    final waiting =
+        localQueue.where((item) => item.status != SyncStatus.synced).length;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
       child: Column(
@@ -1219,15 +1248,15 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
                           fontSize: 13, color: AppColors.onSurfaceVariant)),
                 ),
                 FilledButton.tonalIcon(
-                  onPressed: widget.flushing ? null : widget.onFlush,
-                  icon: widget.flushing
+                  onPressed: flushing ? null : widget.onFlush,
+                  icon: flushing
                       ? const SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.upload_rounded, size: 16),
-                  label: Text(widget.flushing ? '同步中' : '立即同步'),
+                  label: Text(flushing ? '同步中' : '立即同步'),
                 ),
               ],
             ),
@@ -1246,15 +1275,14 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
                                 const SizedBox(height: 6),
                             itemBuilder: (_, i) => _tile(_records[i]),
                           ))
-                : widget.localQueue.isEmpty
+                : localQueue.isEmpty
                     ? const EmptyView('本地队列为空，所有数据已同步',
                         icon: Icons.check_circle_outline)
                     : ListView.separated(
                         controller: widget.scrollController,
-                        itemCount: widget.localQueue.length,
+                        itemCount: localQueue.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 6),
-                        itemBuilder: (_, i) =>
-                            _localTile(widget.localQueue[i]),
+                        itemBuilder: (_, i) => _localTile(localQueue[i]),
                       ),
           ),
         ],
@@ -1291,8 +1319,8 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
                 Text(
                   '${item.operation} · 入队 ${_fmt(item.createdAt.toIso8601String())}'
                   '${item.retryCount > 0 ? ' · 重试 ${item.retryCount} 次' : ''}',
-                  style: const TextStyle(
-                      color: AppColors.outline, fontSize: 11),
+                  style:
+                      const TextStyle(color: AppColors.outline, fontSize: 11),
                 ),
                 if (item.lastError != null && item.lastError!.isNotEmpty)
                   Padding(
