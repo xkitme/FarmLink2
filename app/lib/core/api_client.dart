@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'constants.dart';
 
-/// 业务异常（携带后端业务码）
+/// 业务异常（携带服务端业务码）
 class ApiException implements Exception {
   final int code;
   final String message;
@@ -13,7 +13,7 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-/// 统一 HTTP 客户端，对接后端 `{ code, msg, data }` 响应格式。
+/// 统一 HTTP 客户端，对接服务端 `{ code, msg, data }` 响应格式。
 class ApiClient {
   static String baseUrl = kBaseUrl;
   static String? _token;

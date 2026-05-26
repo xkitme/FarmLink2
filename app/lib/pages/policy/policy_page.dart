@@ -5,7 +5,7 @@ import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 
-/// 惠农政策 · 党建学习 · 文明乡风 —— 三个 tab 全部接入后端
+/// 惠农政策 · 党建学习 · 文明乡风 —— 三个 tab 全部接入服务端
 class PolicyPage extends StatefulWidget {
   const PolicyPage({super.key});
 
@@ -84,7 +84,7 @@ class _PolicyPageState extends State<PolicyPage> {
     }
   }
 
-  /// 三个 tab 各自请求不同后端接口
+  /// 三个 tab 各自请求不同服务端接口
   Future<List<_PolicyItem>> _fetch(int tab) async {
     if (tab == 0) {
       final data = await ApiClient.get('/policy/list', query: {'pageSize': 20});
@@ -199,7 +199,7 @@ class _PolicyPageState extends State<PolicyPage> {
             const AlertBanner('数据更新中，下拉刷新可重试', critical: false),
           Expanded(
             child: _loading[_active]
-                ? const Loading(text: '正在从后端同步...')
+                ? const Loading(text: '正在加载政策服务...')
                 : _error[_active] != null
                     ? ErrorRetry(
                         message: _error[_active]!,

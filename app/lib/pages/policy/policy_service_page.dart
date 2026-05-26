@@ -7,7 +7,7 @@ import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
 /// 惠农政策服务 —— 补贴申请/政策问答/法律咨询/积分兑换/
-/// 村务公开/职业培训/人才库（7 项均接后端）
+/// 村务公开/职业培训/人才库（7 项均接服务端）
 class PolicyServicePage extends StatefulWidget {
   const PolicyServicePage({super.key});
 

@@ -551,9 +551,7 @@ class _MachineryPageState extends State<MachineryPage> {
               ),
               const SizedBox(width: 14),
               ElevatedButton(
-                onPressed: _booking || machine.id == null
-                    ? null
-                    : () => _bookMachine(machine),
+                onPressed: _booking ? null : () => _bookMachine(machine),
                 child: _booking
                     ? const SizedBox(
                         width: 18,
@@ -572,7 +570,7 @@ class _MachineryPageState extends State<MachineryPage> {
 
   Future<void> _bookMachine(_Machine machine) async {
     if (machine.id == null) {
-      toast(context, '内置农机暂不能预约，请等待后端同步');
+      toast(context, '农机资料更新中，请稍后预约');
       return;
     }
     setState(() => _booking = true);
@@ -583,7 +581,7 @@ class _MachineryPageState extends State<MachineryPage> {
         'machineryId': machine.id,
         'startDate': _date(start),
         'endDate': _date(end),
-        'remark': 'Flutter App 预约',
+        'remark': '移动端预约',
       });
       if (mounted) toast(context, '预约已提交，可在后台预约表查看');
     } catch (error) {

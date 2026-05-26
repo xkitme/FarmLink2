@@ -9,7 +9,7 @@ import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
 /// 农业生产板块 —— 地块/农事记录 + 作物长势/杂草/种子识别 +
-/// 施肥/灌溉/产量预测 + 农事日历/农药查询/碳汇计算（全部接后端）
+/// 施肥/灌溉/产量预测 + 农事日历/农药查询/碳汇计算（全部接服务端）
 class AgriPage extends StatefulWidget {
   const AgriPage({super.key});
 

@@ -7,7 +7,7 @@ import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
 /// 农机共享服务 —— 维保提醒/故障诊断/作业轨迹/成本核算/
-/// 土地流转/机手认证/农机保险（7 项均接后端）
+/// 土地流转/机手认证/农机保险（7 项均接服务端）
 class MachineryServicePage extends StatefulWidget {
   const MachineryServicePage({super.key});
 

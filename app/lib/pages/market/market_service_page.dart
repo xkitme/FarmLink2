@@ -8,7 +8,7 @@ import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
 /// 流通销售服务 —— 行情/价格预测/期货/出口合规/收购站/团购/
-/// 质量分级/直播话术/包装文案/溯源/物流（11 项均接后端）
+/// 质量分级/直播话术/包装文案/溯源/物流（11 项均接服务端）
 class MarketServicePage extends StatefulWidget {
   const MarketServicePage({super.key});
 

@@ -6,7 +6,7 @@ import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 
-/// 首页 · 气象灾害看板 — 接入后端 /agri/weather（样式复刻设计稿 _2）
+/// 首页 · 气象灾害看板 — 接入服务端 /agri/weather（样式复刻设计稿 _2）
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -344,7 +344,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 未来天气趋势（后端 7 日预报）
+  // 未来天气趋势（服务端 7 日预报）
   Widget _forecastCard() {
     final days = _days.take(7).toList();
     final highs = days.map((d) => _int(d['tempHigh'])).toList();

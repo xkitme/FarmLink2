@@ -7,7 +7,7 @@ import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
 /// 气象灾害板块 —— 预警 / 灾情上报 / 保险理赔 / 应急预案 /
-/// 冻害防护 / 火险预警 / 干旱指数 / 一键求助（8 项均接后端）
+/// 冻害防护 / 火险预警 / 干旱指数 / 一键求助（8 项均接服务端）
 class DisasterPage extends StatefulWidget {
   const DisasterPage({super.key});
 

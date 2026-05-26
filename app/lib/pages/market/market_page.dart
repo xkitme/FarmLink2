@@ -333,7 +333,7 @@ class _MarketPageState extends State<MarketPage> {
     final inCart = product.id != null ? (_cart[product.id] ?? 0) : 0;
     return AppCard(
       padding: EdgeInsets.zero,
-      onTap: () => toast(context, product.fromApi ? '来自后端商品数据' : '内置商品'),
+      onTap: () => _showProductDetail(product),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -499,7 +499,7 @@ class _MarketPageState extends State<MarketPage> {
 
   void _addCart(_Product product) {
     if (product.id == null) {
-      toast(context, '内置商品暂不能下单，请等待后端商品同步');
+      toast(context, '商品资料更新中，请稍后下单');
       return;
     }
     setState(() {
@@ -606,7 +606,7 @@ class _MarketPageState extends State<MarketPage> {
           'phone': '13800000000',
           'address': '默认收货地址',
         },
-        'remark': 'Flutter App 下单',
+        'remark': '移动端下单',
       });
       if (!mounted) return;
       setState(() => _cart.clear());
@@ -617,6 +617,78 @@ class _MarketPageState extends State<MarketPage> {
     } finally {
       if (mounted) setState(() => _checkingOut = false);
     }
+  }
+
+  void _showProductDetail(_Product product) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(R.md),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.asset(
+                  product.image,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: AppColors.surfaceContainer,
+                    child: const Icon(Icons.storefront,
+                        color: AppColors.primary, size: 48),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(product.title,
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface)),
+                ),
+                StatusChip(product.badge, color: product.badgeColor),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(product.seller,
+                style: const TextStyle(color: AppColors.onSurfaceVariant)),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Text('￥${product.price.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800)),
+                Text(' / ${product.unit}',
+                    style: const TextStyle(color: AppColors.onSurfaceVariant)),
+                const Spacer(),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _addCart(product);
+                  },
+                  icon: const Icon(Icons.add_shopping_cart, size: 18),
+                  label: const Text('加入合计'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -5,7 +5,7 @@ import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
-/// 发布 · 乡村动态 — 接入后端 /life/help + /village/affairs（样式复刻设计稿 _1）
+/// 发布 · 乡村动态 — 接入服务端 /life/help + /village/affairs（样式复刻设计稿 _1）
 class PublishPage extends StatefulWidget {
   const PublishPage({super.key});
 
