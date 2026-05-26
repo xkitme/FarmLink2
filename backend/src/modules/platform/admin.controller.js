@@ -2,6 +2,7 @@ import { prisma } from '../../db.js'
 import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams, parseJson } from '../../utils/page.js'
 import { invalidateApiSwitchCache, rateLimitSnapshot } from '../../middleware/apiControl.js'
+import { RESOURCE_CONFIGS, RESOURCE_GROUPS } from './resource.config.js'
 
 function switchWhere(query) {
   const where = {}
@@ -105,5 +106,83 @@ export async function rateLimitStatus(req, res) {
       { name: 'upload', limit: 30, windowSec: 3600, scope: '用户或IP' },
     ],
     counters: rateLimitSnapshot(),
+  })
+}
+
+/** 初始化数据概览 */
+export async function seedDataSummary(req, res) {
+  const modelCountCache = new Map()
+
+  async function countResource(resourceKey) {
+    const config = RESOURCE_CONFIGS[resourceKey]
+    if (!config?.model || !prisma[config.model]) {
+      return {
+        key: resourceKey,
+        title: config?.title || resourceKey,
+        model: config?.model || '-',
+        count: null,
+        ready: false,
+      }
+    }
+    if (!modelCountCache.has(config.model)) {
+      modelCountCache.set(config.model, await prisma[config.model].count())
+    }
+    const count = modelCountCache.get(config.model)
+    return {
+      key: resourceKey,
+      title: config.title,
+      model: config.model,
+      count,
+      ready: count > 0,
+    }
+  }
+
+  const groups = []
+  for (const group of RESOURCE_GROUPS) {
+    const resources = []
+    for (const resourceKey of group.resources) {
+      resources.push(await countResource(resourceKey))
+    }
+    groups.push({
+      key: group.key,
+      title: group.title,
+      resources,
+      readyCount: resources.filter((item) => item.ready).length,
+      totalCount: resources.reduce((sum, item) => sum + (item.count || 0), 0),
+    })
+  }
+
+  const [apiSwitchCount, enabledSwitchCount, operationLogCount] = await Promise.all([
+    prisma.apiSwitch.count(),
+    prisma.apiSwitch.count({ where: { enabled: true } }),
+    prisma.operationLog.count(),
+  ])
+
+  ok(res, {
+    generatedAt: new Date().toISOString(),
+    summary: {
+      groupCount: groups.length,
+      resourceCount: groups.reduce((sum, group) => sum + group.resources.length, 0),
+      recordCount: [...modelCountCache.values()].reduce((sum, count) => sum + count, 0),
+      apiSwitchCount,
+      enabledSwitchCount,
+      operationLogCount,
+    },
+    groups,
+    commands: {
+      installAll: 'cd backend && npm run install:all',
+      migrate: 'cd backend && npm run db:push',
+      seed: 'cd backend && npm run db:seed',
+      start: 'start.bat',
+    },
+    files: {
+      seedScript: 'backend/seeds/index.js',
+      schema: 'backend/prisma/schema.prisma',
+      database: 'backend/prisma/dev.db',
+    },
+    notes: [
+      '初始化数据用于快速填充平台基础用户、业务样例、API 开关与知识库条目。',
+      '执行初始化命令前请确认当前数据是否需要保留。',
+    ],
   })
 }

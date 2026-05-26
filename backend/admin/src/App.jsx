@@ -2,10 +2,12 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AdminLayout from './layout/AdminLayout.jsx'
 import ApiDebugPage from './pages/ApiDebugPage.jsx'
 import ApiSwitchPage from './pages/ApiSwitchPage.jsx'
+import AiOpsPage from './pages/AiOpsPage.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Login from './pages/Login.jsx'
 import OperationLogPage from './pages/OperationLogPage.jsx'
 import ResourcePage from './pages/ResourcePage.jsx'
+import SeedDataPage from './pages/SeedDataPage.jsx'
 import { isLoggedIn } from './api/auth.js'
 import { RESOURCE_GROUPS } from './resourceGroups.js'
 
@@ -35,8 +37,10 @@ export default function App() {
               element={<ResourcePage title={config.title} group={config.group} resources={config.resources} />}
             />
           ))}
+          <Route path="ai-ops" element={<AiOpsPage />} />
           <Route path="api-switch" element={<ApiSwitchPage />} />
           <Route path="api-debug" element={<ApiDebugPage />} />
+          <Route path="seed-data" element={<SeedDataPage />} />
           <Route path="logs" element={<OperationLogPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>

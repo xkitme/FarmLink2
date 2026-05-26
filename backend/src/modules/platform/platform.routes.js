@@ -45,6 +45,7 @@ router.put('/admin/api-switch/:id/toggle', requireAuth, requireRole('ADMIN'), wr
 router.delete('/admin/api-switch/:id',     requireAuth, requireRole('ADMIN'), wrap(admin.apiSwitchRemove))
 router.get('/admin/operation-log/list',    requireAuth, requireRole('ADMIN'), wrap(admin.operationLogList))
 router.get('/admin/rate-limit/status',     requireAuth, requireRole('ADMIN'), wrap(admin.rateLimitStatus))
+router.get('/admin/seed/summary',          requireAuth, requireRole('ADMIN'), wrap(admin.seedDataSummary))
 router.get('/admin/resource/index',        requireAuth, requireRole('ADMIN'), wrap(resource.resourceIndex))
 router.get('/admin/resource/:resource/config', requireAuth, requireRole('ADMIN'), wrap(resource.resourceConfig))
 router.get('/admin/resource/:resource/list',   requireAuth, requireRole('ADMIN'), wrap(resource.resourceList))

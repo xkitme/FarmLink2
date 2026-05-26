@@ -52,7 +52,8 @@ const menuItems = [
     icon: <RobotOutlined />,
     label: 'AI 能力',
     children: [
-      { key: '/ai', icon: <ExperimentOutlined />, label: 'AI 状态' },
+      { key: '/ai-ops', icon: <RobotOutlined />, label: 'AI 运维中心' },
+      { key: '/ai', icon: <ExperimentOutlined />, label: 'AI 记录' },
       { key: '/api-debug', icon: <ApiOutlined />, label: 'API 在线调试' },
     ],
   },
@@ -62,6 +63,7 @@ const menuItems = [
     label: '系统治理',
     children: [
       { key: '/api-switch', icon: <ControlOutlined />, label: 'API 开关' },
+      { key: '/seed-data', icon: <DatabaseOutlined />, label: '初始化数据' },
       { key: '/logs', icon: <SearchOutlined />, label: '操作日志' },
     ],
   },
@@ -130,7 +132,7 @@ export default function AdminLayout() {
               onClick={() => setCollapsed((value) => !value)}
             />
             <Typography.Text className="page-title">数字乡村助农后台</Typography.Text>
-            <Tag color="green">SQLite 数据服务</Tag>
+            <Tag color="green">平台数据服务</Tag>
           </Space>
           <Space size={16}>
             <Button type="text" icon={<BellOutlined />} aria-label="通知" />
