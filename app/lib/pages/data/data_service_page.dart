@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
+import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
 /// 数据管理 · 服务页
@@ -28,8 +29,10 @@ class _DataServicePageState extends State<DataServicePage> {
   List<Map<String, dynamic>> _statRecords = [];
   Map<String, dynamic> _statSummary = {};
   Map<String, dynamic> _syncStatus = {};
+  List<SyncQueueItem> _localQueue = [];
 
   bool _generating = false;
+  bool _flushing = false;
 
   @override
   void initState() {
@@ -50,6 +53,8 @@ class _DataServicePageState extends State<DataServicePage> {
             query: {'pageSize': '6', 'pageNum': '1'}),
         ApiClient.get('/data/statistics/summary'),
         ApiClient.get('/data/sync/status'),
+        // 分段 40：本地待发送队列与服务端日志并列展示
+        OfflineSyncQueue.all(),
       ]);
       if (!mounted) return;
       final annual = _records(results[0]);
@@ -59,21 +64,52 @@ class _DataServicePageState extends State<DataServicePage> {
         _statRecords = stat;
         _statSummary = _map(results[2]);
         _syncStatus = _map(results[3]);
+        _localQueue = results[4] as List<SyncQueueItem>;
         _loading = false;
       });
-      // 缓存（仅业务表，summary/status 由服务端实时返回）
+      // 缓存（仅业务表，summary/status 失败时清零，不缓存）
       OfflineCache.saveList('data_annual_report', annual);
       OfflineCache.saveList('data_stat_report', stat);
     } catch (e) {
       if (!mounted) return;
       final annual = await OfflineCache.readList('data_annual_report');
+      if (!mounted) return;
       final stat = await OfflineCache.readList('data_stat_report');
+      if (!mounted) return;
+      // 本地队列即使后端失败也能读，单独拉
+      final queue = await OfflineSyncQueue.all();
+      if (!mounted) return;
       setState(() {
         _annualReports = annual;
         _statRecords = stat;
+        // F4：失败时清空头部聚合数据，避免与列表显示不一致
+        _statSummary = {};
+        _syncStatus = {};
+        _localQueue = queue;
         _loading = false;
         _error = serviceUnavailableMessage;
       });
+    }
+  }
+
+  /// 立即把本地队列推到服务端
+  Future<void> _flushQueue() async {
+    if (_flushing) return;
+    setState(() => _flushing = true);
+    try {
+      final result = await OfflineSyncQueue.flush();
+      if (!mounted) return;
+      toast(
+        context,
+        result.total == 0
+            ? '待发送队列暂无数据'
+            : '已处理 ${result.total} 条，成功 ${result.success} / 冲突 ${result.conflict} / 失败 ${result.failed}',
+      );
+      await _load();
+    } catch (e) {
+      if (mounted) toast(context, actionErrorMessage('同步', e), error: true);
+    } finally {
+      if (mounted) setState(() => _flushing = false);
     }
   }
 
@@ -92,6 +128,7 @@ class _DataServicePageState extends State<DataServicePage> {
       if (!mounted) return;
       toast(context, '$year 年度报告已生成');
       await _load();
+      if (!mounted) return;
       if (result is Map) _showAnnualReport(result.cast<String, dynamic>());
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('生成', e), error: true);
@@ -199,84 +236,26 @@ class _DataServicePageState extends State<DataServicePage> {
   // ────────────────────────────────────────────────
 
   Future<void> _openStatForm() async {
-    final typeCtrl = TextEditingController(text: '种植面积');
-    final periodCtrl = TextEditingController(text: 'Q1');
-    final areaCtrl = TextEditingController();
-    final yieldCtrl = TextEditingController();
-    final cropCtrl = TextEditingController();
-    int year = DateTime.now().year;
-
-    final ok = await showModalBottomSheet<bool>(
+    // F5：表单抽成 _StatFormSheet StatefulWidget，controller 在 dispose 中释放
+    final result = await showModalBottomSheet<_StatFormData>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(R.md)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 18,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: StatefulBuilder(builder: (ctx, setLocal) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('新建统计上报',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 14),
-              _field('统计类型', typeCtrl, hint: '如：种植面积 / 产量 / 投入'),
-              _field('年份', null,
-                  child: Wrap(
-                    spacing: 8,
-                    children: [
-                      for (var i = 0; i < 4; i++)
-                        ChoiceChip(
-                          label: Text('${DateTime.now().year - i}'),
-                          selected: year == DateTime.now().year - i,
-                          onSelected: (_) =>
-                              setLocal(() => year = DateTime.now().year - i),
-                        ),
-                    ],
-                  )),
-              _field('周期', periodCtrl, hint: '如：Q1 / 上半年 / 全年'),
-              _field('作物', cropCtrl, hint: '如：水稻'),
-              Row(
-                children: [
-                  Expanded(child: _field('面积（亩）', areaCtrl, number: true)),
-                  const SizedBox(width: 10),
-                  Expanded(child: _field('产量（公斤）', yieldCtrl, number: true)),
-                ],
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  icon: const Icon(Icons.upload_rounded, size: 18),
-                  label: const Text('提交上报'),
-                ),
-              ),
-            ],
-          );
-        }),
-      ),
+      builder: (_) => const _StatFormSheet(),
     );
-
-    if (ok != true) return;
+    if (result == null || !mounted) return;
     try {
       await ApiClient.post('/data/statistics/report', body: {
-        'statType': typeCtrl.text.trim(),
-        'year': year,
-        'period': periodCtrl.text.trim(),
+        'statType': result.statType,
+        'year': result.year,
+        'period': result.period,
         'dataJson': {
-          'cropType': cropCtrl.text.trim(),
-          'areaMu': double.tryParse(areaCtrl.text.trim()) ?? 0,
-          'yieldKg': double.tryParse(yieldCtrl.text.trim()) ?? 0,
+          'cropType': result.cropType,
+          'areaMu': result.areaMu,
+          'yieldKg': result.yieldKg,
         },
         'status': 'SUBMITTED',
       });
@@ -293,7 +272,8 @@ class _DataServicePageState extends State<DataServicePage> {
   // ────────────────────────────────────────────────
 
   Future<void> _openSyncLogs() async {
-    showModalBottomSheet(
+    // 在 sheet 关闭后刷新一次，以反映立即同步后的最新队列
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
@@ -302,13 +282,18 @@ class _DataServicePageState extends State<DataServicePage> {
       ),
       builder: (ctx) => DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.6,
+        initialChildSize: 0.7,
         minChildSize: 0.4,
         maxChildSize: 0.92,
-        builder: (ctx, scrollCtrl) =>
-            _SyncLogsSheet(scrollController: scrollCtrl),
+        builder: (ctx, scrollCtrl) => _SyncLogsSheet(
+          scrollController: scrollCtrl,
+          localQueue: _localQueue,
+          onFlush: _flushQueue,
+          flushing: _flushing,
+        ),
       ),
     );
+    if (mounted) await _load();
   }
 
   // ────────────────────────────────────────────────
@@ -680,6 +665,9 @@ class _DataServicePageState extends State<DataServicePage> {
     final conflict = _int(_syncStatus['conflict']);
     final failed = _int(_syncStatus['failed']);
     final latest = _list(_syncStatus['latest']);
+    // 分段 40：待发送 = 队列中 status != synced
+    final waiting =
+        _localQueue.where((item) => item.status != SyncStatus.synced).length;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -694,22 +682,37 @@ class _DataServicePageState extends State<DataServicePage> {
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
-              TextButton.icon(
-                onPressed: _openSyncLogs,
-                icon: const Icon(Icons.list_alt, size: 16),
-                label: const Text('查看全部'),
-              ),
+              if (waiting > 0)
+                FilledButton.tonalIcon(
+                  onPressed: _flushing ? null : _flushQueue,
+                  icon: _flushing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.upload_rounded, size: 16),
+                  label: Text(_flushing ? '同步中' : '立即同步'),
+                )
+              else
+                TextButton.icon(
+                  onPressed: _openSyncLogs,
+                  icon: const Icon(Icons.list_alt, size: 16),
+                  label: const Text('查看全部'),
+                ),
             ],
           ),
           const SizedBox(height: 10),
           Row(
             children: [
+              _miniStat('待发送', '$waiting',
+                  waiting > 0 ? AppColors.warning : AppColors.outline),
               _miniStat('总计', '$total', AppColors.primary),
               _miniStat('成功', '$success', AppColors.primary),
-              _miniStat('冲突', '$conflict',
-                  conflict > 0 ? AppColors.warning : AppColors.outline),
-              _miniStat('失败', '$failed',
-                  failed > 0 ? AppColors.error : AppColors.outline),
+              _miniStat('失败', '${failed + conflict}',
+                  (failed + conflict) > 0
+                      ? AppColors.error
+                      : AppColors.outline),
             ],
           ),
           const SizedBox(height: 12),
@@ -722,6 +725,14 @@ class _DataServicePageState extends State<DataServicePage> {
                 for (final item in latest.take(3)) _syncLogTile(item),
               ],
             ),
+          if (waiting > 0) ...[
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _openSyncLogs,
+              icon: const Icon(Icons.list_alt, size: 16),
+              label: const Text('查看本地队列与全部日志'),
+            ),
+          ],
         ],
       ),
     );
@@ -784,44 +795,6 @@ class _DataServicePageState extends State<DataServicePage> {
                 color: color, fontSize: 12, fontWeight: FontWeight.w600)),
       );
 
-  Widget _field(String label, TextEditingController? controller,
-      {String? hint, bool number = false, Widget? child}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.onSurfaceVariant)),
-          const SizedBox(height: 4),
-          if (child != null)
-            child
-          else
-            TextField(
-              controller: controller,
-              keyboardType: number
-                  ? const TextInputType.numberWithOptions(decimal: true)
-                  : null,
-              decoration: InputDecoration(
-                hintText: hint,
-                isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                filled: true,
-                fillColor: AppColors.surfaceLow,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(R.sm),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 
   // ────────────────────────────────────────────────
   // helpers
@@ -931,12 +904,184 @@ class _DataServicePageState extends State<DataServicePage> {
 }
 
 // ────────────────────────────────────────────────
+// 表单工具：共享字段构造器 + 统计上报表单
+// ────────────────────────────────────────────────
+
+/// 通用表单字段，State 类与 _StatFormSheet 共享
+Widget _formField(String label, TextEditingController? controller,
+    {String? hint, bool number = false, Widget? child}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.onSurfaceVariant)),
+        const SizedBox(height: 4),
+        if (child != null)
+          child
+        else
+          TextField(
+            controller: controller,
+            keyboardType: number
+                ? const TextInputType.numberWithOptions(decimal: true)
+                : null,
+            decoration: InputDecoration(
+              hintText: hint,
+              isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              filled: true,
+              fillColor: AppColors.surfaceLow,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(R.sm),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+/// 统计上报表单提交结果
+class _StatFormData {
+  final String statType;
+  final int year;
+  final String period;
+  final String cropType;
+  final double areaMu;
+  final double yieldKg;
+  const _StatFormData({
+    required this.statType,
+    required this.year,
+    required this.period,
+    required this.cropType,
+    required this.areaMu,
+    required this.yieldKg,
+  });
+}
+
+/// 统计上报表单 Sheet —— controller 在 dispose 中释放，避免内存泄漏
+class _StatFormSheet extends StatefulWidget {
+  const _StatFormSheet();
+
+  @override
+  State<_StatFormSheet> createState() => _StatFormSheetState();
+}
+
+class _StatFormSheetState extends State<_StatFormSheet> {
+  final _typeCtrl = TextEditingController(text: '种植面积');
+  final _periodCtrl = TextEditingController(text: 'Q1');
+  final _areaCtrl = TextEditingController();
+  final _yieldCtrl = TextEditingController();
+  final _cropCtrl = TextEditingController();
+  late int _year;
+
+  @override
+  void initState() {
+    super.initState();
+    _year = DateTime.now().year;
+  }
+
+  @override
+  void dispose() {
+    _typeCtrl.dispose();
+    _periodCtrl.dispose();
+    _areaCtrl.dispose();
+    _yieldCtrl.dispose();
+    _cropCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    Navigator.pop(
+      context,
+      _StatFormData(
+        statType: _typeCtrl.text.trim(),
+        year: _year,
+        period: _periodCtrl.text.trim(),
+        cropType: _cropCtrl.text.trim(),
+        areaMu: double.tryParse(_areaCtrl.text.trim()) ?? 0,
+        yieldKg: double.tryParse(_yieldCtrl.text.trim()) ?? 0,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now().year;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 18,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('新建统计上报',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 14),
+          _formField('统计类型', _typeCtrl, hint: '如：种植面积 / 产量 / 投入'),
+          _formField('年份', null,
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  for (var i = 0; i < 4; i++)
+                    ChoiceChip(
+                      label: Text('${now - i}'),
+                      selected: _year == now - i,
+                      onSelected: (_) => setState(() => _year = now - i),
+                    ),
+                ],
+              )),
+          _formField('周期', _periodCtrl, hint: '如：Q1 / 上半年 / 全年'),
+          _formField('作物', _cropCtrl, hint: '如：水稻'),
+          Row(
+            children: [
+              Expanded(child: _formField('面积（亩）', _areaCtrl, number: true)),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _formField('产量（公斤）', _yieldCtrl, number: true)),
+            ],
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _submit,
+              icon: const Icon(Icons.upload_rounded, size: 18),
+              label: const Text('提交上报'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────
 // 同步日志详情 Sheet（分页）
 // ────────────────────────────────────────────────
 
 class _SyncLogsSheet extends StatefulWidget {
   final ScrollController scrollController;
-  const _SyncLogsSheet({required this.scrollController});
+  final List<SyncQueueItem> localQueue;
+  final Future<void> Function() onFlush;
+  final bool flushing;
+  const _SyncLogsSheet({
+    required this.scrollController,
+    required this.localQueue,
+    required this.onFlush,
+    required this.flushing,
+  });
 
   @override
   State<_SyncLogsSheet> createState() => _SyncLogsSheetState();
@@ -945,6 +1090,7 @@ class _SyncLogsSheet extends StatefulWidget {
 class _SyncLogsSheetState extends State<_SyncLogsSheet> {
   bool _loading = true;
   String _filter = 'ALL';
+  String _tab = 'SERVER'; // SERVER | LOCAL
   List<Map<String, dynamic>> _records = [];
 
   @override
@@ -954,6 +1100,7 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
   }
 
   Future<void> _load() async {
+    if (_tab != 'SERVER') return;
     setState(() => _loading = true);
     try {
       final query = <String, dynamic>{'pageSize': '50', 'pageNum': '1'};
@@ -981,6 +1128,9 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final waiting = widget.localQueue
+        .where((item) => item.status != SyncStatus.synced)
+        .length;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
       child: Column(
@@ -1003,47 +1153,160 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
                     style:
                         TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
               ),
-              IconButton(
-                onPressed: _loading ? null : _load,
-                icon: const Icon(Icons.refresh,
-                    color: AppColors.onSurfaceVariant),
-              ),
+              if (_tab == 'SERVER')
+                IconButton(
+                  onPressed: _loading ? null : _load,
+                  icon: const Icon(Icons.refresh,
+                      color: AppColors.onSurfaceVariant),
+                ),
             ],
           ),
           const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final f in const ['ALL', 'SUCCESS', 'CONFLICT', 'FAILED'])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(_label(f)),
-                      selected: _filter == f,
-                      onSelected: (_) {
-                        setState(() => _filter = f);
-                        _load();
-                      },
+          // 分段 40：服务端日志 / 本地队列 切换
+          Row(
+            children: [
+              for (final entry in const [
+                ('SERVER', '服务端日志'),
+                ('LOCAL', '本地队列'),
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(entry.$1 == 'LOCAL'
+                        ? '${entry.$2}${waiting > 0 ? ' · $waiting' : ''}'
+                        : entry.$2),
+                    selected: _tab == entry.$1,
+                    onSelected: (_) {
+                      setState(() => _tab = entry.$1);
+                      if (entry.$1 == 'SERVER') _load();
+                    },
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_tab == 'SERVER') ...[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final f in const [
+                    'ALL',
+                    'SUCCESS',
+                    'CONFLICT',
+                    'FAILED'
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(_label(f)),
+                        selected: _filter == f,
+                        onSelected: (_) {
+                          setState(() => _filter = f);
+                          _load();
+                        },
+                      ),
                     ),
+                ],
+              ),
+            ),
+          ] else if (waiting > 0)
+            Row(
+              children: [
+                Expanded(
+                  child: Text('共 $waiting 条待发送数据',
+                      style: const TextStyle(
+                          fontSize: 13, color: AppColors.onSurfaceVariant)),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: widget.flushing ? null : widget.onFlush,
+                  icon: widget.flushing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.upload_rounded, size: 16),
+                  label: Text(widget.flushing ? '同步中' : '立即同步'),
+                ),
+              ],
+            ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: _tab == 'SERVER'
+                ? (_loading
+                    ? const Loading(text: '加载日志')
+                    : _records.isEmpty
+                        ? const EmptyView('当前筛选下暂无同步记录',
+                            icon: Icons.history_toggle_off)
+                        : ListView.separated(
+                            controller: widget.scrollController,
+                            itemCount: _records.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 6),
+                            itemBuilder: (_, i) => _tile(_records[i]),
+                          ))
+                : widget.localQueue.isEmpty
+                    ? const EmptyView('本地队列为空，所有数据已同步',
+                        icon: Icons.check_circle_outline)
+                    : ListView.separated(
+                        controller: widget.scrollController,
+                        itemCount: widget.localQueue.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 6),
+                        itemBuilder: (_, i) =>
+                            _localTile(widget.localQueue[i]),
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _localTile(SyncQueueItem item) {
+    final color = item.status == SyncStatus.synced
+        ? AppColors.primary
+        : item.status == SyncStatus.conflict
+            ? AppColors.warning
+            : item.status == SyncStatus.failed
+                ? AppColors.error
+                : AppColors.goldContainer;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLow,
+        borderRadius: BorderRadius.circular(R.sm),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_tableLabel(item.tableName),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700)),
+                Text(
+                  '${item.operation} · 入队 ${_fmt(item.createdAt.toIso8601String())}'
+                  '${item.retryCount > 0 ? ' · 重试 ${item.retryCount} 次' : ''}',
+                  style: const TextStyle(
+                      color: AppColors.outline, fontSize: 11),
+                ),
+                if (item.lastError != null && item.lastError!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(item.lastError!,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: color, fontSize: 11)),
                   ),
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: _loading
-                ? const Loading(text: '加载日志')
-                : _records.isEmpty
-                    ? const EmptyView('当前筛选下暂无同步记录',
-                        icon: Icons.history_toggle_off)
-                    : ListView.separated(
-                        controller: widget.scrollController,
-                        itemCount: _records.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 6),
-                        itemBuilder: (_, i) => _tile(_records[i]),
-                      ),
-          ),
+          const SizedBox(width: 8),
+          StatusChip(item.status.label, color: color),
         ],
       ),
     );

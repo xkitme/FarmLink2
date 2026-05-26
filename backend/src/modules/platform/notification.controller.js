@@ -1,18 +1,37 @@
 import { prisma } from '../../db.js'
-import { ok, okPage } from '../../utils/response.js'
+import { ok } from '../../utils/response.js'
 import { pageParams } from '../../utils/page.js'
 
 /** 通知列表（含个人通知 + 全体广播） */
 export async function list(req, res) {
   const { pageNum, pageSize, skip, take } = pageParams(req.query)
-  const where = { OR: [{ userId: req.user.id }, { userId: null }] }
-  const [records, total, unread] = await Promise.all([
+  const type = parseType(req.query.type)
+  const isRead = parseRead(req.query.isRead)
+  const baseWhere = { OR: [{ userId: req.user.id }, { userId: null }] }
+  const where = {
+    ...baseWhere,
+    ...(type ? { type } : {}),
+    ...(isRead == null ? {} : { isRead }),
+  }
+  const [records, total, unread, typeGroups] = await Promise.all([
     prisma.notification.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take }),
     prisma.notification.count({ where }),
-    prisma.notification.count({ where: { ...where, isRead: false } }),
+    prisma.notification.count({ where: { ...baseWhere, isRead: false } }),
+    prisma.notification.groupBy({
+      by: ['type'],
+      where: baseWhere,
+      _count: { _all: true },
+    }),
   ])
-  okPage(res, { records, total, pageNum, pageSize })
-  // 未读数通过响应头附带
+  ok(res, {
+    records,
+    total,
+    pageNum,
+    pageSize,
+    pages: pageSize > 0 ? Math.ceil(total / pageSize) : 0,
+    unread,
+    typeCounts: Object.fromEntries(typeGroups.map((item) => [item.type, item._count._all])),
+  })
 }
 
 /** 未读数量 */
@@ -40,4 +59,17 @@ export async function markAllRead(req, res) {
     data: { isRead: true },
   })
   ok(res, null, '全部已读')
+}
+
+function parseType(value) {
+  const type = `${value ?? ''}`.trim().toUpperCase()
+  if (!type || type === 'ALL') return null
+  return type
+}
+
+function parseRead(value) {
+  const text = `${value ?? ''}`.trim().toLowerCase()
+  if (['true', '1', 'yes'].includes(text)) return true
+  if (['false', '0', 'no'].includes(text)) return false
+  return null
 }

@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants.dart';
+import '../../core/notification_state.dart';
 
-class ShellPage extends StatelessWidget {
+class ShellPage extends StatefulWidget {
   final Widget child;
   const ShellPage({super.key, required this.child});
+
+  @override
+  State<ShellPage> createState() => _ShellPageState();
+}
+
+class _ShellPageState extends State<ShellPage> {
+  String? _lastLocation;
 
   static const _tabs = [
     (path: '/home', icon: Icons.home_rounded, label: '首页'),
@@ -13,6 +21,25 @@ class ShellPage extends StatelessWidget {
     (path: '/messages', icon: Icons.mail_rounded, label: '消息'),
     (path: '/profile', icon: Icons.person_rounded, label: '我的'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) NotificationState.refresh();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final loc = GoRouterState.of(context).uri.path;
+    if (_lastLocation == loc) return;
+    _lastLocation = loc;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) NotificationState.refresh();
+    });
+  }
 
   int _index(String loc) {
     for (var i = 0; i < _tabs.length; i++) {
@@ -26,7 +53,7 @@ class ShellPage extends StatelessWidget {
     final loc = GoRouterState.of(context).uri.path;
     final idx = _index(loc);
     return Scaffold(
-      body: child,
+      body: widget.child,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -41,11 +68,15 @@ class ShellPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 for (var i = 0; i < _tabs.length; i++)
-                  _NavItem(
-                    icon: _tabs[i].icon,
-                    label: _tabs[i].label,
-                    active: idx == i,
-                    onTap: () => context.go(_tabs[i].path),
+                  ValueListenableBuilder<int>(
+                    valueListenable: NotificationState.unread,
+                    builder: (context, unread, _) => _NavItem(
+                      icon: _tabs[i].icon,
+                      label: _tabs[i].label,
+                      active: idx == i,
+                      badgeCount: _tabs[i].path == '/messages' ? unread : 0,
+                      onTap: () => context.go(_tabs[i].path),
+                    ),
                   ),
               ],
             ),
@@ -60,11 +91,13 @@ class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
+  final int badgeCount;
   final VoidCallback onTap;
   const _NavItem({
     required this.icon,
     required this.label,
     required this.active,
+    required this.badgeCount,
     required this.onTap,
   });
 
@@ -86,7 +119,23 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 26),
+            SizedBox(
+              width: 34,
+              height: 28,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Icon(icon, color: color, size: 26),
+                  if (badgeCount > 0)
+                    Positioned(
+                      right: -3,
+                      top: -3,
+                      child: _UnreadBadge(count: badgeCount),
+                    ),
+                ],
+              ),
+            ),
             const SizedBox(height: 2),
             Text(label,
                 style: TextStyle(
@@ -95,6 +144,35 @@ class _NavItem extends StatelessWidget {
                   color: color,
                 )),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UnreadBadge extends StatelessWidget {
+  final int count;
+  const _UnreadBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = count > 99 ? '99+' : '$count';
+    return Container(
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: AppColors.error,
+        border: Border.all(color: AppColors.surface, width: 2),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          height: 1,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );

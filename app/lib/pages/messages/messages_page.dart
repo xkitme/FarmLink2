@@ -3,7 +3,15 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/notification_state.dart';
 import '../../widgets/common.dart';
+
+class _MessageFilter {
+  final String key;
+  final String label;
+  final IconData icon;
+  const _MessageFilter(this.key, this.label, this.icon);
+}
 
 class MessagesPage extends StatefulWidget {
   const MessagesPage({super.key});
@@ -17,7 +25,17 @@ class _MessagesPageState extends State<MessagesPage> {
   bool _marking = false;
   String? _error;
   int _unread = 0;
+  String _activeFilter = 'ALL';
   List<Map<String, dynamic>> _items = [];
+
+  static const _filters = [
+    _MessageFilter('ALL', '全部', Icons.all_inbox_outlined),
+    _MessageFilter('UNREAD', '未读', Icons.mark_email_unread_outlined),
+    _MessageFilter('ALERT', '预警', Icons.thunderstorm_outlined),
+    _MessageFilter('POLICY', '政策', Icons.account_balance_outlined),
+    _MessageFilter('FARM', '农事', Icons.eco_outlined),
+    _MessageFilter('SYSTEM', '系统', Icons.campaign_outlined),
+  ];
 
   @override
   void initState() {
@@ -33,17 +51,19 @@ class _MessagesPageState extends State<MessagesPage> {
     try {
       final results = await Future.wait<dynamic>([
         ApiClient.get('/notification/list',
-            query: {'pageNum': 1, 'pageSize': 30}),
+            query: {'pageNum': 1, 'pageSize': 100}),
         ApiClient.get('/notification/unread'),
       ]);
       if (!mounted) return;
       final page = _map(results[0]);
       final unread = _map(results[1]);
+      final unreadCount = _int(unread['unread']);
       setState(() {
         _items = _list(page['records']);
-        _unread = _int(unread['unread']);
+        _unread = unreadCount;
         _loading = false;
       });
+      NotificationState.setUnread(unreadCount);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -69,6 +89,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
   Future<void> _openMessage(Map<String, dynamic> item) async {
     final id = _int(item['id']);
+    final type = _typeOf(item);
     if (id > 0 && item['isRead'] != true) {
       try {
         await ApiClient.put('/notification/$id/read');
@@ -91,8 +112,7 @@ class _MessagesPageState extends State<MessagesPage> {
           children: [
             Row(
               children: [
-                Icon(_iconOf(_text(item['type'])),
-                    color: _colorOf(_text(item['type']))),
+                Icon(_iconOf(type), color: _colorOf(type)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -131,6 +151,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final visibleItems = _visibleItems;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: FarmAppBar(
@@ -162,13 +183,20 @@ class _MessagesPageState extends State<MessagesPage> {
                           label: const Text('全部已读'),
                         ),
                       ),
+                      _filterBar(),
+                      const SizedBox(height: 12),
                       if (_items.isEmpty)
                         const AppCard(
                           child: EmptyView('暂无消息通知',
                               icon: Icons.notifications_none_rounded),
                         )
+                      else if (visibleItems.isEmpty)
+                        AppCard(
+                          child: EmptyView(_emptyTextForFilter(),
+                              icon: _iconOf(_activeFilter)),
+                        )
                       else
-                        for (final item in _items)
+                        for (final item in visibleItems)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _messageCard(item),
@@ -177,6 +205,15 @@ class _MessagesPageState extends State<MessagesPage> {
                   ),
                 ),
     );
+  }
+
+  List<Map<String, dynamic>> get _visibleItems =>
+      _items.where(_matchesActiveFilter).toList(growable: false);
+
+  bool _matchesActiveFilter(Map<String, dynamic> item) {
+    if (_activeFilter == 'ALL') return true;
+    if (_activeFilter == 'UNREAD') return !_isRead(item);
+    return _typeOf(item) == _activeFilter;
   }
 
   Widget _hero() {
@@ -227,9 +264,52 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 
+  Widget _filterBar() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final filter in _filters) ...[
+            ChoiceChip(
+              selected: _activeFilter == filter.key,
+              avatar: Icon(
+                filter.icon,
+                size: 16,
+                color: _activeFilter == filter.key
+                    ? AppColors.primary
+                    : AppColors.onSurfaceVariant,
+              ),
+              label: Text('${filter.label} ${_countFor(filter.key)}'),
+              selectedColor: AppColors.primaryContainer.withValues(alpha: 0.16),
+              backgroundColor: AppColors.surface,
+              side: BorderSide(
+                color: _activeFilter == filter.key
+                    ? AppColors.primary
+                    : AppColors.outlineVariant,
+              ),
+              labelStyle: TextStyle(
+                color: _activeFilter == filter.key
+                    ? AppColors.primary
+                    : AppColors.onSurfaceVariant,
+                fontWeight: _activeFilter == filter.key
+                    ? FontWeight.w700
+                    : FontWeight.w600,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(R.md),
+              ),
+              onSelected: (_) => setState(() => _activeFilter = filter.key),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _messageCard(Map<String, dynamic> item) {
-    final type = _text(item['type']);
-    final read = item['isRead'] == true;
+    final type = _typeOf(item);
+    final read = _isRead(item);
     final color = _colorOf(type);
     return AppCard(
       onTap: () => _openMessage(item),
@@ -282,7 +362,15 @@ class _MessagesPageState extends State<MessagesPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    StatusChip(_labelOf(type), color: color),
                     Text(
                       _date(item['createdAt']),
                       style: const TextStyle(
@@ -292,7 +380,7 @@ class _MessagesPageState extends State<MessagesPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   _text(item['content'], fallback: '点击查看消息详情'),
                   maxLines: 2,
@@ -309,6 +397,43 @@ class _MessagesPageState extends State<MessagesPage> {
         ],
       ),
     );
+  }
+
+  int _countFor(String filter) {
+    if (filter == 'ALL') return _items.length;
+    if (filter == 'UNREAD') {
+      return _items.where((item) => !_isRead(item)).length;
+    }
+    return _items.where((item) => _typeOf(item) == filter).length;
+  }
+
+  String _emptyTextForFilter() {
+    for (final filter in _filters) {
+      if (filter.key == _activeFilter) return '${filter.label}暂无消息';
+    }
+    return '当前分类暂无消息';
+  }
+
+  String _typeOf(Map<String, dynamic> item) =>
+      _normalizeType(_text(item['type']));
+
+  bool _isRead(Map<String, dynamic> item) => item['isRead'] == true;
+
+  String _normalizeType(String type) {
+    final upper = type.trim().toUpperCase();
+    if (upper.contains('ALERT') || upper.contains('WARN')) return 'ALERT';
+    if (upper.contains('POLICY')) return 'POLICY';
+    if (upper.contains('FARM') || upper.contains('AGRI')) return 'FARM';
+    if (upper.contains('SYSTEM')) return 'SYSTEM';
+    return upper.isEmpty ? 'SYSTEM' : upper;
+  }
+
+  String _labelOf(String type) {
+    if (type == 'ALERT') return '预警';
+    if (type == 'POLICY') return '政策';
+    if (type == 'FARM') return '农事';
+    if (type == 'SYSTEM') return '系统';
+    return '通知';
   }
 
   IconData _iconOf(String type) {

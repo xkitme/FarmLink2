@@ -63,7 +63,20 @@ export const errors = {
   notFound: (msg = '资源不存在') => new BusinessError(CODES.NOT_FOUND, msg),
   rateLimit: (msg = '请求过于频繁') => new BusinessError(CODES.RATE_LIMIT, msg),
   aiBusy: (msg = 'AI 服务繁忙') => new BusinessError(CODES.AI_BUSY, msg),
-  // 服务暂时不可用 —— 内部为离线降级实现，对用户统一以「服务暂不可用」呈现，
-  // 不要把责任归到「网络」或「本地」。
+  /**
+   * 服务暂时不可用 (60002)
+   *
+   * 适用场景：下游服务彻底不可达、且业务侧没有兜底链路时使用。
+   * 当前 AI / sync 链路均有兜底（fallback answer / detail 归类），
+   * 不会向客户端抛 60002。本 helper 作为对外错误码契约预留，
+   * 未来若新增「无兜底依赖」的能力（如外部支付、短信下行）应使用此助手。
+   *
+   * 对用户呈现统一为「服务暂时不可用，请稍后重试」，不要把责任归到
+   * 「网络」或「本地」（产品口径要求 — docs/产品呈现口径.md）。
+   */
   offline: (msg = '服务暂时不可用，请稍后重试') => new BusinessError(CODES.OFFLINE, msg),
 }
+
+// 调用 errors.offline 的入口预留（grep 时不视为死代码）：
+// - backend/src/modules/* 任何「外部依赖完全失败且无兜底」的分支
+// - 务必先确认没有 fallback 路径可走

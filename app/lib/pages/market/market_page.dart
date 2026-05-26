@@ -362,11 +362,13 @@ class _MarketPageState extends State<MarketPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: product.badgeColor,
+                      color: product.id == null
+                          ? AppColors.outline
+                          : product.badgeColor,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      product.badge,
+                      product.id == null ? '示例' : product.badge,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -658,7 +660,10 @@ class _MarketPageState extends State<MarketPage> {
                           fontWeight: FontWeight.w700,
                           color: AppColors.onSurface)),
                 ),
-                StatusChip(product.badge, color: product.badgeColor),
+                if (product.id == null)
+                  const StatusChip('示例商品', color: AppColors.outline)
+                else
+                  StatusChip(product.badge, color: product.badgeColor),
               ],
             ),
             const SizedBox(height: 8),
@@ -676,12 +681,14 @@ class _MarketPageState extends State<MarketPage> {
                     style: const TextStyle(color: AppColors.onSurfaceVariant)),
                 const Spacer(),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _addCart(product);
-                  },
+                  onPressed: product.id == null
+                      ? null
+                      : () {
+                          Navigator.pop(context);
+                          _addCart(product);
+                        },
                   icon: const Icon(Icons.add_shopping_cart, size: 18),
-                  label: const Text('加入合计'),
+                  label: Text(product.id == null ? '资料更新中' : '加入合计'),
                 ),
               ],
             ),

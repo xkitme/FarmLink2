@@ -68,12 +68,12 @@ class _MachineryPageState extends State<MachineryPage> {
   static const _fallback = [
     _Machine(
       image: 'assets/images/_5_2.jpg',
-      name: '雷沃欧豹 M1004',
-      type: '100马力 轮式拖拉机',
+      name: '示例农机 · 资料更新中',
+      type: '100 马力 · 轮式拖拉机',
       price: 150,
       deposit: 1000,
       rating: 4.9,
-      owner: '李师傅',
+      owner: '示例机主',
       distance: '2.5 km',
     ),
   ];
@@ -402,8 +402,11 @@ class _MachineryPageState extends State<MachineryPage> {
                             ),
                           ),
                         ),
-                        const Icon(Icons.verified,
-                            color: AppColors.primary, size: 28),
+                        if (machine.id == null)
+                          const StatusChip('暂未上架', color: AppColors.outline)
+                        else
+                          const Icon(Icons.verified,
+                              color: AppColors.primary, size: 28),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -551,7 +554,9 @@ class _MachineryPageState extends State<MachineryPage> {
               ),
               const SizedBox(width: 14),
               ElevatedButton(
-                onPressed: _booking ? null : () => _bookMachine(machine),
+                onPressed: (_booking || machine.id == null)
+                    ? null
+                    : () => _bookMachine(machine),
                 child: _booking
                     ? const SizedBox(
                         width: 18,

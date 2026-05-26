@@ -84,18 +84,25 @@ class OfflineSyncQueue {
     for (final item in items) {
       try {
         final result = await _submit(item);
-        if (result == SyncStatus.synced) {
+        if (result.status == SyncStatus.synced) {
           success++;
-        } else if (result == SyncStatus.conflict) {
+        } else if (result.status == SyncStatus.conflict) {
           conflict++;
-          remaining.add(item.next(result, lastError: '服务端数据更新，需要人工合并'));
+          remaining.add(item.next(
+            SyncStatus.conflict,
+            lastError: result.detail ?? '服务端数据更新，需要人工合并',
+          ));
         } else {
           failed++;
-          remaining.add(item.next(SyncStatus.failed, lastError: '同步失败'));
+          remaining.add(item.next(
+            SyncStatus.failed,
+            lastError: result.detail ?? '同步失败',
+          ));
         }
-      } catch (_) {
+      } catch (e) {
+        // F6：保留原始异常字符串，便于诊断 timeout / 5xx / parse 等具体原因
         failed++;
-        remaining.add(item.next(SyncStatus.failed, lastError: '同步失败'));
+        remaining.add(item.next(SyncStatus.failed, lastError: '$e'));
       }
     }
 
@@ -116,7 +123,7 @@ class OfflineSyncQueue {
 
   static Future<void> clear() => _save([]);
 
-  static Future<SyncStatus> _submit(SyncQueueItem item) async {
+  static Future<_SubmitResult> _submit(SyncQueueItem item) async {
     if (_replayTables.contains(item.tableName)) {
       final data = await ApiClient.post('/data/sync', body: {
         'items': [item.toReplayPayload()],
@@ -126,18 +133,22 @@ class OfflineSyncQueue {
         final first = results.first;
         if (first is Map) {
           final status = '${first['status']}';
-          if (status == 'SUCCESS') return SyncStatus.synced;
-          if (status == 'CONFLICT') return SyncStatus.conflict;
+          final detail = first['detail'] == null ? null : '${first['detail']}';
+          if (status == 'SUCCESS') return const _SubmitResult(SyncStatus.synced);
+          if (status == 'CONFLICT') {
+            return _SubmitResult(SyncStatus.conflict, detail);
+          }
+          return _SubmitResult(SyncStatus.failed, detail);
         }
       }
-      return SyncStatus.synced;
+      return const _SubmitResult(SyncStatus.synced);
     }
 
     if (item.path == null || item.path!.isEmpty) {
       throw Exception('缺少同步接口路径');
     }
     await ApiClient.post(item.path!, body: item.payload);
-    return SyncStatus.synced;
+    return const _SubmitResult(SyncStatus.synced);
   }
 
   static Future<void> _save(List<SyncQueueItem> items) async {
@@ -274,4 +285,11 @@ class OfflineSyncResult {
         remaining = 0;
 
   bool get allSynced => total > 0 && remaining == 0 && failed == 0;
+}
+
+/// 单条同步结果：携带服务端 detail，便于队列保留诊断信息
+class _SubmitResult {
+  final SyncStatus status;
+  final String? detail;
+  const _SubmitResult(this.status, [this.detail]);
 }

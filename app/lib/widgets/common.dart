@@ -193,14 +193,22 @@ class EmptyView extends StatelessWidget {
 class ErrorRetry extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
-  const ErrorRetry({super.key, required this.message, required this.onRetry});
+  /// 可选图标，默认 `cloud_off` —— 即使 message 是中性文案，
+  /// 图标仍可暗示「可能是网络问题，可以试试重试」。
+  /// 业务错误（非连通性）可覆盖为 `error_outline_rounded` 等。
+  final IconData icon;
+  const ErrorRetry({
+    super.key,
+    required this.message,
+    required this.onRetry,
+    this.icon = Icons.cloud_off,
+  });
   @override
   Widget build(BuildContext context) => Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 56, color: AppColors.outlineVariant),
+            Icon(icon, size: 56, color: AppColors.outlineVariant),
             const SizedBox(height: 12),
             Text(message,
                 style: const TextStyle(color: AppColors.onSurfaceVariant)),

@@ -143,12 +143,20 @@ export async function seedDataSummary(req, res) {
     for (const resourceKey of group.resources) {
       resources.push(await countResource(resourceKey))
     }
+    // F7：totalCount 按 model 去重，避免同 group 内两个资源指向同 prisma model 时重复累加
+    const seenModels = new Set()
+    let totalCount = 0
+    for (const item of resources) {
+      if (!item.model || item.model === '-' || seenModels.has(item.model)) continue
+      seenModels.add(item.model)
+      totalCount += item.count || 0
+    }
     groups.push({
       key: group.key,
       title: group.title,
       resources,
       readyCount: resources.filter((item) => item.ready).length,
-      totalCount: resources.reduce((sum, item) => sum + (item.count || 0), 0),
+      totalCount,
     })
   }
 

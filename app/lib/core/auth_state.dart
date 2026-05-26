@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import 'api_client.dart';
+import 'notification_state.dart';
 
 /// 全局登录态。
 class AuthState extends ChangeNotifier {
@@ -81,6 +82,7 @@ class AuthState extends ChangeNotifier {
     _token = null;
     _user = null;
     ApiClient.setToken(null);
+    NotificationState.setUnread(0);
     final sp = await SharedPreferences.getInstance();
     await sp.remove('token');
     await sp.remove('user');
