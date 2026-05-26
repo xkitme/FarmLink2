@@ -3,7 +3,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/notification_state.dart';
 import '../../core/offline_cache.dart';
+import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
 /// 首页 · 气象灾害看板 — 接入服务端 /agri/weather（样式复刻设计稿 _2）
@@ -22,6 +24,11 @@ class _HomePageState extends State<HomePage> {
   String? _cacheTime;
   List<Map<String, dynamic>> _days = [];
   List<Map<String, dynamic>> _alerts = [];
+  Map<String, dynamic>? _latestNotification;
+  Map<String, dynamic>? _latestPublish;
+  int _unread = 0;
+  int _waiting = 0;
+  String? _queueHint;
 
   @override
   void initState() {
@@ -31,6 +38,40 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
+    final results = await Future.wait<dynamic>([
+      _loadWeatherSnapshot(),
+      _loadLatestNotification(),
+      _loadLatestPublish(),
+      OfflineSyncQueue.all().catchError((_) => <SyncQueueItem>[]),
+      NotificationState.refresh().then((_) => NotificationState.unread.value),
+    ]);
+    if (!mounted) return;
+
+    final weather = results[0] as Map<String, dynamic>;
+    final notification = results[1] as Map<String, dynamic>?;
+    final publish = results[2] as Map<String, dynamic>?;
+    final queue = (results[3] as List).whereType<SyncQueueItem>().toList();
+    final waiting =
+        queue.where((item) => item.status != SyncStatus.synced).toList();
+
+    setState(() {
+      _days = _listOfMaps(weather['days']);
+      _alerts = _listOfMaps(weather['alerts']);
+      _fromCache = weather['fromCache'] == true;
+      _cacheTime =
+          weather['cacheTime'] == null ? null : '${weather['cacheTime']}';
+      _latestNotification = notification;
+      _latestPublish = publish;
+      _unread = results[4] is int
+          ? results[4] as int
+          : NotificationState.unread.value;
+      _waiting = waiting.length;
+      _queueHint = waiting.isEmpty ? null : _queueTitleOf(waiting.first);
+      _loading = false;
+    });
+  }
+
+  Future<Map<String, dynamic>> _loadWeatherSnapshot() async {
     try {
       final data = await ApiClient.get('/agri/weather') as Map<String, dynamic>;
       final days = (data['days'] as List? ?? [])
@@ -44,32 +85,51 @@ class _HomePageState extends State<HomePage> {
       await OfflineCache.saveList(_cacheKey, [
         {'days': days, 'alerts': alerts}
       ]);
-      if (!mounted) return;
-      setState(() {
-        _days = days;
-        _alerts = alerts;
-        _fromCache = false;
-        _loading = false;
-      });
+      return {
+        'days': days,
+        'alerts': alerts,
+        'fromCache': false,
+        'cacheTime': null,
+      };
     } catch (_) {
       final cached = await OfflineCache.readList(_cacheKey);
       final cacheTime = await OfflineCache.updatedAt(_cacheKey);
-      if (!mounted) return;
-      setState(() {
-        if (cached.isNotEmpty) {
-          _days = (cached.first['days'] as List? ?? [])
-              .whereType<Map>()
-              .map((e) => e.cast<String, dynamic>())
-              .toList();
-          _alerts = (cached.first['alerts'] as List? ?? [])
-              .whereType<Map>()
-              .map((e) => e.cast<String, dynamic>())
-              .toList();
-          _fromCache = true;
-          _cacheTime = cacheTime;
-        }
-        _loading = false;
-      });
+      if (cached.isEmpty) {
+        return {
+          'days': const <Map<String, dynamic>>[],
+          'alerts': const <Map<String, dynamic>>[],
+          'fromCache': false,
+          'cacheTime': null,
+        };
+      }
+      return {
+        'days': _listOfMaps(cached.first['days']),
+        'alerts': _listOfMaps(cached.first['alerts']),
+        'fromCache': true,
+        'cacheTime': cacheTime,
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadLatestNotification() async {
+    try {
+      final data = await ApiClient.get('/notification/list',
+          query: {'pageNum': 1, 'pageSize': 1});
+      final records = _recordsOf(data);
+      return records.isEmpty ? null : records.first;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadLatestPublish() async {
+    try {
+      final data = await ApiClient.get('/life/help/list',
+          query: {'pageNum': 1, 'pageSize': 1});
+      final records = _recordsOf(data);
+      return records.isEmpty ? null : records.first;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -101,35 +161,25 @@ class _HomePageState extends State<HomePage> {
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       children: [
-                        _weatherBento(),
-                        const SizedBox(height: 24),
-                        _forecastCard(),
+                        _weatherStripCard()
+                            .animate()
+                            .fadeIn(duration: 360.ms)
+                            .slideY(begin: 0.08),
                         const SectionTitle('核心服务'),
                         _serviceGrid(context),
+                        const SectionTitle('我的快讯'),
+                        _quickPanel()
+                            .animate(delay: 80.ms)
+                            .fadeIn(duration: 360.ms)
+                            .slideY(begin: 0.08),
+                        const SectionTitle('未来天气趋势'),
+                        _forecastCard(),
                       ],
                     ),
                   ),
                 ),
               ],
             ),
-    );
-  }
-
-  // ── 气象 Bento ────────────────────────────
-  Widget _weatherBento() {
-    return Column(
-      children: [
-        _heroTempCard().animate().fadeIn(duration: 400.ms).slideY(begin: 0.12),
-        const SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: _soilCard()),
-            const SizedBox(width: 16),
-            Expanded(child: _humidityCard()),
-          ],
-        ).animate(delay: 120.ms).fadeIn(duration: 400.ms).slideY(begin: 0.12),
-      ],
     );
   }
 
@@ -141,212 +191,81 @@ class _HomePageState extends State<HomePage> {
     return Icons.wb_sunny;
   }
 
-  Widget _heroTempCard() {
+  Widget _weatherStripCard() {
     final t = _today;
     final cond = '${t['condition'] ?? '晴'}';
     final low = _int(t['tempLow']);
     final high = _int(t['tempHigh']);
+    final humidity = _int(t['humidity']);
     final wind = _int(t['windLevel']);
-    return Container(
-      height: 168,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(R.lg),
-        boxShadow: AppColors.ambientShadow,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
+    final soil = _soilStatusOf(humidity, cond);
+    return AppCard(
+      onTap: () => context.go('/disaster'),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
         children: [
-          Image.asset('assets/images/_2_1.jpg',
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  const ColoredBox(color: Color(0xFF3F4A40))),
-          const DecoratedBox(
+          Container(
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xCC2A2E27), Color(0x992A2E27)],
-              ),
+              color: AppColors.primaryContainer.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(R.md),
             ),
+            child:
+                Icon(_conditionIcon(cond), color: AppColors.primary, size: 28),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('当前气况 · 所在农区',
-                              style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                  letterSpacing: 1)),
-                          const SizedBox(height: 6),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text('$low°C',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 36,
-                                      fontWeight: FontWeight.w700)),
-                              const SizedBox(width: 8),
-                              Text('/ $high°C 最高',
-                                  style: const TextStyle(
-                                      color: Colors.white70, fontSize: 14)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(_conditionIcon(cond),
-                        color: AppColors.primaryDim, size: 40),
-                  ],
+                Text(
+                  _days.isEmpty ? '气象数据更新中' : '$low°~$high°  $cond',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.onSurface,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                const Spacer(),
-                Row(
-                  children: [
-                    _glassChip(Icons.air, '阵风 $wind 级'),
-                    const SizedBox(width: 12),
-                    _glassChip(_conditionIcon(cond), cond),
-                  ],
+                const SizedBox(height: 6),
+                Text(
+                  '湿度 $humidity% · 风 $wind 级 · 墒情$soil',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 12,
+                    height: 1.25,
+                  ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          const Icon(Icons.chevron_right_rounded, color: AppColors.outline),
         ],
       ),
     );
   }
 
-  Widget _glassChip(IconData icon, String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(R.md),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: AppColors.onSurface),
-            const SizedBox(width: 4),
-            Text(text,
-                style:
-                    const TextStyle(fontSize: 12, color: AppColors.onSurface)),
-          ],
-        ),
-      );
-
-  // 土壤墒情（按湿度/天气推断）
-  Widget _soilCard() {
-    final humidity = _int(_today['humidity']);
-    final cond = '${_today['condition'] ?? ''}';
-    String status;
-    String note;
-    Color noteColor;
+  String _soilStatusOf(int humidity, String cond) {
     if (cond.contains('雨') || humidity >= 85) {
-      status = '偏湿';
-      note = '积水风险偏高';
-      noteColor = AppColors.error;
-    } else if (humidity < 55 && humidity > 0) {
-      status = '偏旱';
-      note = '建议及时补水';
-      noteColor = AppColors.warning;
-    } else {
-      status = '适宜';
-      note = '墒情正常，可正常作业';
-      noteColor = AppColors.primary;
+      return '偏湿';
     }
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: AppColors.gold),
-        boxShadow: AppColors.ambientShadow,
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.grass, size: 18, color: AppColors.tertiary),
-              SizedBox(width: 6),
-              Text('土壤墒情 (AI分析)',
-                  style: TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 0.4,
-                      color: AppColors.tertiary)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(status,
-              style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.onSurface)),
-          const SizedBox(height: 4),
-          Text(note, style: TextStyle(fontSize: 12, color: noteColor)),
-        ],
-      ),
-    );
-  }
-
-  Widget _humidityCard() {
-    final humidity = _int(_today['humidity']);
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(R.lg),
-        boxShadow: AppColors.ambientShadow,
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.water_drop_outlined,
-                  size: 18, color: AppColors.onSurfaceVariant),
-              SizedBox(width: 6),
-              Text('相对湿度',
-                  style: TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 0.4,
-                      color: AppColors.onSurfaceVariant)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text('$humidity%',
-              style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.onSurface)),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: (humidity / 100).clamp(0.0, 1.0),
-              minHeight: 8,
-              backgroundColor: AppColors.surfaceHigh,
-              color: AppColors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
+    if (humidity < 55 && humidity > 0) return '偏旱';
+    return '适宜';
   }
 
   // 未来天气趋势（服务端 7 日预报）
   Widget _forecastCard() {
     final days = _days.take(7).toList();
+    if (days.isEmpty) {
+      return const AppCard(
+        child: EmptyView('暂无天气趋势', icon: Icons.bar_chart_rounded),
+      );
+    }
     final highs = days.map((d) => _int(d['tempHigh'])).toList();
     final maxH = highs.isEmpty ? 1 : highs.reduce((a, b) => a > b ? a : b);
     return Container(
@@ -359,12 +278,6 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('未来天气趋势',
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.onSurface)),
-          const SizedBox(height: 16),
           SizedBox(
             height: 130,
             child: Row(
@@ -426,39 +339,40 @@ class _HomePageState extends State<HomePage> {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: kSections.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
-        childAspectRatio: 1.62,
+        crossAxisCount: 4,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.95,
       ),
       itemBuilder: (context, index) {
         final item = kSections[index];
         final color = item['color'] as Color;
         return AppCard(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
           onTap: () => _openSection(context, item['key'] as String),
-          child: Row(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(R.md),
                 ),
-                child: Icon(item['icon'] as IconData, color: color, size: 25),
+                child: Icon(item['icon'] as IconData, color: color, size: 22),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  item['label'] as String,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.onSurface,
-                    fontSize: 15,
-                    height: 1.25,
-                    fontWeight: FontWeight.w700,
-                  ),
+              const SizedBox(height: 8),
+              Text(
+                item['label'] as String,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.onSurface,
+                  fontSize: 12,
+                  height: 1.2,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -466,6 +380,153 @@ class _HomePageState extends State<HomePage> {
         );
       },
     );
+  }
+
+  Widget _quickPanel() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _quickCard(
+            icon: Icons.mail_rounded,
+            color: _unread > 0 ? AppColors.error : AppColors.primary,
+            title: '未读消息',
+            badge: '$_unread',
+            subtitle: _text(_latestNotification?['title'], fallback: '暂无新消息'),
+            onTap: () => context.go('/messages'),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _quickCard(
+            icon: Icons.sync_alt_rounded,
+            color: _waiting > 0 ? AppColors.warning : AppColors.primary,
+            title: '待发送',
+            badge: '$_waiting',
+            subtitle: _waiting > 0 ? (_queueHint ?? '有数据等待发送') : '数据已同步',
+            onTap: () => context.go('/data/service'),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _quickCard(
+            icon: Icons.add_circle_outline_rounded,
+            color: AppColors.secondary,
+            title: '最近发布',
+            subtitle: _text(_latestPublish?['title'], fallback: '暂无发布'),
+            onTap: () => context.go('/publish'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _quickCard({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    String? badge,
+  }) {
+    return SizedBox(
+      height: 96,
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 16),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (badge != null)
+                  Text(
+                    badge,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.onSurface,
+                  fontSize: 12,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static List<Map<String, dynamic>> _recordsOf(dynamic data) {
+    if (data is Map) return _listOfMaps(data['records']);
+    return const [];
+  }
+
+  static List<Map<String, dynamic>> _listOfMaps(dynamic value) {
+    if (value is List) {
+      return value.whereType<Map>().map(_mapOf).toList();
+    }
+    return const [];
+  }
+
+  static Map<String, dynamic> _mapOf(Map value) =>
+      value.map((key, value) => MapEntry('$key', value));
+
+  static String _text(dynamic value, {String fallback = ''}) {
+    final text = '${value ?? ''}'.trim();
+    return text.isEmpty || text == 'null' ? fallback : text;
+  }
+
+  static String _queueTitleOf(SyncQueueItem item) {
+    final error = _text(item.lastError);
+    if (error.isNotEmpty) return error;
+    return '${_tableLabel(item.tableName)}等待发送';
+  }
+
+  static String _tableLabel(String tableName) {
+    switch (tableName) {
+      case 'farm_record':
+        return '农事记录';
+      case 'land_plot':
+        return '地块数据';
+      case 'disaster_report':
+        return '灾情上报';
+      case 'subsidy_application':
+        return '补贴申请';
+      case 'machinery_booking':
+        return '农机预约';
+      case 'help_request':
+        return '互助信息';
+      default:
+        return '业务数据';
+    }
   }
 
   void _openSection(BuildContext context, String key) {

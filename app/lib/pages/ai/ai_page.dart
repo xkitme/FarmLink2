@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
@@ -17,78 +19,194 @@ class AiPage extends StatefulWidget {
 class _AiPageState extends State<AiPage> {
   final _input = TextEditingController();
   final _picker = ImagePicker();
-  final List<_ChatMessage> _messages = [
-    const _ChatMessage(
-      fromUser: false,
-      text: '您好，我是您的智能农技助手。可以问我政策、农技、病虫害、行情等问题，也可以上传图片让我识别。',
-    ),
-    const _ChatMessage(
-      fromUser: true,
-      text: '最近几天要暴雨，玉米地刚施完肥，需要做防护吗？',
-    ),
-    const _ChatMessage(
-      fromUser: false,
-      text: '建议先疏通田间排水沟，雨后及时查苗。如果肥料被冲刷，可根据苗情少量追施速效肥，并留意雨后高温潮湿引发的病害。',
-    ),
-  ];
+  final _scrollCtrl = ScrollController();
 
-  bool _asking = false;
+  final List<_ChatMessage> _messages = [];
+  String _scene = 'GENERAL';
+  bool _loadingHistory = true;
+  bool _sending = false;
   bool _detecting = false;
-  Uint8List? _pickedImage;
-  _DetectResult? _detectResult;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
 
   @override
   void dispose() {
     _input.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _chooseImageSource() async {
-    final source = await showModalBottomSheet<ImageSource>(
+  Future<void> _loadHistory() async {
+    try {
+      final data = await ApiClient.get('/ai/qa/records',
+          query: {'pageNum': 1, 'pageSize': 20});
+      final page = _map(data);
+      final records = _list(page['records']);
+      final list = <_ChatMessage>[];
+      for (final record in records.reversed) {
+        final scene = _normalizeScene(record['scene']);
+        final createdAt = _date(record['createdAt']);
+        final question = _text(record['question']);
+        final answer = _text(record['answer']);
+        if (question.isNotEmpty) {
+          list.add(_ChatMessage(
+            fromUser: true,
+            text: question,
+            scene: scene,
+            createdAt: createdAt,
+          ));
+        }
+        if (answer.isNotEmpty) {
+          list.add(_ChatMessage(
+            fromUser: false,
+            text: answer,
+            scene: scene,
+            createdAt: createdAt,
+          ));
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _messages
+          ..clear()
+          ..addAll(list);
+        _loadingHistory = false;
+      });
+      _scrollToBottom();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingHistory = false;
+        if (_messages.isEmpty) {
+          _messages.add(_ChatMessage(
+            fromUser: false,
+            text: '您好，我是您的智能农技助手。可以问我政策、农技、病虫害、行情等问题，也可以点击「+」上传图片让我识别。',
+            scene: _scene,
+          ));
+        }
+      });
+      _scrollToBottom();
+    }
+  }
+
+  Future<void> _send() async {
+    final question = _input.text.trim();
+    if (question.isEmpty || _sending) return;
+    _input.clear();
+    setState(() {
+      _messages.add(_ChatMessage(
+        fromUser: true,
+        text: question,
+        scene: _scene,
+      ));
+      _messages.add(_ChatMessage(
+        fromUser: false,
+        text: '',
+        scene: _scene,
+        streaming: true,
+      ));
+      _sending = true;
+    });
+    _scrollToBottom();
+
+    var buffer = '';
+    try {
+      final stream = ApiClient.stream('/ai/chat', {
+        'scene': _scene.toLowerCase(),
+        'question': question,
+        'stream': true,
+      });
+      await for (final chunk in stream) {
+        final delta = _deltaOf(chunk);
+        if (delta.isEmpty) continue;
+        buffer += delta;
+        if (!mounted) return;
+        setState(() {
+          _messages[_messages.length - 1] =
+              _messages.last.copyWith(text: buffer);
+        });
+        _scrollToBottom();
+      }
+      if (!mounted) return;
+      setState(() {
+        _messages[_messages.length - 1] =
+            _messages.last.copyWith(streaming: false);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages[_messages.length - 1] = _ChatMessage(
+          fromUser: false,
+          text: serviceUnavailableMessage,
+          scene: _scene,
+        );
+      });
+      toast(context, actionErrorMessage('问答', e), error: true);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _openPlusSheet() {
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
       ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 42,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.outlineVariant,
-                  borderRadius: BorderRadius.circular(999),
-                ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.outlineVariant,
+                borderRadius: BorderRadius.circular(999),
               ),
-              const SizedBox(height: 12),
-              ListTile(
-                leading: const Icon(Icons.photo_camera_outlined,
-                    color: AppColors.primary),
-                title: const Text('拍照识别'),
-                subtitle: const Text('适合现场叶片、茎秆、果实病害'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined,
-                    color: AppColors.secondary),
-                title: const Text('上传图片'),
-                subtitle: const Text('选择已有田间照片进行智能诊断'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 10),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined,
+                  color: AppColors.primary),
+              title: const Text('拍照识别'),
+              subtitle: const Text('叶片 / 茎秆 / 果实病害实时识别'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickAndDetect(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined,
+                  color: AppColors.secondary),
+              title: const Text('从相册上传'),
+              subtitle: const Text('选择已有田间照片进行智能诊断'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickAndDetect(ImageSource.gallery);
+              },
+            ),
+            const ListTile(
+              enabled: false,
+              leading: Icon(Icons.mic_none_outlined, color: AppColors.outline),
+              title: Text('语音输入'),
+              subtitle: Text('准备中'),
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
-    if (source == null) return;
-    await _pickAndDetect(source);
   }
 
   Future<void> _pickAndDetect(ImageSource source) async {
+    if (_detecting || _sending) return;
     try {
       final image = await _picker.pickImage(
           source: source, imageQuality: 82, maxWidth: 1600);
@@ -96,282 +214,362 @@ class _AiPageState extends State<AiPage> {
       final bytes = await image.readAsBytes();
       if (!mounted) return;
       setState(() {
-        _pickedImage = bytes;
+        _messages.add(_ChatMessage(
+          fromUser: true,
+          text: '请识别这张图片',
+          scene: _scene,
+          image: bytes,
+        ));
+        _messages.add(_ChatMessage(
+          fromUser: false,
+          text: '识别中...',
+          scene: _scene,
+          streaming: true,
+        ));
         _detecting = true;
-        _detectResult = null;
       });
+      _scrollToBottom();
 
-      final data = await ApiClient.upload(
-        '/agri/disease/detect',
-        bytes,
-        image.name,
-        fields: const {'cropType': '苹果'},
-      ) as Map<String, dynamic>;
-
-      final disease = data['disease'];
-      final diseaseMap = disease is Map
-          ? disease.cast<String, dynamic>()
-          : <String, dynamic>{};
-      final confidence = (data['confidence'] as num?)?.toDouble() ?? 0.0;
-      final name =
-          '${diseaseMap['diseaseName'] ?? data['resultLabel'] ?? '疑似病害'}';
-      final advice =
-          '${diseaseMap['prevention'] ?? diseaseMap['medicineAdvice'] ?? '建议结合田间湿度、叶片正反面和近期用药情况复核。'}';
-
+      final data = await ApiClient.upload('/ai/image/detect', bytes, image.name)
+          as Map<String, dynamic>;
+      final result = _detectResultOf(data);
       if (!mounted) return;
       setState(() {
-        _detectResult = _DetectResult(
-          name: name,
-          confidence: confidence,
-          advice: advice,
-          mode: '智能识别',
+        _messages[_messages.length - 1] = _ChatMessage(
+          fromUser: false,
+          text: result.summaryText,
+          scene: _scene,
+          detect: result,
         );
       });
+      _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
+      setState(() {
+        _messages[_messages.length - 1] = _ChatMessage(
+          fromUser: false,
+          text: '识别失败，请稍后再试。',
+          scene: _scene,
+        );
+      });
       toast(context, actionErrorMessage('识别', e), error: true);
     } finally {
       if (mounted) setState(() => _detecting = false);
     }
   }
 
-  Future<void> _ask() async {
-    final question = _input.text.trim();
-    if (question.isEmpty || _asking) return;
-    setState(() {
-      _messages.add(_ChatMessage(fromUser: true, text: question));
-      _asking = true;
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollCtrl.hasClients) return;
+      _scrollCtrl.animateTo(
+        _scrollCtrl.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOut,
+      );
     });
-    _input.clear();
-
-    try {
-      final data = await ApiClient.post('/ai/chat', body: {
-        'scene': 'AGRI',
-        'question': question,
-      }) as Map<String, dynamic>;
-      final answer = '${data['answer'] ?? '已收到问题，暂无更完整答案，请稍后再试。'}';
-      if (!mounted) return;
-      setState(() {
-        _messages.add(_ChatMessage(
-          fromUser: false,
-          text: answer,
-        ));
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _messages.add(const _ChatMessage(
-          fromUser: false,
-          text: '当前服务暂时不可用。请确认账号已登录，稍后再试。',
-        ));
-      });
-      toast(context, actionErrorMessage('问答', e), error: true);
-    } finally {
-      if (mounted) setState(() => _asking = false);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        children: [
-          _diagnosisCard(),
-          const SizedBox(height: 24),
-          _chatCard(),
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        title: const Text(
+          'AI 农技助手',
+          style: TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: '清空对话',
+            icon: const Icon(Icons.delete_sweep_outlined,
+                color: AppColors.onSurfaceVariant),
+            onPressed: _messages.isEmpty
+                ? null
+                : () => setState(() => _messages.clear()),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _diagnosisCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(R.md),
-        border: Border.all(color: AppColors.gold),
-        boxShadow: AppColors.ambientShadow,
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Column(
         children: [
-          const Row(
-            children: [
-              Icon(Icons.center_focus_strong,
-                  color: AppColors.primary, size: 22),
-              SizedBox(width: 8),
-              Text(
-                '智能识病',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            '拍照或上传作物叶片，平台会完成识别记录、知识匹配与防治建议生成。',
-            style: TextStyle(fontSize: 16, color: AppColors.onSurfaceVariant),
-          ),
-          const SizedBox(height: 16),
-          InkWell(
-            onTap: _detecting ? null : _chooseImageSource,
-            borderRadius: BorderRadius.circular(R.md),
-            child: Container(
-              height: 132,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceLow,
-                borderRadius: BorderRadius.circular(R.md),
-                border: Border.all(color: AppColors.outlineVariant, width: 2),
-              ),
-              child: _pickedImage == null
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _detecting
-                              ? Icons.hourglass_top_rounded
-                              : Icons.add_a_photo_outlined,
-                          size: 30,
-                          color: AppColors.outline,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _detecting ? '正在识别...' : '点击拍照或上传图片',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(R.md - 2),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.memory(_pickedImage!, fit: BoxFit.cover),
-                          if (_detecting)
-                            Container(
-                              color: Colors.black.withValues(alpha: 0.25),
-                              child: const Center(
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _diagnosisResultCard(),
-        ],
-      ),
-    );
-  }
-
-  Widget _diagnosisResultCard() {
-    final result = _detectResult;
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(R.md),
-        border: Border.all(color: AppColors.surfaceHigh),
-      ),
-      padding: const EdgeInsets.all(8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(R.sm),
-            child: _pickedImage == null
-                ? Image.asset(
-                    'assets/images/ai_1.jpg',
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 80,
-                      height: 80,
-                      color: AppColors.surfaceHigh,
-                      child: const Icon(Icons.eco,
-                          color: AppColors.primary, size: 32),
-                    ),
-                  )
-                : Image.memory(_pickedImage!,
-                    width: 80, height: 80, fit: BoxFit.cover),
-          ),
-          const SizedBox(width: 8),
+          _sceneBar(),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 8,
-                      height: 8,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
+            child: _loadingHistory
+                ? const Loading(text: '加载对话历史')
+                : _messages.isEmpty
+                    ? const EmptyView('和 AI 农技助手聊聊吧',
+                        icon: Icons.smart_toy_outlined)
+                    : ListView.builder(
+                        controller: _scrollCtrl,
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                        itemCount: _messages.length,
+                        itemBuilder: (_, i) => Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _messages[i].fromUser
+                              ? _userBubble(_messages[i])
+                              : _botBubble(_messages[i]),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      result == null ? '示例诊断结果' : result.mode,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.onSurface,
-                      ),
-                    ),
-                  ],
+          ),
+          _inputBar(),
+        ],
+      ),
+    );
+  }
+
+  Widget _sceneBar() {
+    const scenes = [
+      ('GENERAL', '综合'),
+      ('AGRI', '农技'),
+      ('POLICY', '政策'),
+      ('LEGAL', '法律'),
+    ];
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final scene in scenes)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(scene.$2),
+                  selected: _scene == scene.$1,
+                  selectedColor:
+                      AppColors.primaryContainer.withValues(alpha: 0.16),
+                  onSelected: (_) => setState(() => _scene = scene.$1),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  result?.name ?? '苹果白粉病',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.error,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _inputBar() {
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.surfaceHigh)),
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            IconButton.filledTonal(
+              onPressed: _detecting || _sending ? null : _openPlusSheet,
+              icon: const Icon(Icons.add, size: 20),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.surfaceLow,
+                foregroundColor: AppColors.onSurfaceVariant,
+                fixedSize: const Size(36, 36),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _input,
+                minLines: 1,
+                maxLines: 4,
+                enabled: !_sending,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _send(),
+                decoration: InputDecoration(
+                  hintText: _scene == 'GENERAL'
+                      ? '向 AI 助手提问...'
+                      : '在「${_sceneLabel(_scene)}」场景下提问...',
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  filled: true,
+                  fillColor: AppColors.surfaceLow,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide:
+                        const BorderSide(color: AppColors.outlineVariant),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide:
+                        const BorderSide(color: AppColors.primary, width: 1.5),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton.filled(
+                padding: EdgeInsets.zero,
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                icon: _sending
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.send_rounded, size: 19),
+                onPressed: _sending ? null : _send,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _botBubble(_ChatMessage msg) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: const BoxDecoration(
+            color: AppColors.primaryContainer,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.smart_toy, color: Colors.white, size: 18),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceLow,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(4),
+                topRight: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _resultChip(
-                      result == null ? '建议喷洒三唑酮' : result.shortAdvice,
-                      AppColors.primary,
-                      AppColors.primaryContainer.withValues(alpha: 0.18),
+                    Flexible(
+                      child: Text(
+                        msg.text.isEmpty ? ' ' : msg.text,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
                     ),
-                    _resultChip(
-                      result == null
-                          ? '可信度 96%'
-                          : '可信度 ${(result.confidence * 100).round()}%',
-                      AppColors.onSurfaceVariant,
-                      AppColors.surfaceHigh,
-                    ),
+                    if (msg.streaming) ...[
+                      const SizedBox(width: 4),
+                      const _StreamingCursor(),
+                    ],
                   ],
+                ),
+                if (msg.detect != null) ...[
+                  const SizedBox(height: 10),
+                  _resultChip(
+                    '${msg.detect!.mode} · 可信度 ${(msg.detect!.confidence * 100).round()}%',
+                    AppColors.primary,
+                    AppColors.primaryContainer.withValues(alpha: 0.14),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  _time(msg.createdAt),
+                  style:
+                      const TextStyle(color: AppColors.outline, fontSize: 11),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+  }
+
+  Widget _userBubble(_ChatMessage msg) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(4),
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (msg.image != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(R.sm),
+                    child: Image.memory(
+                      msg.image!,
+                      width: 160,
+                      height: 160,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                Text(
+                  msg.text,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _time(msg.createdAt),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.secondary.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.person, color: AppColors.secondary, size: 18),
+        ),
+      ],
     );
   }
 
@@ -389,207 +587,154 @@ class _AiPageState extends State<AiPage> {
         ),
       );
 
-  Widget _chatCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(R.md),
-        boxShadow: AppColors.ambientShadow,
-      ),
-      child: Column(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceLow,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(R.md)),
-              border: Border(bottom: BorderSide(color: AppColors.surfaceHigh)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: const Row(
-              children: [
-                Icon(Icons.smart_toy, color: AppColors.primary, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  '农技专家 AI',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.onSurface,
-                  ),
-                ),
-                Spacer(),
-                StatusChip('AI 助手'),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                for (var i = 0; i < _messages.length; i++) ...[
-                  _messages[i].fromUser
-                      ? _userBubble(_messages[i].text)
-                      : _botBubble(_messages[i].text),
-                  if (i != _messages.length - 1) const SizedBox(height: 16),
-                ],
-                if (_asking) ...[
-                  const SizedBox(height: 16),
-                  _botBubble('正在处理中，请稍等...'),
-                ],
-              ],
-            ),
-          ),
-          Container(
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.surfaceHigh)),
-            ),
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-            child: Row(
-              children: [
-                IconButton.filledTonal(
-                  style: IconButton.styleFrom(
-                    backgroundColor: AppColors.surfaceLow,
-                    foregroundColor: AppColors.onSurfaceVariant,
-                    fixedSize: const Size(36, 36),
-                  ),
-                  onPressed: () => toast(context, '语音问答服务正在准备中，请稍后再试'),
-                  icon: const Icon(Icons.add, size: 20),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _input,
-                    minLines: 1,
-                    maxLines: 3,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _ask(),
-                    decoration: const InputDecoration(
-                      hintText: '向农技助手提问...',
-                      isDense: true,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      filled: true,
-                      fillColor: AppColors.surfaceLow,
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(999)),
-                        borderSide: BorderSide(color: AppColors.outlineVariant),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(999)),
-                        borderSide:
-                            BorderSide(color: AppColors.primary, width: 1.5),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: IconButton.filled(
-                    padding: EdgeInsets.zero,
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                    icon: _asking
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(Icons.send_rounded, size: 19),
-                    onPressed: _asking ? null : _ask,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+  _DetectResult _detectResultOf(Map<String, dynamic> data) {
+    final nested = data['result'];
+    final result = nested is Map ? nested.cast<String, dynamic>() : data;
+    final name = _text(
+      result['resultLabel'] ?? result['name'],
+      fallback: '未识别',
+    );
+    final confidence = _double(result['confidence']);
+    final advice = _text(result['adviceText'] ?? result['advice']);
+    final mode = _text(data['serviceMode'] ?? result['mode'], fallback: '智能识别');
+    return _DetectResult(
+      name: name,
+      confidence: confidence <= 0 ? 0.8 : confidence,
+      advice: advice,
+      mode: mode,
     );
   }
 
-  Widget _botBubble(String text) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              color: AppColors.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.smart_toy, color: Colors.white, size: 18),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceLow,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-              ),
-              child: Text(
-                text,
-                style: const TextStyle(
-                    fontSize: 14, height: 1.6, color: AppColors.onSurface),
-              ),
-            ),
-          ),
-        ],
-      );
+  String _deltaOf(String chunk) {
+    try {
+      final parsed = jsonDecode(chunk);
+      if (parsed is Map && parsed['delta'] is String) {
+        return parsed['delta'] as String;
+      }
+      return '';
+    } catch (_) {
+      return chunk;
+    }
+  }
 
-  Widget _userBubble(String text) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(4),
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-              ),
-              child: Text(
-                text,
-                style: const TextStyle(
-                    fontSize: 14, height: 1.6, color: Colors.white),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.secondary.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child:
-                const Icon(Icons.person, color: AppColors.secondary, size: 18),
-          ),
-        ],
-      );
+  String _sceneLabel(String scene) {
+    switch (scene) {
+      case 'AGRI':
+        return '农技';
+      case 'POLICY':
+        return '政策';
+      case 'LEGAL':
+        return '法律';
+      default:
+        return '综合';
+    }
+  }
+
+  String _normalizeScene(dynamic value) {
+    final scene = _text(value, fallback: 'GENERAL').toUpperCase();
+    if (scene == 'AGRI' || scene == 'POLICY' || scene == 'LEGAL') return scene;
+    return 'GENERAL';
+  }
+
+  static Map<String, dynamic> _map(dynamic value) {
+    if (value is Map) return value.map((k, v) => MapEntry('$k', v));
+    return {};
+  }
+
+  static List<Map<String, dynamic>> _list(dynamic value) {
+    if (value is List) {
+      return value.whereType<Map>().map((item) => _map(item)).toList();
+    }
+    return [];
+  }
+
+  static DateTime _date(dynamic value) {
+    return DateTime.tryParse(_text(value)) ?? DateTime.now();
+  }
+
+  static double _double(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse('$value') ?? 0;
+  }
+
+  static String _text(dynamic value, {String fallback = ''}) {
+    final text = '${value ?? ''}'.trim();
+    return text.isEmpty || text == 'null' ? fallback : text;
+  }
+
+  static String _time(DateTime value) => DateFormat('HH:mm').format(value);
+}
+
+class _StreamingCursor extends StatefulWidget {
+  const _StreamingCursor();
+
+  @override
+  State<_StreamingCursor> createState() => _StreamingCursorState();
+}
+
+class _StreamingCursorState extends State<_StreamingCursor>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _controller,
+      child: Container(
+        width: 6,
+        height: 14,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
+  }
 }
 
 class _ChatMessage {
   final bool fromUser;
   final String text;
+  final String? scene;
+  final Uint8List? image;
+  final _DetectResult? detect;
+  final bool streaming;
+  final DateTime createdAt;
 
-  const _ChatMessage({required this.fromUser, required this.text});
+  _ChatMessage({
+    required this.fromUser,
+    required this.text,
+    this.scene,
+    this.image,
+    this.detect,
+    this.streaming = false,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  _ChatMessage copyWith({String? text, bool? streaming}) => _ChatMessage(
+        fromUser: fromUser,
+        text: text ?? this.text,
+        scene: scene,
+        image: image,
+        detect: detect,
+        streaming: streaming ?? this.streaming,
+        createdAt: createdAt,
+      );
 }
 
 class _DetectResult {
@@ -605,9 +750,9 @@ class _DetectResult {
     required this.mode,
   });
 
-  String get shortAdvice {
-    final normalized = advice.replaceAll('\n', ' ').trim();
-    if (normalized.length <= 12) return normalized;
-    return '${normalized.substring(0, 12)}...';
+  String get summaryText {
+    final confidenceText = '可信度 ${(confidence * 100).round()}%';
+    if (advice.isEmpty) return '识别结果：$name（$confidenceText）';
+    return '识别结果：$name（$confidenceText）\n\n$advice';
   }
 }
