@@ -28,9 +28,90 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api/request.js'
 
-function formatValue(value) {
+const VALUE_LABELS = {
+  FARMER: '农户',
+  BIGFARMER: '种植大户',
+  VILLAGE: '村委',
+  EXPERT: '农技员',
+  MERCHANT: '商家',
+  ADMIN: '管理员',
+  PENDING: '待处理',
+  REPLIED: '已回复',
+  CLOSED: '已关闭',
+  PAID: '已支付',
+  SHIPPED: '已发货',
+  CREATED: '已创建',
+  PICKED: '已揽收',
+  TRANSIT: '运输中',
+  ARRIVED: '已到站',
+  DELIVERED: '已签收',
+  DONE: '已完成',
+  CANCELLED: '已取消',
+  CONFIRMED: '已确认',
+  OPEN: '开放中',
+  DEALT: '已成交',
+  REPORTED: '已上报',
+  REVIEWING: '审核中',
+  PROCESSED: '已处理',
+  ASSESSING: '评估中',
+  APPROVED: '已通过',
+  REJECTED: '未通过',
+  PUBLISHED: '已发布',
+  HANDLING: '处理中',
+  RESOLVED: '已解决',
+  ON_SALE: '在售',
+  SOLD: '已售出',
+  DRAFT: '草稿',
+  SUBMITTED: '已提交',
+  SUCCESS: '成功',
+  CONFLICT: '冲突',
+  FAILED: '失败',
+  INSERT: '新增',
+  UPDATE: '更新',
+  DELETE: '删除',
+}
+
+const VALUE_COLORS = {
+  APPROVED: 'green',
+  CONFIRMED: 'green',
+  DONE: 'green',
+  PAID: 'green',
+  PROCESSED: 'green',
+  PUBLISHED: 'green',
+  RESOLVED: 'green',
+  SUCCESS: 'green',
+  REJECTED: 'red',
+  CANCELLED: 'red',
+  CLOSED: 'default',
+  FAILED: 'red',
+  CONFLICT: 'orange',
+  PENDING: 'gold',
+  SUBMITTED: 'blue',
+  REVIEWING: 'blue',
+  ASSESSING: 'blue',
+  HANDLING: 'blue',
+  TRANSIT: 'blue',
+}
+
+function optionLabel(item) {
+  if (item && typeof item === 'object') return item.label || item.value
+  return VALUE_LABELS[item] || item
+}
+
+function optionValue(item) {
+  if (item && typeof item === 'object') return item.value
+  return item
+}
+
+function formatValue(value, field) {
   if (value === null || value === undefined || value === '') return '-'
   if (typeof value === 'boolean') return value ? <Tag color="green">是</Tag> : <Tag>否</Tag>
+  if (field?.name === 'status' && typeof value === 'number') {
+    return value === 1 ? <Tag color="green">启用</Tag> : <Tag>停用</Tag>
+  }
+  if (typeof value === 'string' && VALUE_LABELS[value]) {
+    return <Tag color={VALUE_COLORS[value] || 'blue'}>{VALUE_LABELS[value]}</Tag>
+  }
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) return value.slice(0, 19).replace('T', ' ')
   if (typeof value === 'string' && value.length > 48) return `${value.slice(0, 48)}...`
   return String(value)
@@ -59,7 +140,7 @@ function FieldInput({ field }) {
     return (
       <Select
         allowClear
-        options={(field.options || []).map((item) => ({ label: item, value: item }))}
+        options={(field.options || []).map((item) => ({ label: optionLabel(item), value: optionValue(item) }))}
       />
     )
   }
@@ -104,14 +185,14 @@ function ResourceTable({ resourceKey, title }) {
 
   const fields = config?.fields || []
   const listFields = config?.listFields || []
+  const fieldMap = useMemo(() => Object.fromEntries(fields.map((field) => [field.name, field])), [fields])
 
   const columns = useMemo(() => {
-    const fieldMap = Object.fromEntries(fields.map((field) => [field.name, field]))
     const cols = listFields.map((name) => ({
       title: fieldMap[name]?.label || name,
       dataIndex: name,
       ellipsis: true,
-      render: formatValue,
+      render: (value) => formatValue(value, fieldMap[name]),
     }))
     cols.push({
       title: '操作',
@@ -139,7 +220,7 @@ function ResourceTable({ resourceKey, title }) {
       ),
     })
     return cols
-  }, [fields, listFields])
+  }, [fieldMap, listFields])
 
   function openCreate() {
     setEditing(null)
@@ -240,10 +321,10 @@ function ResourceTable({ resourceKey, title }) {
         {viewing && (
           <Descriptions bordered column={1} size="small">
             {Object.entries(viewing).map(([key, value]) => (
-              <Descriptions.Item key={key} label={key}>
+              <Descriptions.Item key={key} label={fieldMap[key]?.label || key}>
                 {typeof value === 'string' && value.length > 160
                   ? <pre className="detail-pre">{value}</pre>
-                  : formatValue(value)}
+                  : formatValue(value, fieldMap[key])}
               </Descriptions.Item>
             ))}
           </Descriptions>

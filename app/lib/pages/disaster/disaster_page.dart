@@ -495,7 +495,7 @@ class _DisasterPageState extends State<DisasterPage> {
       _infoSheet('理赔评估结果',
           '受灾等级：${r['aiAssessLevel'] ?? '—'}\n建议理赔：约 ${r['suggestedPayout'] ?? 0} 元\n\n${r['assessDetail'] ?? ''}\n\n${r['insurerContact'] ?? ''}');
     } catch (e) {
-      if (mounted) toast(context, '理赔评估失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('理赔评估', e), error: true);
     }
   }
 
@@ -573,7 +573,7 @@ class _DisasterPageState extends State<DisasterPage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '读取记录失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('读取记录', e), error: true);
     }
   }
 

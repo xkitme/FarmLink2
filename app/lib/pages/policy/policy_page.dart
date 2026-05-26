@@ -357,7 +357,9 @@ class _PolicyPageState extends State<PolicyPage> {
         category = '${detail['category'] ?? category}';
         guide = detail['applyGuide'] as String?;
       } catch (e) {
-        if (context.mounted) toast(context, '政策详情读取失败：$e', error: true);
+        if (context.mounted) {
+          toast(context, actionErrorMessage('政策详情读取', e), error: true);
+        }
         return;
       }
     }

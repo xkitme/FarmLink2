@@ -51,8 +51,8 @@ class _LifePageState extends State<LifePage> {
       {Map<String, dynamic>? query, List<String>? errors}) async {
     try {
       return await ApiClient.get(path, query: query);
-    } catch (e) {
-      errors?.add('$path: $e');
+    } catch (_) {
+      errors?.add(path);
       return null;
     }
   }
@@ -738,7 +738,7 @@ class _LifePageState extends State<LifePage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '查询失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('查询', e), error: true);
     }
   }
 
@@ -783,7 +783,7 @@ class _LifePageState extends State<LifePage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '账单读取失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('账单读取', e), error: true);
     }
   }
 
@@ -794,7 +794,7 @@ class _LifePageState extends State<LifePage> {
       if (!mounted) return;
       _infoSheet('缴费成功', '订单号：${r['orderNo'] ?? ''}\n金额：¥${r['amount'] ?? 0}');
     } catch (e) {
-      if (mounted) toast(context, '缴费失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('缴费', e), error: true);
     }
   }
 
@@ -848,7 +848,7 @@ class _LifePageState extends State<LifePage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '匹配失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('匹配', e), error: true);
     }
   }
 
@@ -880,7 +880,7 @@ class _LifePageState extends State<LifePage> {
       _infoSheet('贷款预评估',
           '信用评分：${r['aiCreditScore'] ?? '—'}\n评估结果：${r['aiAssessResult'] ?? ''}\n\n${r['tip'] ?? ''}');
     } catch (e) {
-      if (mounted) toast(context, '评估失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('评估', e), error: true);
     }
   }
 
@@ -903,7 +903,7 @@ class _LifePageState extends State<LifePage> {
       if (!mounted) return;
       _infoSheet('教育答疑', '${r['answer'] ?? ''}');
     } catch (e) {
-      if (mounted) toast(context, '答疑失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('答疑', e), error: true);
     }
   }
 
@@ -928,7 +928,7 @@ class _LifePageState extends State<LifePage> {
       _infoSheet('旅游推广文案',
           '${r['promoText'] ?? ''}\n\n标签：${(r['tags'] as List? ?? []).join(' · ')}');
     } catch (e) {
-      if (mounted) toast(context, '生成失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('生成', e), error: true);
     }
   }
 
@@ -1110,7 +1110,7 @@ class _LifePageState extends State<LifePage> {
       toast(context, '已响应，请联系对方');
       _load();
     } catch (e) {
-      if (mounted) toast(context, '响应失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('响应', e), error: true);
     }
   }
 

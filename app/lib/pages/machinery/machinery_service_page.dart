@@ -295,7 +295,7 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '诊断失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('诊断', e), error: true);
     }
   }
 
@@ -346,7 +346,7 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '核算失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('核算', e), error: true);
     }
   }
 
@@ -385,7 +385,7 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '读取失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('读取', e), error: true);
     }
   }
 

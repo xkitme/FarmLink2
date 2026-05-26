@@ -72,7 +72,7 @@ class _DataServicePageState extends State<DataServicePage> {
         _annualReports = annual;
         _statRecords = stat;
         _loading = false;
-        _error = '$e';
+        _error = serviceUnavailableMessage;
       });
     }
   }
@@ -94,7 +94,7 @@ class _DataServicePageState extends State<DataServicePage> {
       await _load();
       if (result is Map) _showAnnualReport(result.cast<String, dynamic>());
     } catch (e) {
-      if (mounted) toast(context, '生成失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('生成', e), error: true);
     } finally {
       if (mounted) setState(() => _generating = false);
     }
@@ -284,7 +284,7 @@ class _DataServicePageState extends State<DataServicePage> {
       toast(context, '统计数据已上报');
       await _load();
     } catch (e) {
-      if (mounted) toast(context, '上报失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('上报', e), error: true);
     }
   }
 
@@ -374,7 +374,8 @@ class _DataServicePageState extends State<DataServicePage> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.cloud_off, color: AppColors.warning, size: 18),
+            const Icon(Icons.info_outline_rounded,
+                color: AppColors.warning, size: 18),
             const SizedBox(width: 8),
             const Expanded(
               child: Text('数据更新中，请稍候',
@@ -973,7 +974,7 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        toast(context, '加载失败：$e', error: true);
+        toast(context, actionErrorMessage('加载', e), error: true);
       }
     }
   }

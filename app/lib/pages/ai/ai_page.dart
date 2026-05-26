@@ -129,7 +129,7 @@ class _AiPageState extends State<AiPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      toast(context, '识别失败：$e', error: true);
+      toast(context, actionErrorMessage('识别', e), error: true);
     } finally {
       if (mounted) setState(() => _detecting = false);
     }
@@ -165,7 +165,7 @@ class _AiPageState extends State<AiPage> {
           text: '当前服务暂时不可用。请确认账号已登录，稍后再试。',
         ));
       });
-      toast(context, '问答失败：$e', error: true);
+      toast(context, actionErrorMessage('问答', e), error: true);
     } finally {
       if (mounted) setState(() => _asking = false);
     }

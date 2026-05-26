@@ -43,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) context.go('/home');
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = serviceErrorMessage(e, fallback: '登录暂时不可用，请稍后重试');
         _loading = false;
       });
     }

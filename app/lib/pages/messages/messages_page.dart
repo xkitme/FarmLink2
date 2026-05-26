@@ -47,7 +47,7 @@ class _MessagesPageState extends State<MessagesPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '$e';
+        _error = serviceErrorMessage(e);
         _loading = false;
       });
     }
@@ -61,7 +61,7 @@ class _MessagesPageState extends State<MessagesPage> {
       await _load();
       if (mounted) toast(context, '全部消息已标记为已读');
     } catch (e) {
-      if (mounted) toast(context, '操作失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('操作', e), error: true);
     } finally {
       if (mounted) setState(() => _marking = false);
     }

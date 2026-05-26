@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
+import '../../widgets/common.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -55,7 +56,7 @@ class _RegisterPageState extends State<RegisterPage> {
       if (mounted) context.go('/home');
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = serviceErrorMessage(e, fallback: '注册暂时不可用，请稍后重试');
         _loading = false;
       });
     }

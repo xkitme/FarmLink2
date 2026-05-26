@@ -313,7 +313,7 @@ class _AgriPageState extends State<AgriPage> {
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      toast(context, '$name失败：$e', error: true);
+      toast(context, actionErrorMessage(name, e), error: true);
     }
   }
 
@@ -446,7 +446,7 @@ class _AgriPageState extends State<AgriPage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '生成失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('生成', e), error: true);
     }
   }
 
@@ -468,7 +468,7 @@ class _AgriPageState extends State<AgriPage> {
       _infoSheet('灌溉计划',
           '${plan['advice'] ?? ''}\n${r['note'] ?? ''}\n\n${r['tip'] ?? ''}');
     } catch (e) {
-      if (mounted) toast(context, '生成失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('生成', e), error: true);
     }
   }
 
@@ -494,7 +494,7 @@ class _AgriPageState extends State<AgriPage> {
       _infoSheet('产量预测结果',
           '预测产量：${r['predictedYield'] ?? 0} 公斤\n亩产：${r['perMuYield'] ?? 0} 公斤/亩\n置信区间：${range.isNotEmpty ? '${range[0]} ~ ${range[1]} 公斤' : '—'}\n\n${r['advice'] ?? ''}');
     } catch (e) {
-      if (mounted) toast(context, '预测失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('预测', e), error: true);
     }
   }
 
@@ -602,7 +602,7 @@ class _AgriPageState extends State<AgriPage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '读取失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('读取', e), error: true);
     }
   }
 
@@ -623,7 +623,7 @@ class _AgriPageState extends State<AgriPage> {
       _infoSheet('碳汇计算结果',
           '估算固碳量：${r['carbonAmount'] ?? 0} 吨 CO₂\n\n${r['tradeRef'] ?? ''}\n\n${r['tip'] ?? ''}');
     } catch (e) {
-      if (mounted) toast(context, '计算失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('计算', e), error: true);
     }
   }
 

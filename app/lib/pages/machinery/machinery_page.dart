@@ -129,7 +129,7 @@ class _MachineryPageState extends State<MachineryPage> {
         _selected = machines.first;
         _fromCache = cached.isNotEmpty;
         _cacheTime = cacheTime;
-        _error = cached.isNotEmpty ? null : '后端暂不可用，已展示内置农机数据';
+        _error = cached.isNotEmpty ? null : serviceUnavailableMessage;
         _loading = false;
       });
     }
@@ -587,7 +587,7 @@ class _MachineryPageState extends State<MachineryPage> {
       });
       if (mounted) toast(context, '预约已提交，可在后台预约表查看');
     } catch (error) {
-      if (mounted) toast(context, '预约失败：$error', error: true);
+      if (mounted) toast(context, actionErrorMessage('预约', error), error: true);
     } finally {
       if (mounted) setState(() => _booking = false);
     }

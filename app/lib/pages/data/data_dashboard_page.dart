@@ -55,7 +55,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '$e';
+        _error = serviceErrorMessage(e);
         _loading = false;
       });
     }
@@ -75,7 +75,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
       );
       await _load();
     } catch (e) {
-      if (mounted) toast(context, '同步失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('同步', e), error: true);
     } finally {
       if (mounted) setState(() => _syncing = false);
     }

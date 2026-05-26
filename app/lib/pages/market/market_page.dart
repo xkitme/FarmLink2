@@ -157,7 +157,7 @@ class _MarketPageState extends State<MarketPage> {
             : _fallback;
         _fromCache = cached.isNotEmpty;
         _cacheTime = cacheTime;
-        _error = cached.isNotEmpty ? null : '后端暂不可用，已展示内置集市数据';
+        _error = cached.isNotEmpty ? null : serviceUnavailableMessage;
         _loading = false;
       });
     }
@@ -613,7 +613,7 @@ class _MarketPageState extends State<MarketPage> {
       toast(context, '订单已提交，可在后台订单表查看');
       _loadProducts();
     } catch (error) {
-      if (mounted) toast(context, '下单失败：$error', error: true);
+      if (mounted) toast(context, actionErrorMessage('下单', error), error: true);
     } finally {
       if (mounted) setState(() => _checkingOut = false);
     }

@@ -93,9 +93,9 @@ class OfflineSyncQueue {
           failed++;
           remaining.add(item.next(SyncStatus.failed, lastError: '同步失败'));
         }
-      } catch (e) {
+      } catch (_) {
         failed++;
-        remaining.add(item.next(SyncStatus.failed, lastError: '$e'));
+        remaining.add(item.next(SyncStatus.failed, lastError: '同步失败'));
       }
     }
 

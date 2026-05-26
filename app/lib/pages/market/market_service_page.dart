@@ -321,7 +321,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
       toast(context, '参团成功');
       _load();
     } catch (e) {
-      if (mounted) toast(context, '参团失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('参团', e), error: true);
     }
   }
 
@@ -348,7 +348,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '读取失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('读取', e), error: true);
     }
   }
 
@@ -390,7 +390,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '读取失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('读取', e), error: true);
     }
   }
 
@@ -407,7 +407,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
       _infoSheet('${r['product']} 出口合规',
           '执行标准：${r['standard'] ?? ''}\n\n检疫要求：${r['quarantine'] ?? ''}\n\n所需单证：${docs.join('、')}\n\n${r['tip'] ?? ''}');
     } catch (e) {
-      if (mounted) toast(context, '查询失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('查询', e), error: true);
     }
   }
 
@@ -436,7 +436,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      toast(context, '分级失败：$e', error: true);
+      toast(context, actionErrorMessage('分级', e), error: true);
     }
   }
 
@@ -468,7 +468,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '生成失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('生成', e), error: true);
     }
   }
 
@@ -490,7 +490,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
       _infoSheet('包装文案 · ${name.text.trim()}',
           '【标语】${r['slogan'] ?? ''}\n\n【文案】${r['description'] ?? ''}\n\n【标签】${tags.join(' · ')}\n\n【设计建议】${r['designTip'] ?? ''}');
     } catch (e) {
-      if (mounted) toast(context, '生成失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('生成', e), error: true);
     }
   }
 

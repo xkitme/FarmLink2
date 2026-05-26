@@ -489,7 +489,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
             ],
           ));
     } catch (e) {
-      if (mounted) toast(context, '问答失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('问答', e), error: true);
     }
   }
 
@@ -540,7 +540,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
       toast(context, '兑换成功，剩余 ${r['remainPoints']} 分');
       _load();
     } catch (e) {
-      if (mounted) toast(context, '兑换失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('兑换', e), error: true);
     }
   }
 
@@ -551,7 +551,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
       _infoSheet('${r['title'] ?? '培训课程'}',
           '${r['content'] ?? '暂无课程介绍'}\n\n证书：${r['certName'] ?? '结业证书'}');
     } catch (e) {
-      if (mounted) toast(context, '读取失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('读取', e), error: true);
     }
   }
 
@@ -560,7 +560,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
       await ApiClient.post('/training/course/${course['id']}/enroll');
       if (mounted) toast(context, '报名成功');
     } catch (e) {
-      if (mounted) toast(context, '报名失败：$e', error: true);
+      if (mounted) toast(context, actionErrorMessage('报名', e), error: true);
     }
   }
 

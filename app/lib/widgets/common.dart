@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../core/api_client.dart';
 import '../core/constants.dart';
 
 /// 品牌顶栏：白底 h64，左农机图标、居中「FarmLink 田园通」粗体绿、右铃铛
@@ -197,7 +199,7 @@ class ErrorRetry extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off,
+            const Icon(Icons.error_outline_rounded,
                 size: 56, color: AppColors.outlineVariant),
             const SizedBox(height: 12),
             Text(message,
@@ -211,6 +213,24 @@ class ErrorRetry extends StatelessWidget {
           ],
         ),
       );
+}
+
+const String serviceUnavailableMessage = '服务暂时不可用，请稍后重试';
+
+String serviceErrorMessage(Object error,
+    {String fallback = serviceUnavailableMessage}) {
+  if (error is ApiException && error.message.trim().isNotEmpty) {
+    return error.message;
+  }
+  return fallback;
+}
+
+String actionErrorMessage(String action, Object error) {
+  final message = serviceErrorMessage(error);
+  if (message == serviceUnavailableMessage) {
+    return '$action暂时不可用，请稍后重试';
+  }
+  return '$action失败：$message';
 }
 
 /// 通用服务状态面板
