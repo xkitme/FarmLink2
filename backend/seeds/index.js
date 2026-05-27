@@ -10,6 +10,7 @@ const prisma = new PrismaClient()
 const now = new Date()
 const daysAgo = (n) => new Date(now.getTime() - n * 86400000)
 const daysLater = (n) => new Date(now.getTime() + n * 86400000)
+const dateOf = (value) => new Date(`${value}T08:00:00.000+08:00`)
 
 async function main() {
   console.log('开始写入种子数据...')
@@ -57,9 +58,9 @@ async function main() {
   })
   await prisma.user.createMany({
     data: [
-      mkUser('farmer',    '张大山', 'FARMER',    '张大山', '13800000001'),
-      mkUser('bigfarmer', '李建国', 'BIGFARMER', '李建国', '13800000002'),
-      mkUser('village',   '王主任', 'VILLAGE',   '王建华', '13800000003'),
+      mkUser('farmer',    '张大叔', 'FARMER',    '张大山', '13800000001'),
+      mkUser('bigfarmer', '李大姐', 'BIGFARMER', '李桂兰', '13800000002'),
+      mkUser('village',   '王村委', 'VILLAGE',   '王建华', '13800000003'),
       mkUser('expert',    '赵农技', 'EXPERT',    '赵建军', '13800000004'),
       mkUser('merchant',  '陈收购', 'MERCHANT',  '陈志远', '13800000005'),
       mkUser('admin',     '管理员', 'ADMIN',     '系统管理员', '13800000000'),
@@ -67,17 +68,25 @@ async function main() {
   })
   const farmer    = await prisma.user.findUnique({ where: { username: 'farmer' } })
   const bigfarmer = await prisma.user.findUnique({ where: { username: 'bigfarmer' } })
+  const village   = await prisma.user.findUnique({ where: { username: 'village' } })
   const merchant  = await prisma.user.findUnique({ where: { username: 'merchant' } })
 
-  // 给农户加点积分流水
+  // 三位主角的积分流水：张大叔、李大姐、王村委。
   await prisma.pointsLog.createMany({
     data: [
       { userId: farmer.id, points: 10, type: 'SIGN_IN',   remark: '每日签到' },
       { userId: farmer.id, points: 5,  type: 'LEARN',      remark: '党建学习打卡' },
-      { userId: farmer.id, points: 20, type: 'VOLUNTEER',  remark: '参与村庄志愿服务' },
+      { userId: farmer.id, points: 20, type: 'VOLUNTEER',  remark: '参与村庄排水沟清理' },
+      { userId: farmer.id, points: 30, type: 'AGRI_RECORD', remark: '完善全年农事记录' },
+      { userId: bigfarmer.id, points: 40, type: 'TRAINING', remark: '完成柑橘标准化培训' },
+      { userId: bigfarmer.id, points: 36, type: 'MARKET', remark: '完成农产品溯源上架' },
+      { userId: village.id, points: 50, type: 'GOVERNANCE', remark: '完成村级统计上报' },
+      { userId: village.id, points: 45, type: 'VOLUNTEER', remark: '组织防汛巡田' },
     ],
   })
-  await prisma.user.update({ where: { id: farmer.id }, data: { points: 35 } })
+  await prisma.user.update({ where: { id: farmer.id }, data: { points: 65 } })
+  await prisma.user.update({ where: { id: bigfarmer.id }, data: { points: 76 } })
+  await prisma.user.update({ where: { id: village.id }, data: { points: 95 } })
 
   // ── API 功能开关 ──────────────────────────────────
   await prisma.apiSwitch.createMany({
@@ -101,7 +110,7 @@ async function main() {
       { key: 'subsidy_apply',     name: '补贴申请',       category: '惠农政策', description: '在线补贴申请' },
       { key: 'community_post',    name: '社区发布',       category: '乡村生活', description: '互助/二手/举报发布' },
       { key: 'media_upload',      name: '文件上传',       category: '平台',     description: '图片/视频上传' },
-      { key: 'offline_sync',      name: '离线数据同步',   category: '平台',     description: '断网数据同步上传' },
+      { key: 'offline_sync',      name: '数据同步',       category: '平台',     description: '待发送队列与自动重传' },
     ],
   })
 
@@ -221,16 +230,26 @@ async function main() {
       content: '为推动柑橘产业提质增效，蒲江县对连片新建或改造标准化柑橘园、采用绿色防控技术、参与品牌创建的农户和主体给予奖补。标准化改造按亩给予物化补助，绿色防控示范片给予技术服务支持，获得绿色食品、有机认证的给予一次性奖励。',
       publishOrg: '蒲江县农业农村局', applyGuide: '种植季前向乡镇申报，经验收合格后兑付奖补资金。' },
   ]
+  const policyByTitle = new Map()
   for (const p of policies) {
     const created = await prisma.policy.create({
       data: { ...p, regionCode: '510131', validFrom: daysAgo(60), validTo: daysLater(300), viewCount: Math.floor(Math.random() * 500) },
     })
+    policyByTitle.set(created.title, created)
     // 简单切片：按句号切，存为 RAG chunk
     const sentences = created.content.split(/(?<=。)/).filter((s) => s.trim().length > 10)
     await prisma.policyChunk.createMany({
       data: sentences.map((s, i) => ({ policyId: created.id, chunkIndex: i, chunkContent: s.trim() })),
     })
   }
+
+  await prisma.subsidyApplication.createMany({
+    data: [
+      { userId: farmer.id, policyId: policyByTitle.get('2026年耕地地力保护补贴实施方案').id, status: 'APPROVED', reviewRemark: '东头水田面积核验通过，待统一拨付。', materials: '["/uploads/demo/zhang-land-contract.pdf"]', createdAt: dateOf('2026-04-12') },
+      { userId: bigfarmer.id, policyId: policyByTitle.get('蒲江县柑橘产业奖补办法').id, status: 'REVIEWING', reviewRemark: '已进入乡镇初审，需补充绿色防控台账。', materials: '["/uploads/demo/li-green-control.pdf"]', createdAt: dateOf('2026-05-10') },
+      { userId: village.id, policyId: policyByTitle.get('高标准农田建设项目申报指南').id, status: 'SUBMITTED', reviewRemark: '松华村示范片材料已提交。', materials: '["/uploads/demo/songhua-farmland-plan.pdf"]', createdAt: dateOf('2026-03-26') },
+    ],
+  })
 
   // ── 党建学习内容 ──────────────────────────────────
   await prisma.partyLesson.createMany({
@@ -246,12 +265,36 @@ async function main() {
   // ── 商品 ──────────────────────────────────────────
   await prisma.product.createMany({
     data: [
-      { sellerId: farmer.id,    title: '生态散养土鸡蛋（30枚）',  category: '畜禽', price: 45,  unit: '箱', stock: 80, soldCount: 32, description: '自家散养土鸡所产，无添加，营养健康。' },
-      { sellerId: farmer.id,    title: '现摘高山猕猴桃 5斤装',     category: '水果', price: 39,  unit: '箱', stock: 120, soldCount: 56, description: '蒲江高山猕猴桃，现摘现发，香甜多汁。' },
-      { sellerId: bigfarmer.id, title: '当季新米 10斤装',          category: '粮油', price: 58,  unit: '袋', stock: 200, soldCount: 88, description: '当年新稻，现碾现卖，米香浓郁。' },
-      { sellerId: bigfarmer.id, title: '红心柑橘 10斤装',          category: '水果', price: 42,  unit: '箱', stock: 150, soldCount: 47, description: '蒲江红心柑橘，皮薄汁多。' },
-      { sellerId: farmer.id,    title: '农家自晒红薯干',           category: '其他', price: 25,  unit: '袋', stock: 60,  soldCount: 21, description: '传统工艺日晒，软糯香甜。' },
-      { sellerId: merchant.id,  title: '有机蔬菜礼盒（混装8种）',  category: '蔬菜', price: 68,  unit: '盒', stock: 40,  soldCount: 15, description: '当季有机蔬菜混装，新鲜直供。' },
+      { sellerId: farmer.id,    title: '张大叔松华香米 10斤装',    category: '粮油', price: 58,  unit: '袋', stock: 180, soldCount: 96, traceCode: 'TRACE-SH-2026-RICE-ZDS', regionCode: VILLAGE, description: '东头水田当季新稻，现碾现卖，米香浓郁。' },
+      { sellerId: farmer.id,    title: '张大叔后山红心柑橘 10斤装', category: '水果', price: 46,  unit: '箱', stock: 130, soldCount: 54, traceCode: 'TRACE-SH-2026-CITRUS-ZDS', regionCode: VILLAGE, description: '后山橘园分批采收，皮薄汁多，甜酸平衡。' },
+      { sellerId: bigfarmer.id, title: '李大姐阳光番茄 5斤装',      category: '蔬菜', price: 32,  unit: '箱', stock: 160, soldCount: 78, traceCode: 'TRACE-SH-2026-TOMATO-LGL', regionCode: VILLAGE, description: '桂兰蔬菜棚标准化种植，果形饱满，适合家庭鲜食。' },
+      { sellerId: bigfarmer.id, title: '李大姐有机蔬菜礼盒',        category: '蔬菜', price: 68,  unit: '盒', stock: 60,  soldCount: 42, traceCode: 'TRACE-SH-2026-VEG-LGL', regionCode: VILLAGE, description: '当季8种蔬菜混装，田间采摘后统一分级包装。' },
+      { sellerId: farmer.id,    title: '农家自晒红薯干',            category: '其他', price: 25,  unit: '袋', stock: 60,  soldCount: 21, regionCode: VILLAGE, description: '传统工艺日晒，软糯香甜。' },
+      { sellerId: merchant.id,  title: '生态散养土鸡蛋（30枚）',    category: '畜禽', price: 45,  unit: '箱', stock: 80,  soldCount: 32, regionCode: VILLAGE, description: '自家散养土鸡所产，无添加，营养健康。' },
+    ],
+  })
+
+  const storyProducts = await prisma.product.findMany({
+    where: { traceCode: { in: ['TRACE-SH-2026-RICE-ZDS', 'TRACE-SH-2026-CITRUS-ZDS', 'TRACE-SH-2026-TOMATO-LGL', 'TRACE-SH-2026-VEG-LGL'] } },
+  })
+  const productByTrace = Object.fromEntries(storyProducts.map((p) => [p.traceCode, p]))
+
+  await prisma.order.createMany({
+    data: [
+      { orderNo: 'FL202605180001', buyerId: merchant.id, sellerId: farmer.id, productId: productByTrace['TRACE-SH-2026-RICE-ZDS'].id, quantity: 12, totalAmount: 696, status: 'DONE', logisticsNo: 'SF2605180001', remark: '村集市首批香米订单', createdAt: dateOf('2026-05-18') },
+      { orderNo: 'FL202605200002', buyerId: farmer.id, sellerId: bigfarmer.id, productId: productByTrace['TRACE-SH-2026-TOMATO-LGL'].id, quantity: 2, totalAmount: 64, status: 'PAID', logisticsNo: 'YT2605200002', remark: '张大叔为农忙午餐采购', createdAt: dateOf('2026-05-20') },
+      { orderNo: 'FL202605220003', buyerId: merchant.id, sellerId: bigfarmer.id, productId: productByTrace['TRACE-SH-2026-VEG-LGL'].id, quantity: 8, totalAmount: 544, status: 'SHIPPED', logisticsNo: 'JD2605220003', remark: '县城社区团购备货', createdAt: dateOf('2026-05-22') },
+    ],
+  })
+
+  await prisma.traceRecord.createMany({
+    data: [
+      { traceCode: 'TRACE-SH-2026-RICE-ZDS', productId: productByTrace['TRACE-SH-2026-RICE-ZDS'].id, stage: '播种', operator: '张大山', description: '东头水田完成育秧，亩用种3公斤。', recordTime: dateOf('2026-03-08') },
+      { traceCode: 'TRACE-SH-2026-RICE-ZDS', productId: productByTrace['TRACE-SH-2026-RICE-ZDS'].id, stage: '田管', operator: '张大山', description: '分蘖期复查稻飞虱，按农技建议完成二次巡田。', recordTime: dateOf('2026-05-27') },
+      { traceCode: 'TRACE-SH-2026-RICE-ZDS', productId: productByTrace['TRACE-SH-2026-RICE-ZDS'].id, stage: '包装', operator: '陈志远', description: '小批量碾米、称重、贴溯源码。', recordTime: dateOf('2026-05-18') },
+      { traceCode: 'TRACE-SH-2026-TOMATO-LGL', productId: productByTrace['TRACE-SH-2026-TOMATO-LGL'].id, stage: '定植', operator: '李桂兰', description: '阳光番茄定植，株距45厘米。', recordTime: dateOf('2026-03-03') },
+      { traceCode: 'TRACE-SH-2026-TOMATO-LGL', productId: productByTrace['TRACE-SH-2026-TOMATO-LGL'].id, stage: '分级', operator: '李桂兰', description: '按果径、色泽、硬度完成三档分级。', recordTime: dateOf('2026-05-19') },
+      { traceCode: 'TRACE-SH-2026-VEG-LGL', productId: productByTrace['TRACE-SH-2026-VEG-LGL'].id, stage: '采收', operator: '李桂兰', description: '礼盒蔬菜当天采收，当天入库。', recordTime: dateOf('2026-05-22') },
     ],
   })
 
@@ -319,7 +362,7 @@ async function main() {
     data: [
       { title: '柑橘采摘临时工',     jobType: '本地用工', company: '川西果业合作社', location: '蒲江县寿安街道', salary: '150元/天', headcount: 20, requirement: '能吃苦，有采摘经验优先。', contactPhone: '13800001111', regionCode: '510131' },
       { title: '大棚蔬菜种植管理员', jobType: '本地用工', company: '绿康蔬菜合作社', location: '松华村',         salary: '4500元/月', headcount: 3,  requirement: '熟悉大棚蔬菜管理。',     contactPhone: '13800002222', regionCode: VILLAGE },
-      { title: '农机操作手',         jobType: '本地用工', company: '建国家庭农场',   location: '蒲江县',         salary: '面议',      headcount: 2,  requirement: '持农机操作证。',         contactPhone: '13800003333', regionCode: '510131' },
+      { title: '农机操作手',         jobType: '本地用工', company: '桂兰家庭农场',   location: '蒲江县',         salary: '面议',      headcount: 2,  requirement: '持农机操作证。',         contactPhone: '13800003333', regionCode: '510131' },
       { title: '电子厂普工（成都）', jobType: '外出务工', company: '成都某电子厂',   location: '成都高新区',     salary: '5500-7000元/月', headcount: 50, requirement: '18-45岁，包吃住。',  contactPhone: '13800004444', regionCode: '510100' },
       { title: '冷链仓库分拣员',     jobType: '外出务工', company: '物流园区',       location: '成都双流',       salary: '6000元/月', headcount: 15, requirement: '能适应低温作业。',       contactPhone: '13800005555', regionCode: '510100' },
     ],
@@ -345,7 +388,7 @@ async function main() {
   // ── 乡村人才库 ────────────────────────────────────
   await prisma.talentProfile.createMany({
     data: [
-      { userId: bigfarmer.id, name: '李建国', talentType: '致富带头人', skills: '柑橘规模化种植、合作社经营', regionCode: VILLAGE, description: '带领20余户农户发展柑橘产业，年产值超300万元。', contactPhone: '13800000002' },
+      { userId: bigfarmer.id, name: '李桂兰', talentType: '致富带头人', skills: '设施蔬菜种植、合作社经营、农产品分级', regionCode: VILLAGE, description: '带领20余户农户发展设施蔬菜和标准化种植，年产值超300万元。', contactPhone: '13800000002' },
       { name: '吴篾匠', talentType: '乡村工匠', skills: '竹编、传统农具制作', regionCode: VILLAGE, description: '从事竹编四十余年，作品被县非遗中心收藏。', contactPhone: '13800009999' },
       { name: '何技师', talentType: '农技能人', skills: '果树嫁接、病虫害诊断', regionCode: '510131', description: '县级农民技术员，常年义务为乡邻指导果树管理。', contactPhone: '13800010000' },
     ],
@@ -359,29 +402,114 @@ async function main() {
     ],
   })
 
-  // ── 农户的地块与农事记录 ──────────────────────────
-  const plot1 = await prisma.landPlot.create({
-    data: { userId: farmer.id, plotName: '东头水田', areaMu: 3.5, cropType: '水稻', soilType: '壤土', regionCode: VILLAGE },
+  // ── 三位主角的地块与全年农事时间线 ──────────────────
+  const zhangRicePlot = await prisma.landPlot.create({
+    data: { userId: farmer.id, plotName: '东头水田', areaMu: 3.5, cropType: '水稻', soilType: '壤土', regionCode: VILLAGE, boundaryGeojson: '{"type":"Polygon","coordinates":[[[103.52,30.22],[103.525,30.22],[103.525,30.224],[103.52,30.224],[103.52,30.22]]]}' },
   })
-  const plot2 = await prisma.landPlot.create({
-    data: { userId: farmer.id, plotName: '后山橘园', areaMu: 5.0, cropType: '柑橘', soilType: '黄壤', regionCode: VILLAGE },
+  const zhangCitrusPlot = await prisma.landPlot.create({
+    data: { userId: farmer.id, plotName: '后山橘园', areaMu: 5.0, cropType: '柑橘', soilType: '黄壤', regionCode: VILLAGE, boundaryGeojson: '{"type":"Polygon","coordinates":[[[103.528,30.226],[103.534,30.226],[103.534,30.231],[103.528,30.231],[103.528,30.226]]]}' },
   })
+  const liTomatoPlot = await prisma.landPlot.create({
+    data: { userId: bigfarmer.id, plotName: '桂兰蔬菜棚', areaMu: 12.0, cropType: '番茄', soilType: '沙壤土', regionCode: VILLAGE, boundaryGeojson: '{"type":"Polygon","coordinates":[[[103.538,30.218],[103.546,30.218],[103.546,30.225],[103.538,30.225],[103.538,30.218]]]}' },
+  })
+  const liRicePlot = await prisma.landPlot.create({
+    data: { userId: bigfarmer.id, plotName: '桂兰示范稻田', areaMu: 18.5, cropType: '水稻', soilType: '壤土', regionCode: VILLAGE },
+  })
+  const villageDemoPlot = await prisma.landPlot.create({
+    data: { userId: village.id, plotName: '松华高标准农田示范片', areaMu: 26.0, cropType: '水稻', soilType: '壤土', regionCode: VILLAGE },
+  })
+
   await prisma.farmRecord.createMany({
     data: [
-      { userId: farmer.id, plotId: plot1.id, recordType: '播种', cropType: '水稻', content: '播种育秧，亩用种3公斤。', cost: 180, recordDate: daysAgo(40) },
-      { userId: farmer.id, plotId: plot1.id, recordType: '施肥', cropType: '水稻', content: '追施返青肥，尿素15公斤/亩。', cost: 220, recordDate: daysAgo(25) },
-      { userId: farmer.id, plotId: plot1.id, recordType: '打药', cropType: '水稻', content: '防治稻飞虱，喷施吡虫啉。', cost: 95,  recordDate: daysAgo(10) },
-      { userId: farmer.id, plotId: plot2.id, recordType: '灌溉', cropType: '柑橘', content: '果实膨大期灌水一次。', cost: 60,  recordDate: daysAgo(7) },
+      { userId: farmer.id, plotId: zhangCitrusPlot.id, recordType: '修剪', cropType: '柑橘', content: '后山橘园完成冬剪，清理病弱枝并粉碎还田。', cost: 260, recordDate: dateOf('2026-01-12') },
+      { userId: farmer.id, plotId: zhangRicePlot.id, recordType: '播种', cropType: '水稻', content: '东头水田育秧，亩用种3公斤，准备早稻生产。', cost: 180, recordDate: dateOf('2026-03-08') },
+      { userId: farmer.id, plotId: zhangCitrusPlot.id, recordType: '施肥', cropType: '柑橘', content: '追施春梢肥，有机肥120公斤，复合肥20公斤。', cost: 420, recordDate: dateOf('2026-04-02') },
+      { userId: farmer.id, plotId: zhangRicePlot.id, recordType: '插秧', cropType: '水稻', content: '完成机插秧，行距规范，田面保持浅水。', cost: 360, recordDate: dateOf('2026-04-24') },
+      { userId: farmer.id, plotId: zhangRicePlot.id, recordType: '打药', cropType: '水稻', content: '拍照识别稻飞虱，按建议使用吡虫啉并记录剂量。', cost: 95, recordDate: dateOf('2026-05-20') },
+      { userId: farmer.id, plotId: zhangRicePlot.id, recordType: '巡田', cropType: '水稻', content: '7天复查，虫口密度下降，继续观察田间水层。', cost: 0, recordDate: dateOf('2026-05-27') },
+      { userId: farmer.id, plotId: zhangRicePlot.id, recordType: '收获', cropType: '水稻', content: '计划分批收割东头水田，优先供应村集市香米订单。', cost: 520, recordDate: dateOf('2026-09-28') },
+      { userId: farmer.id, plotId: zhangCitrusPlot.id, recordType: '采收', cropType: '柑橘', content: '后山橘园红心柑橘分级采收，优先打包溯源商品。', cost: 380, recordDate: dateOf('2026-11-09') },
+
+      { userId: bigfarmer.id, plotId: liTomatoPlot.id, recordType: '消毒', cropType: '番茄', content: '桂兰蔬菜棚完成棚内清洁和土壤消毒。', cost: 650, recordDate: dateOf('2026-02-15') },
+      { userId: bigfarmer.id, plotId: liTomatoPlot.id, recordType: '定植', cropType: '番茄', content: '阳光番茄定植，株距45厘米，滴灌带同步铺设。', cost: 1280, recordDate: dateOf('2026-03-03') },
+      { userId: bigfarmer.id, plotId: liTomatoPlot.id, recordType: '施肥', cropType: '番茄', content: '滴灌追施水溶肥，控制氮肥比例，促进坐果。', cost: 760, recordDate: dateOf('2026-04-10') },
+      { userId: bigfarmer.id, plotId: liTomatoPlot.id, recordType: '分级', cropType: '番茄', content: 'AI质量分级后分三档包装，A档供应社区团购。', cost: 120, recordDate: dateOf('2026-05-19') },
+      { userId: bigfarmer.id, plotId: liRicePlot.id, recordType: '播种', cropType: '水稻', content: '示范稻田集中育秧，统一品种、统一技术规程。', cost: 860, recordDate: dateOf('2026-03-12') },
+      { userId: bigfarmer.id, plotId: liRicePlot.id, recordType: '灌溉', cropType: '水稻', content: '完成第一轮浅水灌溉，配合村级渠道调度。', cost: 210, recordDate: dateOf('2026-05-16') },
+      { userId: bigfarmer.id, plotId: liTomatoPlot.id, recordType: '采收', cropType: '番茄', content: '首批番茄采收，进入乡村集市和团购渠道。', cost: 340, recordDate: dateOf('2026-06-05') },
+
+      { userId: village.id, plotId: villageDemoPlot.id, recordType: '巡查', cropType: '水稻', content: '王村委组织高标准农田示范片春耕巡查，核对沟渠和田埂。', cost: 0, recordDate: dateOf('2026-02-28') },
+      { userId: village.id, plotId: villageDemoPlot.id, recordType: '管护', cropType: '水稻', content: '组织志愿队清理排水沟，降低强降雨积水风险。', cost: 300, recordDate: dateOf('2026-04-18') },
+      { userId: village.id, plotId: villageDemoPlot.id, recordType: '灾后巡田', cropType: '水稻', content: '暴雨后核查示范片积水点位，形成灾情台账。', cost: 0, recordDate: dateOf('2026-05-22') },
+      { userId: village.id, plotId: villageDemoPlot.id, recordType: '统计上报', cropType: '水稻', content: '汇总松华村种植面积、预计产量和农户收入数据。', cost: 0, recordDate: dateOf('2026-09-02') },
     ],
   })
-  await prisma.yieldPrediction.create({
-    data: { plotId: plot1.id, cropType: '水稻', predictedYield: 1925, confidenceLow: 1750, confidenceHigh: 2100, predictDate: daysLater(45) },
+
+  await prisma.yieldPrediction.createMany({
+    data: [
+      { plotId: zhangRicePlot.id, cropType: '水稻', predictedYield: 1925, confidenceLow: 1750, confidenceHigh: 2100, predictDate: dateOf('2026-06-30') },
+      { plotId: zhangCitrusPlot.id, cropType: '柑橘', predictedYield: 4800, confidenceLow: 4300, confidenceHigh: 5250, predictDate: dateOf('2026-09-15') },
+      { plotId: liTomatoPlot.id, cropType: '番茄', predictedYield: 13600, confidenceLow: 12400, confidenceHigh: 14800, predictDate: dateOf('2026-06-20') },
+      { plotId: villageDemoPlot.id, cropType: '水稻', predictedYield: 14300, confidenceLow: 13200, confidenceHigh: 15400, predictDate: dateOf('2026-08-25') },
+    ],
+  })
+
+  await prisma.aiDetectRecord.createMany({
+    data: [
+      { userId: farmer.id, detectType: 'DISEASE', imageUrl: '/uploads/demo/rice-planthopper.jpg', resultLabel: 'rice_planthopper', confidence: 91.6, adviceText: '建议按低毒药剂推荐剂量喷雾，7天后复查虫口密度。', feedback: 1, createdAt: dateOf('2026-05-20') },
+      { userId: farmer.id, detectType: 'DISEASE', imageUrl: '/uploads/demo/citrus-leaf.jpg', resultLabel: 'nitrogen_deficiency', confidence: 86.4, adviceText: '建议补充叶面肥并复查新梢叶色。', feedback: 1, createdAt: dateOf('2026-04-03') },
+      { userId: bigfarmer.id, detectType: 'GRADE', imageUrl: '/uploads/demo/tomato-grade.jpg', resultLabel: 'A_GRADE', confidence: 93.2, adviceText: 'A档果建议进入礼盒渠道，B档进入社区团购。', feedback: 1, createdAt: dateOf('2026-05-19') },
+      { userId: village.id, detectType: 'DISASTER', imageUrl: '/uploads/demo/rain-field.jpg', resultLabel: 'waterlogging_medium', confidence: 88.8, adviceText: '建议优先排涝低洼田块，并同步保险员核验。', feedback: 1, createdAt: dateOf('2026-05-22') },
+    ],
   })
 
   // ── 灾情上报 ──────────────────────────────────────
-  await prisma.disasterReport.create({
-    data: { userId: farmer.id, disasterType: '暴雨', plotId: plot1.id, affectedArea: 1.2, estimatedLoss: 1800,
-      description: '连续强降雨导致东头水田局部积水，秧苗倒伏。', aiLossLevel: '中', status: 'REVIEWING', regionCode: VILLAGE },
+  await prisma.disasterReport.createMany({
+    data: [
+      { userId: farmer.id, disasterType: '暴雨', plotId: zhangRicePlot.id, affectedArea: 1.2, estimatedLoss: 1800, description: '连续强降雨导致东头水田局部积水，秧苗倒伏。', aiLossLevel: '中', status: 'REVIEWING', regionCode: VILLAGE, createdAt: dateOf('2026-05-22') },
+      { userId: bigfarmer.id, disasterType: '冰雹', plotId: liTomatoPlot.id, affectedArea: 0.8, estimatedLoss: 2600, description: '短时冰雹造成部分棚膜破损，番茄叶片受伤。', aiLossLevel: '中', status: 'PROCESSED', regionCode: VILLAGE, createdAt: dateOf('2026-04-29') },
+      { userId: village.id, disasterType: '暴雨', plotId: villageDemoPlot.id, affectedArea: 2.4, estimatedLoss: 4200, description: '示范片低洼处短时积水，已组织排涝和补苗。', aiLossLevel: '中', status: 'PROCESSED', regionCode: VILLAGE, createdAt: dateOf('2026-05-22') },
+    ],
+  })
+
+  const zhangDisaster = await prisma.disasterReport.findFirst({ where: { userId: farmer.id, disasterType: '暴雨' }, orderBy: { createdAt: 'desc' } })
+  const liDisaster = await prisma.disasterReport.findFirst({ where: { userId: bigfarmer.id, disasterType: '冰雹' }, orderBy: { createdAt: 'desc' } })
+  await prisma.insuranceClaim.createMany({
+    data: [
+      { userId: farmer.id, disasterReportId: zhangDisaster.id, claimType: '水稻种植险', estimatedAmount: 1500, aiAssessLevel: '中', assessDetail: '积水面积约1.2亩，建议人工复核后进入理赔流程。', status: 'ASSESSING', insurerContact: '蒲江农险服务站 李专员', createdAt: dateOf('2026-05-23') },
+      { userId: bigfarmer.id, disasterReportId: liDisaster.id, claimType: '设施农业险', estimatedAmount: 2200, aiAssessLevel: '中', assessDetail: '棚膜破损和叶片损伤已拍照留档。', status: 'APPROVED', insurerContact: '蒲江农险服务站 李专员', createdAt: dateOf('2026-04-30') },
+    ],
+  })
+
+  await prisma.annualReport.createMany({
+    data: [
+      { userId: farmer.id, year: 2026, totalIncome: 1240, totalCost: 2215, generatedByAi: true, summary: '张大叔的东头水田与后山橘园已形成水稻、柑橘两条经营线。', reportContent: '2026 年已记录农事 8 次，重点完成水稻育秧、插秧、病虫害识别处置和柑橘春季管理。平台建议继续补齐采收、销售与复查记录。', createdAt: dateOf('2026-05-27') },
+      { userId: bigfarmer.id, year: 2026, totalIncome: 6080, totalCost: 4220, generatedByAi: true, summary: '李大姐的蔬菜棚已接入分级、团购和溯源销售。', reportContent: '2026 年已记录农事 7 次，番茄从定植、追肥到分级采收形成完整链条。建议把棚膜维护和分级记录继续沉淀为标准作业。', createdAt: dateOf('2026-05-27') },
+    ],
+  })
+
+  await prisma.statReport.createMany({
+    data: [
+      { regionCode: VILLAGE, reporterId: village.id, statType: '种植面积', year: 2026, period: '第一季度', status: 'CONFIRMED', dataJson: JSON.stringify({ cropType: '水稻', areaMu: 48, yieldKg: 0, farmerCount: 18, story: '春耕面积已核验，含高标准农田示范片26亩。' }), createdAt: dateOf('2026-03-31') },
+      { regionCode: VILLAGE, reporterId: village.id, statType: '产销进度', year: 2026, period: '五月', status: 'SUBMITTED', dataJson: JSON.stringify({ cropType: '蔬菜', areaMu: 12, yieldKg: 1680, orderAmount: 1304, story: '李大姐蔬菜棚首批番茄进入乡村集市和社区团购。' }), createdAt: dateOf('2026-05-25') },
+      { regionCode: VILLAGE, reporterId: village.id, statType: '灾情汇总', year: 2026, period: '五月', status: 'CONFIRMED', dataJson: JSON.stringify({ cropType: '综合', areaMu: 4.4, yieldKg: 0, estimatedLoss: 8400, story: '暴雨与冰雹灾情已形成台账，保险理赔正在跟进。' }), createdAt: dateOf('2026-05-26') },
+    ],
+  })
+
+  await prisma.syncLog.createMany({
+    data: [
+      { userId: farmer.id, tableName: 'farm_record', operation: 'INSERT', localUuid: 'story-zhang-rice-review', syncStatus: 'SUCCESS', syncedAt: dateOf('2026-05-27') },
+      { userId: bigfarmer.id, tableName: 'farm_record', operation: 'INSERT', localUuid: 'story-li-tomato-grade', syncStatus: 'SUCCESS', syncedAt: dateOf('2026-05-19') },
+      { userId: village.id, tableName: 'disaster_report', operation: 'INSERT', localUuid: 'story-village-rain-ledger', syncStatus: 'SUCCESS', syncedAt: dateOf('2026-05-22') },
+    ],
+  })
+
+  await prisma.aiQaRecord.createMany({
+    data: [
+      { userId: farmer.id, scene: 'AGRI', question: '水稻叶片上有小虫，应该怎么处理？', answer: '建议先按虫口密度判断是否达标防治。若确认为稻飞虱，可选低毒药剂按推荐剂量喷雾，并在7天后复查。', modelUsed: 'FarmLink AI', referencesJson: '["稻飞虱知识库","水稻绿色防控建议"]', createdAt: dateOf('2026-05-20') },
+      { userId: bigfarmer.id, scene: 'MARKET', question: '番茄怎么分级卖更合适？', answer: 'A档果适合礼盒和社区团购，B档果可走集市散卖，轻微瑕疵果建议做加工或员工福利，避免压价。', modelUsed: 'FarmLink AI', referencesJson: '["AI质量分级","乡村集市订单"]', createdAt: dateOf('2026-05-19') },
+      { userId: village.id, scene: 'POLICY', question: '高标准农田项目材料还缺什么？', answer: '建议补齐地块边界、受益农户清单、管护责任人和年度建设计划，提交后进入乡镇初审。', modelUsed: 'FarmLink AI', referencesJson: '["高标准农田建设项目申报指南"]', createdAt: dateOf('2026-03-26') },
+    ],
   })
 
   // ── 村务公开 ──────────────────────────────────────
@@ -397,7 +525,7 @@ async function main() {
   await prisma.honorRecord.createMany({
     data: [
       { regionCode: VILLAGE, honoreeName: '张大山', honorType: '好人好事', deed: '主动帮助邻里抢收稻谷，连续三年义务疏通村排水沟。', votes: 86 },
-      { regionCode: VILLAGE, honoreeName: '李建国', honorType: '星级文明户', deed: '带头发展产业，热心公益，家庭和睦，被评为五星级文明户。', votes: 72 },
+      { regionCode: VILLAGE, honoreeName: '李桂兰', honorType: '星级文明户', deed: '带头发展设施蔬菜和分级销售，热心公益，家庭和睦，被评为五星级文明户。', votes: 72 },
       { regionCode: VILLAGE, honoreeName: '王秀英', honorType: '好人好事', deed: '十年如一日照顾村中孤寡老人，传递孝老爱亲正能量。', votes: 95 },
     ],
   })
