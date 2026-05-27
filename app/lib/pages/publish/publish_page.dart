@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
@@ -196,103 +199,128 @@ class _PublishPageState extends State<PublishPage> {
     final phone = '${p['contactPhone'] ?? ''}';
     final status = '${p['status'] ?? 'OPEN'}';
     final time = _friendlyTime(p['createdAt']);
-    final color = _typeColor(type);
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    final color = _typeColorOf(type);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(R.md),
-        border: Border.all(color: AppColors.surfaceHigh),
-        boxShadow: AppColors.ambientShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration:
-                      BoxDecoration(color: color, shape: BoxShape.circle),
-                  alignment: Alignment.center,
-                  child: Text(type.characters.first,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('$type · 乡村互助',
-                          style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.onSurface)),
-                      Text(time,
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.onSurfaceVariant)),
-                    ],
-                  ),
-                ),
-                StatusChip(status == 'DONE' ? '已响应' : '进行中',
-                    color: status == 'DONE'
-                        ? AppColors.onSurfaceVariant
-                        : AppColors.primary),
-              ],
-            ),
+        onTap: () => _openDetail(p),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(R.md),
+            border: Border.all(color: AppColors.surfaceHigh),
+            boxShadow: AppColors.ambientShadow,
           ),
-          if (title.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-              child: Text(title,
-                  style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface)),
-            ),
-          if (content.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(content,
-                  style: const TextStyle(
-                      fontSize: 15, height: 1.5, color: AppColors.onSurface)),
-            ),
-          Container(
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.surfaceHigh)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                const Icon(Icons.volunteer_activism,
-                    size: 18, color: AppColors.onSurfaceVariant),
-                const SizedBox(width: 6),
-                const Text('邻里互助',
-                    style: TextStyle(
-                        fontSize: 12, color: AppColors.onSurfaceVariant)),
-                const Spacer(),
-                if (phone.isNotEmpty)
-                  ElevatedButton.icon(
-                    onPressed: () => toast(context, '联系电话：$phone'),
-                    icon: const Icon(Icons.call, size: 16),
-                    label: const Text('联系 TA'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(0, 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      textStyle: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration:
+                          BoxDecoration(color: color, shape: BoxShape.circle),
+                      alignment: Alignment.center,
+                      child: Text(type.characters.first,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600)),
                     ),
-                  ),
-              ],
-            ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('$type · 乡村动态',
+                              style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.onSurface)),
+                          Text(time,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                    StatusChip(status == 'DONE' ? '已响应' : '进行中',
+                        color: status == 'DONE'
+                            ? AppColors.onSurfaceVariant
+                            : AppColors.primary),
+                  ],
+                ),
+              ),
+              if (title.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                  child: Text(title,
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface)),
+                ),
+              if (content.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Text(content,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          height: 1.5,
+                          color: AppColors.onSurface)),
+                ),
+              Container(
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: AppColors.surfaceHigh)),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.volunteer_activism,
+                        size: 18, color: AppColors.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    const Text('邻里互助',
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.onSurfaceVariant)),
+                    const Spacer(),
+                    if (phone.isNotEmpty)
+                      ElevatedButton.icon(
+                        onPressed: () => toast(context, '联系电话：$phone'),
+                        icon: const Icon(Icons.call, size: 16),
+                        label: const Text('联系 TA'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(0, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          textStyle: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Future<void> _openDetail(Map<String, dynamic> post) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+      ),
+      builder: (ctx) => _PostDetailSheet(post: post, onAfter: _load),
     );
   }
 
@@ -301,7 +329,15 @@ class _PublishPageState extends State<PublishPage> {
     final titleC = TextEditingController();
     final contentC = TextEditingController();
     final phoneC = TextEditingController();
-    var type = '求助';
+    var type = '互助求助';
+    const types = [
+      '互助求助',
+      '招工',
+      '分享见闻',
+      '失物招领',
+      '二手交易',
+      '闲置共享',
+    ];
 
     final ok = await showModalBottomSheet<bool>(
       context: context,
@@ -323,11 +359,54 @@ class _PublishPageState extends State<PublishPage> {
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       color: AppColors.onSurface)),
+              const SizedBox(height: 4),
+              const Text('选择类型，详细描述后发布到乡村动态广场',
+                  style: TextStyle(
+                      fontSize: 12, color: AppColors.onSurfaceVariant)),
+              const SizedBox(height: 14),
+              const Text('特殊上报',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.onSurfaceVariant)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(sheetCtx, false);
+                        context.go('/disaster');
+                      },
+                      icon: const Icon(Icons.thunderstorm_outlined, size: 16),
+                      label: const Text('灾情上报'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(sheetCtx, false);
+                        context.go('/agri');
+                      },
+                      icon: const Icon(Icons.eco_outlined, size: 16),
+                      label: const Text('农事记录'),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
+              const Text('动态类型',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.onSurfaceVariant)),
+              const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: [
-                  for (final t in ['求助', '互助', '分享', '招工'])
+                  for (final t in types)
                     ChoiceChip(
                       label: Text(t),
                       selected: type == t,
@@ -339,14 +418,18 @@ class _PublishPageState extends State<PublishPage> {
               TextField(
                 controller: titleC,
                 decoration:
-                    const InputDecoration(labelText: '标题', filled: true),
+                    InputDecoration(labelText: _titleLabel(type), filled: true),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: contentC,
-                maxLines: 3,
-                decoration:
-                    const InputDecoration(labelText: '详细内容', filled: true),
+                maxLines: 4,
+                minLines: 3,
+                decoration: InputDecoration(
+                  labelText: _contentLabel(type),
+                  filled: true,
+                  alignLabelWithHint: true,
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -386,10 +469,9 @@ class _PublishPageState extends State<PublishPage> {
     try {
       await ApiClient.post('/life/help', body: payload);
       if (!mounted) return;
-      toast(context, '发布成功');
+      toast(context, '$type 发布成功');
       _load();
     } catch (_) {
-      // 加入待发送队列
       await OfflineSyncQueue.enqueue(
         tableName: 'help_request',
         payload: payload,
@@ -400,11 +482,21 @@ class _PublishPageState extends State<PublishPage> {
     }
   }
 
-  Color _typeColor(String type) {
-    if (type.contains('招工')) return AppColors.goldContainer;
-    if (type.contains('分享')) return AppColors.primaryContainer;
-    if (type.contains('互助')) return AppColors.secondary;
-    return AppColors.primary;
+  String _titleLabel(String type) {
+    if (type == '二手交易' || type == '闲置共享') return '物品名称';
+    if (type == '失物招领') return '失物 / 招领描述';
+    if (type == '招工') return '招工岗位';
+    if (type == '分享见闻') return '标题';
+    return '需要什么帮助';
+  }
+
+  String _contentLabel(String type) {
+    if (type == '二手交易') return '物品成色 / 价格 / 取货地点';
+    if (type == '闲置共享') return '物品功能 / 借用规则';
+    if (type == '失物招领') return '丢失时间 / 地点 / 特征';
+    if (type == '招工') return '工作内容 / 时间 / 薪酬';
+    if (type == '分享见闻') return '想分享的内容';
+    return '详细描述（时间、地点、需要怎么帮）';
   }
 
   String _friendlyTime(dynamic value) {
@@ -413,4 +505,209 @@ class _PublishPageState extends State<PublishPage> {
     if (text.length >= 10) return text.substring(0, 10);
     return '近期';
   }
+}
+
+class _PostDetailSheet extends StatefulWidget {
+  final Map<String, dynamic> post;
+  final Future<void> Function() onAfter;
+
+  const _PostDetailSheet({required this.post, required this.onAfter});
+
+  @override
+  State<_PostDetailSheet> createState() => _PostDetailSheetState();
+}
+
+class _PostDetailSheetState extends State<_PostDetailSheet> {
+  bool _accepting = false;
+
+  Future<void> _accept() async {
+    final id = widget.post['id'];
+    if (id == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('我能帮 TA'),
+        content: const Text('确认响应这条动态并与发布人联系吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('确认'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _accepting = true);
+    try {
+      await ApiClient.post('/life/help/$id/accept');
+      if (!mounted) return;
+      toast(context, '已响应，感谢您的帮助');
+      Navigator.pop(context);
+      await widget.onAfter();
+    } catch (e) {
+      if (mounted) toast(context, actionErrorMessage('响应', e), error: true);
+    } finally {
+      if (mounted) setState(() => _accepting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final post = widget.post;
+    final currentUserId = context.read<AuthState>().user?.id;
+    final ownerId =
+        post['userId'] is num ? (post['userId'] as num).toInt() : null;
+    final isMine = currentUserId != null && ownerId == currentUserId;
+    final type = '${post['type'] ?? '互助'}';
+    final title = '${post['title'] ?? '-'}';
+    final content = '${post['content'] ?? ''}';
+    final phone = '${post['contactPhone'] ?? ''}';
+    final status = '${post['status'] ?? 'OPEN'}';
+    final author = '${post['publisherName'] ?? post['userName'] ?? '乡村用户'}';
+    final time = _friendlyTimeOf(post['createdAt']);
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.62,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      builder: (ctx, scrollCtrl) => ListView(
+        controller: scrollCtrl,
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              StatusChip(type, color: _typeColorOf(type)),
+              const SizedBox(width: 8),
+              StatusChip(
+                status == 'DONE' ? '已响应' : '进行中',
+                color: status == 'DONE'
+                    ? AppColors.onSurfaceVariant
+                    : AppColors.primary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$author · $time',
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            content.isEmpty ? '（暂无详细描述）' : content,
+            style: const TextStyle(
+              fontSize: 15,
+              height: 1.6,
+              color: AppColors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (phone.isNotEmpty)
+            AppCard(
+              child: Row(
+                children: [
+                  const Icon(Icons.phone, color: AppColors.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '联系方式',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                        Text(
+                          phone,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => toast(context, '联系电话：$phone'),
+                    icon: const Icon(Icons.call, color: AppColors.primary),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 16),
+          if (status != 'DONE' && !isMine)
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _accepting ? null : _accept,
+                icon: _accepting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.volunteer_activism, size: 18),
+                label: Text(_accepting ? '提交中' : '我能帮 TA'),
+              ),
+            )
+          else if (isMine)
+            OutlinedButton.icon(
+              onPressed: null,
+              icon: const Icon(Icons.person_outline, size: 18),
+              label: const Text('这是我发布的动态'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+Color _typeColorOf(String type) {
+  if (type.contains('招工')) return AppColors.goldContainer;
+  if (type.contains('分享')) return AppColors.primaryContainer;
+  if (type.contains('互助') || type.contains('求助')) return AppColors.primary;
+  if (type.contains('二手') || type.contains('闲置')) return AppColors.secondary;
+  if (type.contains('失物')) return AppColors.warning;
+  return AppColors.primary;
+}
+
+String _friendlyTimeOf(dynamic value) {
+  final text = '$value';
+  if (text.length >= 16) return text.substring(0, 16).replaceAll('T', ' ');
+  if (text.length >= 10) return text.substring(0, 10);
+  return '近期';
 }
