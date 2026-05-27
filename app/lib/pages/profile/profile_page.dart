@@ -17,7 +17,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _loading = true;
-  bool _syncing = false;
+  bool _autoSyncing = false;
   String? _error;
   Map<String, dynamic> _dashboard = {};
   Map<String, dynamic> _syncStatus = {};
@@ -29,7 +29,7 @@ class _ProfilePageState extends State<ProfilePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool triggerAutoSync = true}) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -48,6 +48,11 @@ class _ProfilePageState extends State<ProfilePage> {
         _queue = results[2] as List<SyncQueueItem>;
         _loading = false;
       });
+      final waiting =
+          _queue.where((item) => item.status != SyncStatus.synced).length;
+      if (triggerAutoSync && waiting > 0 && !_autoSyncing) {
+        _autoSyncSilently();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -57,23 +62,18 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _syncQueue() async {
-    if (_syncing) return;
-    setState(() => _syncing = true);
+  Future<void> _autoSyncSilently() async {
+    if (_autoSyncing || !mounted) return;
+    setState(() => _autoSyncing = true);
     try {
-      final result = await OfflineSyncQueue.flush();
-      if (!mounted) return;
-      toast(
-        context,
-        result.total == 0
-            ? '待发送队列暂无待处理数据'
-            : '已处理 ${result.total} 条，成功 ${result.success} 条',
-      );
-      await _load();
-    } catch (e) {
-      if (mounted) toast(context, actionErrorMessage('同步', e), error: true);
+      await OfflineSyncQueue.flush();
+    } catch (_) {
+      // 静默处理，结果通过下一次刷新体现。
     } finally {
-      if (mounted) setState(() => _syncing = false);
+      if (mounted) {
+        setState(() => _autoSyncing = false);
+        await _load(triggerAutoSync: false);
+      }
     }
   }
 
@@ -85,14 +85,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: FarmAppBar(
-        actions: [
-          IconButton(
-            onPressed: _loading ? null : _load,
-            icon: const Icon(Icons.refresh, color: AppColors.onSurfaceVariant),
-          ),
-        ],
-      ),
+      appBar: const FarmAppBar(),
       body: _loading
           ? const Loading(text: '正在读取个人数据')
           : _error != null
@@ -227,53 +220,77 @@ class _ProfilePageState extends State<ProfilePage> {
         _queue.where((item) => item.status != SyncStatus.synced).length;
     final failed = _int(_syncStatus['failed']);
     final conflict = _int(_syncStatus['conflict']);
+    final total = _int(_syncStatus['total']);
+    String stateLabel;
+    Color stateColor;
+    if (_autoSyncing) {
+      stateLabel = '同步中';
+      stateColor = AppColors.primary;
+    } else if (waiting > 0) {
+      stateLabel = '待发送 $waiting';
+      stateColor = AppColors.warning;
+    } else if (failed > 0 || conflict > 0) {
+      stateLabel = '失败 ${failed + conflict}';
+      stateColor = AppColors.error;
+    } else {
+      stateLabel = '已同步';
+      stateColor = AppColors.primary;
+    }
+
     return AppCard(
-      child: Row(
+      padding: EdgeInsets.zero,
+      onTap: () => context.go('/data/service'),
+      child: Column(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(R.md),
-            ),
-            child: const Icon(Icons.sync_alt_rounded, color: AppColors.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                const Text(
-                  '数据同步',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface,
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(R.md),
+                  ),
+                  child: const Icon(Icons.sync_alt_rounded,
+                      color: AppColors.primary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '数据同步',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '已同步 $total 条，待发送 $waiting 条',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            const TextStyle(color: AppColors.onSurfaceVariant),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  '待发送 $waiting 条，失败 $failed 条，冲突 $conflict 条',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.onSurfaceVariant),
-                ),
+                const SizedBox(width: 8),
+                StatusChip(stateLabel, color: stateColor),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          FilledButton.tonalIcon(
-            onPressed: _syncing ? null : _syncQueue,
-            icon: _syncing
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh, size: 18),
-            label: Text(_syncing ? '处理中' : '同步'),
-          ),
+          if (_autoSyncing)
+            const LinearProgressIndicator(
+              minHeight: 2,
+              backgroundColor: Colors.transparent,
+              color: AppColors.primary,
+            ),
         ],
       ),
     );
@@ -297,11 +314,7 @@ class _ProfilePageState extends State<ProfilePage> {
           _line(),
           _menu(context, Icons.notifications_none_rounded, '消息通知', '/messages'),
           _line(),
-          _menuAction(context, Icons.elderly, '适老模式',
-              () => toast(context, '适老模式已在账号设置中启用')),
-          _line(),
-          _menuAction(context, Icons.settings_outlined, '设置',
-              () => toast(context, '设置已保存')),
+          _menu(context, Icons.settings_outlined, '设置', '/profile/settings'),
         ],
       ),
     );

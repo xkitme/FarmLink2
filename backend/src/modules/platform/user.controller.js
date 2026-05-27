@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs'
 import { prisma } from '../../db.js'
 import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams } from '../../utils/page.js'
@@ -24,6 +25,31 @@ export async function updateProfile(req, res) {
 
   const user = await prisma.user.update({ where: { id: req.user.id }, data })
   ok(res, sanitizeUser(user), '资料已更新')
+}
+
+/** 修改密码 */
+export async function updatePassword(req, res) {
+  const { oldPassword, newPassword } = req.body
+  if (!oldPassword || !newPassword) {
+    throw errors.param('请填写当前密码与新密码')
+  }
+  if (newPassword.length < 8) {
+    throw errors.param('新密码至少 8 位')
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } })
+  if (!user) throw errors.notFound('用户不存在')
+
+  const isOk = await bcrypt.compare(oldPassword, user.passwordHash)
+  if (!isOk) throw errors.param('当前密码不正确')
+
+  const passwordHash = await bcrypt.hash(newPassword, 10)
+  await prisma.user.update({
+    where: { id: req.user.id },
+    data: { passwordHash },
+  })
+
+  ok(res, { ok: true }, '密码已修改，请重新登录')
 }
 
 /** 积分余额 */

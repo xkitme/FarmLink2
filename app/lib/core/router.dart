@@ -21,6 +21,15 @@ import '../pages/policy/policy_page.dart';
 import '../pages/data/data_dashboard_page.dart';
 import '../pages/data/data_service_page.dart';
 import '../pages/profile/profile_page.dart';
+import '../pages/profile/settings/about_page.dart';
+import '../pages/profile/settings/account_page.dart';
+import '../pages/profile/settings/help_feedback_page.dart';
+import '../pages/profile/settings/password_page.dart';
+import '../pages/profile/settings/privacy_settings_page.dart';
+import '../pages/profile/settings/push_settings_page.dart';
+import '../pages/profile/settings/settings_home_page.dart';
+import '../pages/profile/settings/storage_page.dart';
+import '../pages/profile/settings/weather_alert_page.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
@@ -79,6 +88,33 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
             GoRoute(
                 path: '/messages', builder: (_, __) => const MessagesPage()),
             GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
+            GoRoute(
+                path: '/profile/settings',
+                builder: (_, __) => const SettingsHomePage()),
+            GoRoute(
+                path: '/profile/settings/account',
+                builder: (_, __) => const AccountPage()),
+            GoRoute(
+                path: '/profile/settings/password',
+                builder: (_, __) => const PasswordPage()),
+            GoRoute(
+                path: '/profile/settings/push',
+                builder: (_, __) => const PushSettingsPage()),
+            GoRoute(
+                path: '/profile/settings/weather',
+                builder: (_, __) => const WeatherAlertPage()),
+            GoRoute(
+                path: '/profile/settings/storage',
+                builder: (_, __) => const StoragePage()),
+            GoRoute(
+                path: '/profile/settings/about',
+                builder: (_, __) => const AboutPage()),
+            GoRoute(
+                path: '/profile/settings/privacy',
+                builder: (_, __) => const PrivacySettingsPage()),
+            GoRoute(
+                path: '/profile/settings/help',
+                builder: (_, __) => const HelpFeedbackPage()),
           ],
         ),
       ],

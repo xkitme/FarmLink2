@@ -20,6 +20,7 @@ router.post('/auth/logout',    requireAuth, wrap(auth.logout))
 // ── 用户 ────────────────────────────────────
 router.get('/user/profile',     requireAuth, wrap(user.getProfile))
 router.put('/user/profile',     requireAuth, wrap(user.updateProfile))
+router.put('/user/password',    requireAuth, wrap(user.updatePassword))
 router.get('/user/points',      requireAuth, wrap(user.getPoints))
 router.get('/user/points/log',  requireAuth, wrap(user.getPointsLog))
 
