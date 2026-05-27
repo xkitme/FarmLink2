@@ -154,6 +154,7 @@ FarmLink/
 - Node.js 18+
 - Flutter 3.3+（如需构建移动端）
 - Ollama（可选，用于 AI 增强；未启动时使用规则引擎）
+- Git Bash / Windows Terminal（推荐；旧版 cmd 也可用，启动脚本已切换 UTF-8）
 
 ### 1. 首次准备依赖
 
@@ -201,6 +202,55 @@ flutter pub get
 .\start.bat -SkipAdmin
 .\start.bat -SkipMobile
 ```
+
+### 2.1 手动分项启动
+
+如果只想跑单端服务，或需要在不同终端窗口分别查看日志，可以按下面的命令分项启动。
+
+#### 后端（仅 API）
+
+```powershell
+cd backend
+npm run dev:backend
+```
+
+后端会在 `http://localhost:8000/api/v1` 监听。该命令等价于 `nodemon src/server.js`，文件改动后会自动重启。
+
+#### 管理面板（独立 Vite）
+
+```powershell
+cd backend/admin
+npm install        # 首次需要
+npm run dev
+```
+
+管理面板会在 `http://localhost:5173/admin/` 打开。需要后端先启动，页面才能正常调用接口。
+
+#### 后端 + 管理面板（双进程并行）
+
+如果想一条命令同时启动后端和管理面板，但不启动移动端 Web，运行：
+
+```powershell
+cd backend
+npm run dev
+```
+
+该命令会用 `concurrently` 同时启动 nodemon（后端）和 Vite（管理面板）。
+
+#### Flutter 移动端 Web 预览
+
+```powershell
+cd app
+flutter pub get      # 首次需要
+flutter build web    # 编译 web bundle
+node serve_web.mjs   # 启动静态服务器
+```
+
+打开 `http://localhost:5000` 查看移动端 UI。后端默认按 `http://localhost:8000` 调用，也可以通过 `--dart-define=FARMLINK_API_BASE_URL=http://x.x.x.x:8000` 指定服务地址。
+
+#### Flutter 移动端 APK
+
+参见下面 [3. 构建 Android APK](#3-构建-android-apk)。
 
 ### 3. 构建 Android APK
 
