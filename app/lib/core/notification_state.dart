@@ -11,14 +11,17 @@ class NotificationState {
   NotificationState._();
 
   static final ValueNotifier<int> unread = ValueNotifier<int>(0);
+  static int _refreshSeq = 0;
 
   static Future<void> refresh() async {
+    final seq = ++_refreshSeq;
     if (ApiClient.token == null) {
       setUnread(0);
       return;
     }
     try {
       final data = await ApiClient.get('/notification/unread');
+      if (seq != _refreshSeq) return;
       if (data is Map) setUnread(_int(data['unread']));
     } catch (_) {
       // 保持上一次可用数字，避免底栏因一次请求失败闪成 0。

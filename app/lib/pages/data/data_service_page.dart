@@ -84,12 +84,19 @@ class _DataServicePageState extends State<DataServicePage> {
       OfflineCache.saveList('data_stat_report', stat);
     } catch (e) {
       if (!mounted) return;
-      final annual = await OfflineCache.readList('data_annual_report');
-      if (!mounted) return;
-      final stat = await OfflineCache.readList('data_stat_report');
-      if (!mounted) return;
-      // 本地队列即使后端失败也能读，单独拉
-      final queue = await OfflineSyncQueue.all();
+      var annual = <Map<String, dynamic>>[];
+      var stat = <Map<String, dynamic>>[];
+      var queue = <SyncQueueItem>[];
+      try {
+        annual = await OfflineCache.readList('data_annual_report');
+        if (!mounted) return;
+        stat = await OfflineCache.readList('data_stat_report');
+        if (!mounted) return;
+        // 本地队列即使服务数据更新失败也能读，单独拉
+        queue = await OfflineSyncQueue.all();
+      } catch (_) {
+        // 缓存或队列读取失败也不能让页面卡在 Loading。
+      }
       if (!mounted) return;
       setState(() {
         _annualReports = annual;
@@ -675,6 +682,7 @@ class _DataServicePageState extends State<DataServicePage> {
   }
 
   Widget _syncCard() {
+    final serviceUpdating = _error != null && _syncStatus.isEmpty;
     final total = _int(_syncStatus['total']);
     final success = _int(_syncStatus['success']);
     final conflict = _int(_syncStatus['conflict']);
@@ -722,18 +730,23 @@ class _DataServicePageState extends State<DataServicePage> {
             children: [
               _miniStat('待发送', '$waiting',
                   waiting > 0 ? AppColors.warning : AppColors.outline),
-              _miniStat('总计', '$total', AppColors.primary),
-              _miniStat('成功', '$success', AppColors.primary),
+              _miniStat('总计', serviceUpdating ? '—' : '$total',
+                  serviceUpdating ? AppColors.outline : AppColors.primary),
+              _miniStat('成功', serviceUpdating ? '—' : '$success',
+                  serviceUpdating ? AppColors.outline : AppColors.primary),
               _miniStat(
                   '失败',
-                  '${failed + conflict}',
+                  serviceUpdating ? '—' : '${failed + conflict}',
                   (failed + conflict) > 0
                       ? AppColors.error
                       : AppColors.outline),
             ],
           ),
           const SizedBox(height: 12),
-          if (latest.isEmpty)
+          if (serviceUpdating)
+            const Text('服务数据更新中，待发送队列可继续查看',
+                style: TextStyle(color: AppColors.onSurfaceVariant))
+          else if (latest.isEmpty)
             const Text('暂无同步记录',
                 style: TextStyle(color: AppColors.onSurfaceVariant))
           else

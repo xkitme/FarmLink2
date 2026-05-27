@@ -23,14 +23,6 @@ class _ShellPageState extends State<ShellPage> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) NotificationState.refresh();
-    });
-  }
-
-  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final loc = GoRouterState.of(context).uri.path;

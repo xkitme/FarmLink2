@@ -13,10 +13,15 @@ export async function list(req, res) {
     ...(type ? { type } : {}),
     ...(isRead == null ? {} : { isRead }),
   }
+  const unreadWhere = {
+    ...baseWhere,
+    ...(type ? { type } : {}),
+    isRead: false,
+  }
   const [records, total, unread, typeGroups] = await Promise.all([
     prisma.notification.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take }),
     prisma.notification.count({ where }),
-    prisma.notification.count({ where: { ...baseWhere, isRead: false } }),
+    prisma.notification.count({ where: unreadWhere }),
     prisma.notification.groupBy({
       by: ['type'],
       where: baseWhere,
@@ -30,7 +35,11 @@ export async function list(req, res) {
     pageSize,
     pages: pageSize > 0 ? Math.ceil(total / pageSize) : 0,
     unread,
-    typeCounts: Object.fromEntries(typeGroups.map((item) => [item.type, item._count._all])),
+    typeCounts: Object.fromEntries(
+      typeGroups
+        .filter((item) => item.type)
+        .map((item) => [item.type, item._count._all]),
+    ),
   })
 }
 

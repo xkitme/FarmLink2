@@ -64,7 +64,6 @@ export default function SeedDataPage() {
     { title: '板块', dataIndex: 'title' },
     { title: '资源数', dataIndex: 'resources', width: 100, render: (value) => `${value?.length || 0} 项` },
     { title: '有数据项', dataIndex: 'readyCount', width: 110, render: (value, record) => `${value} / ${record.resources?.length || 0}` },
-    { title: '记录数', dataIndex: 'totalCount', width: 120 },
     {
       title: '状态',
       dataIndex: 'readyCount',

@@ -97,6 +97,7 @@ class AuthState extends ChangeNotifier {
     final sp = await SharedPreferences.getInstance();
     await sp.setString('token', _token!);
     if (_user != null) await sp.setString('user', jsonEncode(_user!.toJson()));
+    await NotificationState.refresh();
     notifyListeners();
   }
 }

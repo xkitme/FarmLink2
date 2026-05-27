@@ -23,10 +23,17 @@ class MessagesPage extends StatefulWidget {
 class _MessagesPageState extends State<MessagesPage> {
   bool _loading = true;
   bool _marking = false;
+  bool _loadingMore = false;
   String? _error;
   int _unread = 0;
+  int _total = 0;
+  int _pageNum = 1;
+  int _pages = 0;
   String _activeFilter = 'ALL';
   List<Map<String, dynamic>> _items = [];
+  Map<String, int> _typeCounts = {};
+
+  static const _pageSize = 100;
 
   static const _filters = [
     _MessageFilter('ALL', '全部', Icons.all_inbox_outlined),
@@ -43,42 +50,53 @@ class _MessagesPageState extends State<MessagesPage> {
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final results = await Future.wait<dynamic>([
-        ApiClient.get('/notification/list',
-            query: {'pageNum': 1, 'pageSize': 100}),
-        ApiClient.get('/notification/unread'),
-      ]);
-      if (!mounted) return;
-      final page = _map(results[0]);
-      final unread = _map(results[1]);
-      final unreadCount = _int(unread['unread']);
+  Future<void> _load({bool append = false}) async {
+    if (append) {
+      if (_loadingMore || (_pages > 0 && _pageNum >= _pages)) return;
+      setState(() => _loadingMore = true);
+    } else {
       setState(() {
-        _items = _list(page['records']);
+        _loading = true;
+        _error = null;
+      });
+    }
+    final nextPage = append ? _pageNum + 1 : 1;
+    try {
+      final page = _map(await ApiClient.get('/notification/list',
+          query: {'pageNum': nextPage, 'pageSize': _pageSize}));
+      if (!mounted) return;
+      final records = _list(page['records']);
+      final unreadCount = _int(page['unread']);
+      setState(() {
+        _items = append ? [..._items, ...records] : records;
         _unread = unreadCount;
+        _total = _int(page['total']);
+        _pageNum = _int(page['pageNum']);
+        _pages = _int(page['pages']);
+        _typeCounts = _normalizedTypeCounts(page['typeCounts']);
         _loading = false;
+        _loadingMore = false;
       });
       NotificationState.setUnread(unreadCount);
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = serviceErrorMessage(e);
+        if (!append) _error = serviceErrorMessage(e);
         _loading = false;
+        _loadingMore = false;
       });
+      if (append) toast(context, actionErrorMessage('加载', e), error: true);
     }
   }
+
+  Future<void> _reload() => _load();
 
   Future<void> _markAllRead() async {
     if (_marking || _unread == 0) return;
     setState(() => _marking = true);
     try {
       await ApiClient.put('/notification/read-all');
-      await _load();
+      await _reload();
       if (mounted) toast(context, '全部消息已标记为已读');
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('操作', e), error: true);
@@ -93,7 +111,7 @@ class _MessagesPageState extends State<MessagesPage> {
     if (id > 0 && item['isRead'] != true) {
       try {
         await ApiClient.put('/notification/$id/read');
-        await _load();
+        await _reload();
       } catch (_) {}
     }
     if (!mounted) return;
@@ -157,7 +175,7 @@ class _MessagesPageState extends State<MessagesPage> {
       appBar: FarmAppBar(
         actions: [
           IconButton(
-            onPressed: _loading ? null : _load,
+            onPressed: _loading ? null : _reload,
             icon: const Icon(Icons.refresh, color: AppColors.onSurfaceVariant),
           ),
         ],
@@ -167,7 +185,7 @@ class _MessagesPageState extends State<MessagesPage> {
           : _error != null
               ? ErrorRetry(message: _error!, onRetry: _load)
               : RefreshIndicator(
-                  onRefresh: _load,
+                  onRefresh: _reload,
                   color: AppColors.primary,
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -201,6 +219,22 @@ class _MessagesPageState extends State<MessagesPage> {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _messageCard(item),
                           ),
+                      if (_items.length < _total) ...[
+                        const SizedBox(height: 4),
+                        OutlinedButton.icon(
+                          onPressed:
+                              _loadingMore ? null : () => _load(append: true),
+                          icon: _loadingMore
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.expand_more_rounded, size: 18),
+                          label: Text(_loadingMore ? '加载中' : '加载更多'),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -400,11 +434,9 @@ class _MessagesPageState extends State<MessagesPage> {
   }
 
   int _countFor(String filter) {
-    if (filter == 'ALL') return _items.length;
-    if (filter == 'UNREAD') {
-      return _items.where((item) => !_isRead(item)).length;
-    }
-    return _items.where((item) => _typeOf(item) == filter).length;
+    if (filter == 'ALL') return _total;
+    if (filter == 'UNREAD') return _unread;
+    return _typeCounts[filter] ?? 0;
   }
 
   String _emptyTextForFilter() {
@@ -419,7 +451,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
   bool _isRead(Map<String, dynamic> item) => item['isRead'] == true;
 
-  String _normalizeType(String type) {
+  static String _normalizeType(String type) {
     final upper = type.trim().toUpperCase();
     if (upper.contains('ALERT') || upper.contains('WARN')) return 'ALERT';
     if (upper.contains('POLICY')) return 'POLICY';
@@ -464,6 +496,18 @@ class _MessagesPageState extends State<MessagesPage> {
       return value.whereType<Map>().map(_map).toList();
     }
     return [];
+  }
+
+  static Map<String, int> _normalizedTypeCounts(dynamic value) {
+    if (value is! Map) return {};
+    final counts = <String, int>{};
+    for (final entry in value.entries) {
+      final type = _normalizeType('${entry.key}');
+      counts[type] = (counts[type] ?? 0) + _int(entry.value);
+    }
+    counts.remove('');
+    counts.remove('NULL');
+    return counts;
   }
 
   static int _int(dynamic value) {
