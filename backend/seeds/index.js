@@ -549,8 +549,8 @@ async function main() {
   // ── 邻里互助 ──────────────────────────────────────
   await prisma.helpRequest.createMany({
     data: [
-      { userId: farmer.id, type: '求助', title: '求助：周末缺2个采橘帮手', content: '后山橘园柑橘成熟，本周末需要2人帮忙采摘，提供午饭和工钱。', regionCode: VILLAGE, contactPhone: '13800000001' },
-      { userId: bigfarmer.id, type: '提供帮助', title: '可免费提供旋耕机作业', content: '农机闲置，本村农户整地可免费帮忙，只收柴油费。', regionCode: VILLAGE, contactPhone: '13800000002' },
+      { userId: farmer.id, type: '招工', title: '周末缺2个采橘帮手', content: '后山橘园柑橘成熟，本周末需要2人帮忙采摘，提供午饭和工钱。', regionCode: VILLAGE, contactPhone: '13800000001' },
+      { userId: bigfarmer.id, type: '互助求助', title: '可免费提供旋耕机作业', content: '农机闲置，本村农户整地可免费帮忙，只收柴油费。', regionCode: VILLAGE, contactPhone: '13800000002' },
     ],
   })
 

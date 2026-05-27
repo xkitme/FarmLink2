@@ -22,22 +22,23 @@ datasource db {
 
 /// 用户主表
 model User {
-  id           Int      @id @default(autoincrement())
-  username     String   @unique
-  nickname     String?
-  passwordHash String
-  phone        String?  @unique
-  avatarUrl    String?
-  role         String   @default("FARMER") // FARMER/BIGFARMER/VILLAGE/EXPERT/MERCHANT/ADMIN
-  regionCode   String?  // 行政区划编码（行级数据权限）
-  villageName  String?
-  realName     String?
-  points       Int      @default(0)
-  isElderMode  Boolean  @default(false)
-  status       Int      @default(1) // 1正常 0禁用
-  lastLoginAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                Int       @id @default(autoincrement())
+  username          String    @unique
+  nickname          String?
+  passwordHash      String
+  passwordChangedAt DateTime  @default(now())
+  phone             String?   @unique
+  avatarUrl         String?
+  role              String    @default("FARMER") // FARMER/BIGFARMER/VILLAGE/EXPERT/MERCHANT/ADMIN
+  regionCode        String? // 行政区划编码（行级数据权限）
+  villageName       String?
+  realName          String?
+  points            Int       @default(0)
+  isElderMode       Boolean   @default(false)
+  status            Int       @default(1) // 1正常 0禁用
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([phone])
   @@index([regionCode])
@@ -49,7 +50,7 @@ model User {
 model UserOauth {
   id        Int      @id @default(autoincrement())
   userId    Int
-  platform  String   // wechat/apple
+  platform  String // wechat/apple
   openId    String
   unionId   String?
   createdAt DateTime @default(now())
@@ -63,8 +64,8 @@ model UserOauth {
 model PointsLog {
   id        Int      @id @default(autoincrement())
   userId    Int
-  points    Int      // 变化值（正负）
-  type      String   // SIGN_IN/LEARN/VOLUNTEER/EXCHANGE
+  points    Int // 变化值（正负）
+  type      String // SIGN_IN/LEARN/VOLUNTEER/EXCHANGE
   remark    String?
   refId     Int?
   createdAt DateTime @default(now())
@@ -77,7 +78,7 @@ model PointsLog {
 model Notification {
   id        Int      @id @default(autoincrement())
   userId    Int?
-  type      String   // ALERT/POLICY/FARM/SYSTEM
+  type      String // ALERT/POLICY/FARM/SYSTEM
   title     String
   content   String?
   refId     Int?
@@ -93,7 +94,7 @@ model Notification {
 model Feedback {
   id        Int      @id @default(autoincrement())
   userId    Int?
-  category  String?  // BUG/建议/咨询
+  category  String? // BUG/建议/咨询
   content   String
   contact   String?
   images    String?
@@ -141,7 +142,7 @@ model Region {
   id         Int      @id @default(autoincrement())
   code       String   @unique
   name       String
-  level      String   // PROVINCE/CITY/COUNTY/TOWN/VILLAGE
+  level      String // PROVINCE/CITY/COUNTY/TOWN/VILLAGE
   parentCode String?
   createdAt  DateTime @default(now())
 
@@ -159,7 +160,7 @@ model LandPlot {
   userId          Int
   plotName        String
   areaMu          Float    @default(0) // 面积（亩）
-  boundaryGeojson String?  // 地块边界 GeoJSON
+  boundaryGeojson String? // 地块边界 GeoJSON
   cropType        String?
   soilType        String?
   regionCode      String?
@@ -176,7 +177,7 @@ model FarmRecord {
   id         Int      @id @default(autoincrement())
   userId     Int
   plotId     Int?
-  recordType String   // 播种/施肥/打药/灌溉/收获
+  recordType String // 播种/施肥/打药/灌溉/收获
   cropType   String?
   content    String?
   cost       Float    @default(0)
@@ -194,17 +195,17 @@ model FarmRecord {
 
 /// 病害知识库
 model DiseaseKnowledge {
-  id              Int      @id @default(autoincrement())
-  diseaseName     String
-  cropType        String?
-  category        String?  // 虫害/病害/缺素
-  symptoms        String?
-  cause           String?
-  prevention      String?
-  medicineAdvice  String?
-  coverImage      String?
-  modelLabel      String?  // AI 模型对应标签
-  createdAt       DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  diseaseName    String
+  cropType       String?
+  category       String? // 虫害/病害/缺素
+  symptoms       String?
+  cause          String?
+  prevention     String?
+  medicineAdvice String?
+  coverImage     String?
+  modelLabel     String? // AI 模型对应标签
+  createdAt      DateTime @default(now())
 
   @@index([modelLabel])
   @@map("t_disease_knowledge")
@@ -214,13 +215,13 @@ model DiseaseKnowledge {
 model AiDetectRecord {
   id          Int      @id @default(autoincrement())
   userId      Int
-  detectType  String   // DISEASE/WEED/SEED/GRADE
+  detectType  String // DISEASE/WEED/SEED/GRADE
   imageUrl    String
   resultLabel String?
   confidence  Float    @default(0)
   adviceText  String?
   isOffline   Boolean  @default(false)
-  feedback    Int?     // 1准 0不准
+  feedback    Int? // 1准 0不准
   localUuid   String?
   createdAt   DateTime @default(now())
 
@@ -231,14 +232,14 @@ model AiDetectRecord {
 
 /// 产量预测
 model YieldPrediction {
-  id              Int      @id @default(autoincrement())
-  plotId          Int
-  cropType        String?
-  predictedYield  Float    // 预测产量（公斤）
-  confidenceLow   Float?
-  confidenceHigh  Float?
-  predictDate     DateTime
-  createdAt       DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  plotId         Int
+  cropType       String?
+  predictedYield Float // 预测产量（公斤）
+  confidenceLow  Float?
+  confidenceHigh Float?
+  predictDate    DateTime
+  createdAt      DateTime @default(now())
 
   @@index([plotId])
   @@map("t_yield_prediction")
@@ -247,10 +248,10 @@ model YieldPrediction {
 /// 农事日历（节气 + 作物生长周期）
 model FarmCalendar {
   id          Int      @id @default(autoincrement())
-  solarTerm   String?  // 节气
+  solarTerm   String? // 节气
   month       Int
   cropType    String?
-  activity    String   // 农事活动
+  activity    String // 农事活动
   description String?
   createdAt   DateTime @default(now())
 
@@ -262,13 +263,13 @@ model FarmCalendar {
 model PesticideInfo {
   id           Int      @id @default(autoincrement())
   name         String
-  regNo        String?  // 农药登记证号
-  type         String?  // 杀虫剂/杀菌剂/除草剂
-  targetPest   String?  // 防治对象
+  regNo        String? // 农药登记证号
+  type         String? // 杀虫剂/杀菌剂/除草剂
+  targetPest   String? // 防治对象
   cropType     String?
-  safeDosage   String?  // 安全用量
-  safeInterval String?  // 安全间隔期
-  toxicity     String?  // 毒性等级
+  safeDosage   String? // 安全用量
+  safeInterval String? // 安全间隔期
+  toxicity     String? // 毒性等级
   createdAt    DateTime @default(now())
 
   @@index([regNo])
@@ -299,7 +300,7 @@ model CarbonRecord {
 model MarketPrice {
   id          Int      @id @default(autoincrement())
   productName String
-  category    String?  // 蔬菜/水果/粮油/畜禽
+  category    String? // 蔬菜/水果/粮油/畜禽
   marketName  String?
   regionCode  String?
   price       Float
@@ -318,7 +319,7 @@ model PricePrediction {
   productName    String
   predictDate    DateTime
   predictedPrice Float
-  trend          String?  // UP/DOWN/STABLE
+  trend          String? // UP/DOWN/STABLE
   advice         String?
   createdAt      DateTime @default(now())
 
@@ -376,7 +377,7 @@ model TraceRecord {
   id          Int      @id @default(autoincrement())
   traceCode   String
   productId   Int?
-  stage       String   // 种植/施肥/采收/包装/运输
+  stage       String // 种植/施肥/采收/包装/运输
   description String?
   images      String?
   operator    String?
@@ -396,7 +397,7 @@ model Buyer {
   regionCode  String?
   lat         Float?
   lng         Float?
-  products    String?  // 收购品类
+  products    String? // 收购品类
   createdAt   DateTime @default(now())
 
   @@index([regionCode])
@@ -409,7 +410,7 @@ model GroupBuy {
   initiatorId  Int
   title        String
   itemName     String
-  category     String?  // 化肥/农药/种子
+  category     String? // 化肥/农药/种子
   unitPrice    Float
   targetCount  Int      @default(0)
   currentCount Int      @default(0)
@@ -448,7 +449,7 @@ model Machinery {
   id          Int      @id @default(autoincrement())
   ownerId     Int
   machineName String
-  machineType String?  // 拖拉机/收割机/旋耕机
+  machineType String? // 拖拉机/收割机/旋耕机
   dailyPrice  Float    @default(0)
   deposit     Float    @default(0)
   regionCode  String?
@@ -487,7 +488,7 @@ model MachineryTrack {
   machineryId   Int
   operatorId    Int
   workDate      DateTime
-  trackPoints   String?    // 轨迹点数组
+  trackPoints   String? // 轨迹点数组
   workArea      Float    @default(0) // 作业亩数
   durationHours Float    @default(0)
   createdAt     DateTime @default(now())
@@ -504,10 +505,10 @@ model LandTransfer {
   areaMu       Float    @default(0)
   regionCode   String?
   location     String?
-  transferType String?  // 出租/转让
+  transferType String? // 出租/转让
   price        Float    @default(0)
   priceUnit    String   @default("元/亩/年")
-  duration     String?  // 流转年限
+  duration     String? // 流转年限
   description  String?
   contactPhone String?
   status       String   @default("OPEN") // OPEN/DEALT/CLOSED
@@ -537,15 +538,15 @@ model MachineryInsurance {
 
 /// 机手技能认证
 model OperatorCert {
-  id           Int      @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   userId       Int
   realName     String?
-  certType     String?  // 认证类型
+  certType     String? // 认证类型
   certNo       String?
-  machineTypes String?  // 可操作机型
+  machineTypes String? // 可操作机型
   issueDate    DateTime?
-  status       String   @default("PENDING") // PENDING/APPROVED/REJECTED
-  createdAt    DateTime @default(now())
+  status       String    @default("PENDING") // PENDING/APPROVED/REJECTED
+  createdAt    DateTime  @default(now())
 
   @@index([userId])
   @@map("t_operator_cert")
@@ -559,14 +560,14 @@ model OperatorCert {
 model DisasterReport {
   id            Int      @id @default(autoincrement())
   userId        Int
-  disasterType  String   // 暴雨/冰雹/干旱/冻害/虫灾
+  disasterType  String // 暴雨/冰雹/干旱/冻害/虫灾
   plotId        Int?
   affectedArea  Float    @default(0) // 受灾面积（亩）
   estimatedLoss Float    @default(0) // 预估损失（元）
   description   String?
   images        String?
   location      String?
-  aiLossLevel   String?  // 轻/中/重
+  aiLossLevel   String? // 轻/中/重
   status        String   @default("REPORTED") // REPORTED/REVIEWING/PROCESSED
   regionCode    String?
   localUuid     String?
@@ -582,12 +583,12 @@ model DisasterReport {
 /// 天气预警
 model WeatherAlert {
   id           Int      @id @default(autoincrement())
-  alertType    String   // 暴雨/冰雹/霜冻/高温/大风
-  alertLevel   String   // 蓝/黄/橙/红
+  alertType    String // 暴雨/冰雹/霜冻/高温/大风
+  alertLevel   String // 蓝/黄/橙/红
   regionCode   String?
   title        String
   content      String?
-  defenseGuide String?  // 防护建议
+  defenseGuide String? // 防护建议
   validFrom    DateTime
   validTo      DateTime
   createdAt    DateTime @default(now())
@@ -604,7 +605,7 @@ model InsuranceClaim {
   disasterReportId Int?
   claimType        String?
   estimatedAmount  Float    @default(0)
-  aiAssessLevel    String?  // AI 评估损失等级
+  aiAssessLevel    String? // AI 评估损失等级
   assessDetail     String?
   status           String   @default("SUBMITTED") // SUBMITTED/ASSESSING/APPROVED/REJECTED
   insurerContact   String?
@@ -619,10 +620,10 @@ model InsuranceClaim {
 model EmergencyGuide {
   id           Int      @id @default(autoincrement())
   title        String
-  disasterType String   // 防汛/防旱/防冻/防火
+  disasterType String // 防汛/防旱/防冻/防火
   category     String?
   content      String
-  steps        String?    // 操作步骤数组
+  steps        String? // 操作步骤数组
   createdAt    DateTime @default(now())
 
   @@index([disasterType])
@@ -633,7 +634,7 @@ model EmergencyGuide {
 model SosRecord {
   id           Int      @id @default(autoincrement())
   userId       Int
-  sosType      String?  // 灾情/医疗/治安
+  sosType      String? // 灾情/医疗/治安
   location     String?
   description  String?
   contactPhone String?
@@ -651,10 +652,10 @@ model SosRecord {
 
 /// 政策
 model Policy {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   title       String
-  level       String?  // 国家级/省级/县级
-  category    String?  // 种植补贴/农机补贴/金融/教育
+  level       String? // 国家级/省级/县级
+  category    String? // 种植补贴/农机补贴/金融/教育
   content     String
   summary     String?
   publishOrg  String?
@@ -663,9 +664,9 @@ model Policy {
   validFrom   DateTime?
   validTo     DateTime?
   attachments String?
-  viewCount   Int      @default(0)
-  status      Int      @default(1)
-  createdAt   DateTime @default(now())
+  viewCount   Int       @default(0)
+  status      Int       @default(1)
+  createdAt   DateTime  @default(now())
 
   @@index([level])
   @@index([category])
@@ -679,7 +680,7 @@ model PolicyChunk {
   policyId     Int
   chunkIndex   Int
   chunkContent String
-  embedding    String?    // 向量数组
+  embedding    String? // 向量数组
   createdAt    DateTime @default(now())
 
   @@index([policyId])
@@ -734,7 +735,7 @@ model PartyLearnLog {
 model VillageAffair {
   id          Int      @id @default(autoincrement())
   regionCode  String?
-  category    String   // 财务/工程/评优
+  category    String // 财务/工程/评优
   title       String
   content     String?
   attachments String?
@@ -748,15 +749,15 @@ model VillageAffair {
 
 /// 文明乡风榜
 model HonorRecord {
-  id           Int      @id @default(autoincrement())
-  regionCode   String?
-  honoreeName  String
-  honorType    String?  // 好人好事/星级文明户
-  deed         String?  // 事迹
-  images       String?
-  votes        Int      @default(0)
-  status       String   @default("PUBLISHED") // PENDING/PUBLISHED
-  createdAt    DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  regionCode  String?
+  honoreeName String
+  honorType   String? // 好人好事/星级文明户
+  deed        String? // 事迹
+  images      String?
+  votes       Int      @default(0)
+  status      String   @default("PUBLISHED") // PENDING/PUBLISHED
+  createdAt   DateTime @default(now())
 
   @@index([regionCode])
   @@map("t_honor_record")
@@ -772,7 +773,7 @@ model TrainingCourse {
   content     String?
   videoUrl    String?
   durationMin Int      @default(0)
-  certName    String?  // 证书名称
+  certName    String? // 证书名称
   enrollCount Int      @default(0)
   createdAt   DateTime @default(now())
 
@@ -781,14 +782,14 @@ model TrainingCourse {
 
 /// 培训报名 / 证书
 model CourseEnrollment {
-  id           Int      @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   userId       Int
   courseId     Int
-  progress     Int      @default(0) // 0-100
-  completed    Boolean  @default(false)
+  progress     Int       @default(0) // 0-100
+  completed    Boolean   @default(false)
   certNo       String?
   certIssuedAt DateTime?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   @@index([userId])
   @@index([courseId])
@@ -800,7 +801,7 @@ model TalentProfile {
   id           Int      @id @default(autoincrement())
   userId       Int?
   name         String
-  talentType   String?  // 农技能人/工匠/致富带头人
+  talentType   String? // 农技能人/工匠/致富带头人
   skills       String?
   regionCode   String?
   description  String?
@@ -835,15 +836,15 @@ model Clinic {
 
 /// 在线问诊
 model Consultation {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  clinicId   Int?
-  symptom    String
-  images     String?
-  status     String   @default("PENDING") // PENDING/REPLIED/CLOSED
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  clinicId    Int?
+  symptom     String
+  images      String?
+  status      String    @default("PENDING") // PENDING/REPLIED/CLOSED
   doctorReply String?
-  replyAt    DateTime?
-  createdAt  DateTime @default(now())
+  replyAt     DateTime?
+  createdAt   DateTime  @default(now())
 
   @@index([userId])
   @@map("t_consultation")
@@ -854,7 +855,7 @@ model JobInfo {
   id           Int      @id @default(autoincrement())
   publisherId  Int?
   title        String
-  jobType      String?  // 本地用工/外出务工
+  jobType      String? // 本地用工/外出务工
   company      String?
   location     String?
   salary       String?
@@ -873,14 +874,14 @@ model JobInfo {
 model TourismSpot {
   id          Int      @id @default(autoincrement())
   name        String
-  spotType    String?  // 民宿/农家乐/景点
+  spotType    String? // 民宿/农家乐/景点
   regionCode  String?
   address     String?
   description String?
   images      String?
   price       Float?
   phone       String?
-  promoText   String?  // AI 生成推广文案
+  promoText   String? // AI 生成推广文案
   rating      Float    @default(5)
   createdAt   DateTime @default(now())
 
@@ -910,7 +911,7 @@ model SecondhandItem {
 model HelpRequest {
   id           Int      @id @default(autoincrement())
   userId       Int
-  type         String   @default("求助") // 求助/提供帮助
+  type         String   @default("互助求助") // 互助求助/招工/分享见闻/失物招领
   title        String
   content      String?
   regionCode   String?
@@ -928,7 +929,7 @@ model HelpRequest {
 model EnvReport {
   id           Int      @id @default(autoincrement())
   userId       Int
-  problemType  String?  // 污染/垃圾/其他
+  problemType  String? // 污染/垃圾/其他
   description  String?
   images       String?
   location     String?
@@ -950,7 +951,7 @@ model LoanProduct {
   productName  String
   interestRate Float    @default(0)
   maxAmount    Float    @default(0)
-  term         String?  // 贷款期限
+  term         String? // 贷款期限
   requirement  String?
   description  String?
   createdAt    DateTime @default(now())
@@ -980,7 +981,7 @@ model FolkCulture {
   id          Int      @id @default(autoincrement())
   userId      Int?
   title       String
-  cultureType String?  // 村史/非遗/民俗
+  cultureType String? // 村史/非遗/民俗
   regionCode  String?
   content     String?
   images      String?
@@ -998,7 +999,7 @@ model ExpressPoint {
   regionCode    String?
   address       String?
   phone         String?
-  companies     String?  // 代收快递公司
+  companies     String? // 代收快递公司
   businessHours String?
   createdAt     DateTime @default(now())
 
@@ -1031,9 +1032,9 @@ model StatReport {
   id         Int      @id @default(autoincrement())
   regionCode String?
   reporterId Int?
-  statType   String?  // 种植面积/产量/收入
+  statType   String? // 种植面积/产量/收入
   year       Int
-  period     String?  // 季度/月份
+  period     String? // 季度/月份
   dataJson   String?
   status     String   @default("DRAFT") // DRAFT/SUBMITTED/CONFIRMED
   createdAt  DateTime @default(now())
@@ -1047,9 +1048,9 @@ model SyncLog {
   id             Int      @id @default(autoincrement())
   userId         Int
   tableName      String
-  operation      String   // INSERT/UPDATE/DELETE
+  operation      String // INSERT/UPDATE/DELETE
   localUuid      String?
-  syncStatus     String   // SUCCESS/CONFLICT/FAILED
+  syncStatus     String // SUCCESS/CONFLICT/FAILED
   conflictDetail String?
   syncedAt       DateTime @default(now())
 
@@ -1066,15 +1067,18 @@ model SyncLog {
 model AiQaRecord {
   id             Int      @id @default(autoincrement())
   userId         Int
-  scene          String   // POLICY/AGRI/LEGAL/GENERAL
+  threadId       Int?
+  scene          String // POLICY/AGRI/LEGAL/GENERAL
   question       String
-  answer         String
+  answer         String   @default("")
   modelUsed      String?
   isOffline      Boolean  @default(false)
   referencesJson String?
   createdAt      DateTime @default(now())
 
   @@index([userId])
+  @@index([userId, threadId])
+  @@index([userId, createdAt])
   @@index([scene])
   @@map("t_ai_qa_record")
 }

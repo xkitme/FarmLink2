@@ -11,6 +11,38 @@ import { generateText, getOllamaStatus, streamText } from './services/ollama.ser
 const rand = (min, max) => min + Math.random() * (max - min)
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
 
+function threadIdOf(value) {
+  if (value === undefined || value === null || value === '') return null
+  const threadId = Number(value)
+  if (!Number.isInteger(threadId) || threadId <= 0) throw errors.param('threadId 不合法')
+  return threadId
+}
+
+async function resolveThreadId(req) {
+  const threadId = threadIdOf(req.body.threadId ?? req.query.threadId)
+  if (!threadId) return null
+  const exist = await prisma.aiQaRecord.findFirst({
+    where: {
+      threadId,
+      ...(req.user.role === 'ADMIN' ? {} : { userId: req.user.id }),
+    },
+    select: { id: true },
+  })
+  if (!exist) throw errors.notFound('对话不存在')
+  return threadId
+}
+
+async function createThreadRecord(data) {
+  let record = await prisma.aiQaRecord.create({ data })
+  if (!data.threadId) {
+    record = await prisma.aiQaRecord.update({
+      where: { id: record.id },
+      data: { threadId: record.id },
+    })
+  }
+  return record
+}
+
 function sseHeaders(res) {
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
   res.setHeader('Cache-Control', 'no-cache, no-transform')
@@ -33,10 +65,11 @@ async function streamFallback(res, text) {
 async function askScene(req, res, scene) {
   const question = String(req.body.question || req.body.prompt || '').trim()
   if (!question) throw errors.param('请输入问题')
+  const threadId = await resolveThreadId(req)
 
   const useStream = req.body.stream === true || req.query.stream === '1'
   if (!useStream) {
-    const result = await answerQuestion({ userId: req.user.id, scene, question })
+    const result = await answerQuestion({ userId: req.user.id, scene, question, threadId })
     return ok(res, result, 'AI 回答完成')
   }
 
@@ -68,18 +101,17 @@ async function askScene(req, res, scene) {
     await streamFallback(res, answer)
   }
 
-  const record = await prisma.aiQaRecord.create({
-    data: {
-      userId: req.user.id,
-      scene: normalized,
-      question,
-      answer,
-      modelUsed,
-      isOffline: true,
-      referencesJson: JSON.stringify(references),
-    },
+  const record = await createThreadRecord({
+    userId: req.user.id,
+    threadId,
+    scene: normalized,
+    question,
+    answer,
+    modelUsed,
+    isOffline: true,
+    referencesJson: JSON.stringify(references),
   })
-  sse(res, 'done', { recordId: record.id, serviceMode, modelUsed })
+  sse(res, 'done', { recordId: record.id, threadId: record.threadId, serviceMode, modelUsed })
   res.end()
 }
 
@@ -158,12 +190,60 @@ export async function kbSearch(req, res) {
 export async function qaRecords(req, res) {
   const { pageNum, pageSize, skip, take } = pageParams(req.query)
   const where = req.user.role === 'ADMIN' ? {} : { userId: req.user.id }
+  if (req.user.role === 'ADMIN' && req.query.userId) where.userId = Number(req.query.userId)
   if (req.query.scene) where.scene = String(req.query.scene).toUpperCase()
-  const [records, total] = await Promise.all([
-    prisma.aiQaRecord.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take }),
-    prisma.aiQaRecord.count({ where }),
-  ])
-  okPage(res, { records, total, pageNum, pageSize })
+  const rows = await prisma.aiQaRecord.findMany({
+    where,
+    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true,
+      userId: true,
+      threadId: true,
+      scene: true,
+      question: true,
+      answer: true,
+      modelUsed: true,
+      isOffline: true,
+      referencesJson: true,
+      createdAt: true,
+    },
+  })
+  const grouped = new Map()
+  for (const row of rows) {
+    const threadId = row.threadId || row.id
+    if (!grouped.has(threadId)) {
+      grouped.set(threadId, {
+        ...row,
+        threadId,
+        messageCount: 1,
+        lastMessageAt: row.createdAt,
+      })
+      continue
+    }
+    const group = grouped.get(threadId)
+    group.messageCount += 1
+    group.answer = row.answer || group.answer
+    group.lastMessageAt = row.createdAt
+  }
+  const records = [...grouped.values()]
+    .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt))
+    .slice(skip, skip + take)
+  okPage(res, { records, total: grouped.size, pageNum, pageSize })
+}
+
+/** 单个 AI 会话的全部问答记录 */
+export async function qaThreadRecords(req, res) {
+  const threadId = threadIdOf(req.params.threadId)
+  if (!threadId) throw errors.param('threadId 不合法')
+  const records = await prisma.aiQaRecord.findMany({
+    where: {
+      threadId,
+      ...(req.user.role === 'ADMIN' ? {} : { userId: req.user.id }),
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+  if (!records.length) throw errors.notFound('对话不存在')
+  ok(res, { records })
 }
 
 /** 清空当前用户所有 AI 问答记录 */
@@ -179,14 +259,45 @@ export async function qaRemove(req, res) {
   const id = Number(req.params.id)
   if (!id) throw errors.param('记录 ID 不合法')
 
-  const exist = await prisma.aiQaRecord.findUnique({ where: { id } })
+  const exist = await prisma.aiQaRecord.findFirst({
+    where: {
+      OR: [{ id }, { threadId: id }],
+      ...(req.user.role === 'ADMIN' ? {} : { userId: req.user.id }),
+    },
+  })
   if (!exist) throw errors.notFound('记录不存在')
-  if (exist.userId !== req.user.id && req.user.role !== 'ADMIN') {
-    throw errors.forbidden('无权删除他人的对话')
-  }
 
-  await prisma.aiQaRecord.delete({ where: { id } })
-  ok(res, { id }, '已删除')
+  const threadId = exist.threadId || exist.id
+  const result = await prisma.aiQaRecord.deleteMany({
+    where: {
+      threadId,
+      ...(req.user.role === 'ADMIN' ? {} : { userId: req.user.id }),
+    },
+  })
+  ok(res, { id, threadId, deleted: result.count }, '已删除')
+}
+
+/** 持久化图像识别摘要到当前 AI 会话 */
+export async function qaDetectRecord(req, res) {
+  const question = String(req.body.question || '请识别这张图片').trim()
+  const answer = String(req.body.answer || req.body.summary || '').trim()
+  if (!answer) throw errors.param('识别摘要必填')
+  const threadId = await resolveThreadId(req)
+  const referencesJson = JSON.stringify({
+    detect: req.body.detect || null,
+    imageUrl: req.body.imageUrl || null,
+  })
+  const record = await createThreadRecord({
+    userId: req.user.id,
+    threadId,
+    scene: 'DETECT',
+    question,
+    answer,
+    modelUsed: req.body.modelUsed || 'platform-vision',
+    isOffline: true,
+    referencesJson,
+  })
+  ok(res, { recordId: record.id, threadId: record.threadId, record }, '识别记录已保存')
 }
 
 /** 语音识别：支持上传音频，也支持直接传 text。 */

@@ -4,11 +4,29 @@ import { pageParams, parseJson } from '../../utils/page.js'
 
 // ── 邻里互助 ────────────────────────────────
 
+const HELP_TYPE_MAP = {
+  '求助': '互助求助',
+  '互助': '互助求助',
+  '提供帮助': '互助求助',
+  '分享': '分享见闻',
+}
+const ALLOWED_HELP_TYPES = new Set(['互助求助', '招工', '分享见闻', '失物招领'])
+
+function normalizeHelpType(type, { allowEmpty = false } = {}) {
+  const raw = String(type || '').trim()
+  if (!raw) return allowEmpty ? null : '互助求助'
+  const normalized = HELP_TYPE_MAP[raw] || raw
+  if (!ALLOWED_HELP_TYPES.has(normalized)) {
+    throw errors.param(`不支持的互助类型：${raw}`)
+  }
+  return normalized
+}
+
 /** 互助信息列表 */
 export async function helpList(req, res) {
   const { pageNum, pageSize, skip, take } = pageParams(req.query)
   const where = {}
-  if (req.query.type) where.type = req.query.type
+  if (req.query.type) where.type = normalizeHelpType(req.query.type, { allowEmpty: true })
   if (req.query.status) where.status = req.query.status
   if (req.query.regionCode) where.regionCode = req.query.regionCode
   const [records, total] = await Promise.all([
@@ -22,10 +40,11 @@ export async function helpList(req, res) {
 export async function helpCreate(req, res) {
   const { type, title, content, contactPhone } = req.body
   if (!title) throw errors.param('标题必填')
+  const normalizedType = normalizeHelpType(type)
   const h = await prisma.helpRequest.create({
     data: {
       userId: req.user.id,
-      type: type || '求助',
+      type: normalizedType,
       title,
       content: content || null,
       regionCode: req.user.regionCode || null,
@@ -71,14 +90,15 @@ export async function secondhandList(req, res) {
 
 /** 发布二手 */
 export async function secondhandCreate(req, res) {
-  const { title, category, description, price, images } = req.body
+  const { title, category, description, price, images, contactPhone } = req.body
   if (!title || price == null) throw errors.param('标题和价格必填')
+  const contactLine = contactPhone ? `\n联系电话：${contactPhone}` : ''
   const item = await prisma.secondhandItem.create({
     data: {
       sellerId: req.user.id,
       title,
       category: category || '其他',
-      description: description || null,
+      description: description ? `${description}${contactLine}` : (contactLine.trim() || null),
       price: Number(price) || 0,
       images: images ? JSON.stringify(images) : null,
       regionCode: req.user.regionCode || null,

@@ -1,27 +1,33 @@
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 import { prisma } from '../../db.js'
-import { config, ROLES } from '../../config/index.js'
+import { ROLES } from '../../config/index.js'
 import { ok, errors } from '../../utils/response.js'
-import { signToken, signRefreshToken } from '../../middleware/auth.js'
+import { signToken, signRefreshToken, verifyAuthToken } from '../../middleware/auth.js'
 
 /** 去除敏感字段 */
 export function sanitizeUser(user) {
   if (!user) return null
-  const { passwordHash, ...rest } = user
+  const { passwordHash, passwordChangedAt, ...rest } = user
   return rest
 }
 
 /** Token 载荷 */
 function tokenPayload(user) {
-  return { id: user.id, username: user.username, role: user.role, regionCode: user.regionCode }
+  return {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    regionCode: user.regionCode,
+    pwdAt: user.passwordChangedAt ? new Date(user.passwordChangedAt).getTime() : null,
+  }
 }
 
 /** 构建登录会话返回体 */
 export function buildSession(user) {
+  const payload = tokenPayload(user)
   return {
-    token: signToken(tokenPayload(user)),
-    refreshToken: signRefreshToken({ id: user.id }),
+    token: signToken(payload),
+    refreshToken: signRefreshToken(payload),
     user: sanitizeUser(user),
   }
 }
@@ -73,13 +79,14 @@ export async function login(req, res) {
 export async function refresh(req, res) {
   const { refreshToken } = req.body
   if (!refreshToken) throw errors.param('缺少 refreshToken')
-  let payload
+  let sessionUser
   try {
-    payload = jwt.verify(refreshToken, config.jwt.secret)
-  } catch {
+    sessionUser = await verifyAuthToken(refreshToken)
+  } catch (e) {
+    if (e.name === 'BusinessError') throw e
     throw errors.unauthorized('refreshToken 无效或已过期')
   }
-  const user = await prisma.user.findUnique({ where: { id: payload.id } })
+  const user = await prisma.user.findUnique({ where: { id: sessionUser.id } })
   if (!user) throw errors.unauthorized()
   ok(res, { token: signToken(tokenPayload(user)) })
 }

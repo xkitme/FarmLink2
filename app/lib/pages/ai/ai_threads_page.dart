@@ -44,14 +44,16 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
         final question = _text(record['question']);
         final answer = _text(record['answer']);
         final scene = _text(record['scene'], fallback: 'GENERAL');
-        final createdAt = _date(record['createdAt']);
+        final createdAt = _date(record['lastMessageAt'] ?? record['createdAt']);
+        final messageCount = _int(record['messageCount']);
         list.add(_Thread(
-          id: _int(record['id']),
+          id: _int(record['threadId'] ?? record['id']),
           title: _truncate(question.isEmpty ? 'AI 对话' : question, 24),
           preview: _truncate(answer, 60),
           scene: scene,
           kind: _detectKind(record),
           createdAt: createdAt,
+          messageCount: messageCount <= 0 ? 1 : messageCount,
         ));
       }
     } catch (_) {}
@@ -72,6 +74,7 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
           scene: 'REPORT',
           kind: 'REPORT',
           createdAt: _date(report['createdAt']),
+          messageCount: 1,
         ));
       }
     } catch (_) {}
@@ -318,6 +321,17 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  if (thread.messageCount > 1) ...[
+                    Text(
+                      '${thread.messageCount} 条',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   Text(
                     _friendlyTime(thread.createdAt),
                     style: const TextStyle(
@@ -416,6 +430,7 @@ class _Thread {
   final String scene;
   final String kind;
   final DateTime createdAt;
+  final int messageCount;
 
   const _Thread({
     required this.id,
@@ -424,5 +439,6 @@ class _Thread {
     required this.scene,
     required this.kind,
     required this.createdAt,
+    required this.messageCount,
   });
 }

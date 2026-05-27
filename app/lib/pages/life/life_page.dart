@@ -983,12 +983,12 @@ class _LifePageState extends State<LifePage> {
   }
 
   Future<void> _publishHelpSheet() async {
-    final type = ValueNotifier('求助');
+    final type = ValueNotifier('互助求助');
     final title = TextEditingController();
     final content = TextEditingController();
     final phone = TextEditingController();
     final ok = await _formSheet(title: '发布邻里互助', fields: [
-      _chipsField(['求助', '互助', '分享'], type),
+      _chipsField(['互助求助', '招工', '分享见闻', '失物招领'], type),
       _field(title, '标题'),
       _field(content, '详细内容', lines: 3),
       _field(phone, '联系电话（选填）'),

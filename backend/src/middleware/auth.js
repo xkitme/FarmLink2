@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+import { prisma } from '../db.js'
 import { config } from '../config/index.js'
 import { errors } from '../utils/response.js'
 
@@ -19,23 +20,70 @@ function extractToken(req) {
   return h.startsWith('Bearer ') ? h.slice(7) : h
 }
 
+function tokenChangedBeforePassword(decoded, user) {
+  if (!user.passwordChangedAt || !decoded.iat) return false
+  return decoded.iat * 1000 < user.passwordChangedAt.getTime() - 1000
+}
+
+function tokenPasswordSnapshotStale(decoded, user) {
+  if (!user.passwordChangedAt || decoded.pwdAt === undefined || decoded.pwdAt === null) {
+    return tokenChangedBeforePassword(decoded, user)
+  }
+  return Number(decoded.pwdAt) !== user.passwordChangedAt.getTime()
+}
+
+/** 校验 JWT 并确保签发时间晚于最近一次改密时间 */
+export async function verifyAuthToken(token) {
+  try {
+    const decoded = jwt.verify(token, config.jwt.secret)
+    const user = await prisma.user.findUnique({
+      where: { id: Number(decoded.id) },
+      select: {
+        id: true,
+        username: true,
+        phone: true,
+        role: true,
+        regionCode: true,
+        status: true,
+        passwordChangedAt: true,
+      },
+    })
+    if (!user || user.status !== 1) throw errors.unauthorized('账号不可用')
+    if (tokenPasswordSnapshotStale(decoded, user)) {
+      throw errors.unauthorized('密码已修改，请重新登录')
+    }
+    return {
+      id: user.id,
+      username: user.username,
+      phone: user.phone,
+      role: user.role,
+      regionCode: user.regionCode,
+    }
+  } catch (e) {
+    if (e.name === 'JsonWebTokenError' || e.name === 'TokenExpiredError') {
+      throw errors.unauthorized()
+    }
+    throw e
+  }
+}
+
 /** 必须登录 */
-export function requireAuth(req, res, next) {
+export async function requireAuth(req, res, next) {
   const token = extractToken(req)
   if (!token) return next(errors.unauthorized())
   try {
-    req.user = jwt.verify(token, config.jwt.secret)
+    req.user = await verifyAuthToken(token)
     next()
-  } catch {
-    next(errors.unauthorized())
+  } catch (e) {
+    next(e)
   }
 }
 
 /** 可选登录：有 token 解析，无则跳过 */
-export function optionalAuth(req, res, next) {
+export async function optionalAuth(req, res, next) {
   const token = extractToken(req)
   if (token) {
-    try { req.user = jwt.verify(token, config.jwt.secret) } catch { /* 忽略 */ }
+    try { req.user = await verifyAuthToken(token) } catch { /* 忽略 */ }
   }
   next()
 }

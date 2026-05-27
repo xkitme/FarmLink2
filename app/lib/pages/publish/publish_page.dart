@@ -8,6 +8,9 @@ import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
+const _helpPublishTypes = ['互助求助', '招工', '分享见闻', '失物招领'];
+const _secondhandPublishTypes = ['二手交易', '闲置共享'];
+
 /// 发布 · 乡村动态 — 接入服务端 /life/help + /village/affairs（样式复刻设计稿 _1）
 class PublishPage extends StatefulWidget {
   const PublishPage({super.key});
@@ -330,14 +333,7 @@ class _PublishPageState extends State<PublishPage> {
     final contentC = TextEditingController();
     final phoneC = TextEditingController();
     var type = '互助求助';
-    const types = [
-      '互助求助',
-      '招工',
-      '分享见闻',
-      '失物招领',
-      '二手交易',
-      '闲置共享',
-    ];
+    const types = [..._helpPublishTypes, ..._secondhandPublishTypes];
 
     final ok = await showModalBottomSheet<bool>(
       context: context,
@@ -460,22 +456,36 @@ class _PublishPageState extends State<PublishPage> {
     );
 
     if (ok != true || !mounted) return;
-    final payload = {
+    final payload = <String, dynamic>{
       'type': type,
       'title': titleC.text.trim(),
       'content': contentC.text.trim(),
       'contactPhone': phoneC.text.trim(),
     };
+    final isSecondhand = _secondhandPublishTypes.contains(type);
+    final postPath = isSecondhand ? '/life/secondhand' : '/life/help';
+    final tableName = isSecondhand ? 'secondhand_item' : 'help_request';
+    final postBody = <String, dynamic>{
+      ...(isSecondhand
+          ? {
+              'title': payload['title'],
+              'description': payload['content'],
+              'category': type == '闲置共享' ? 'SHARE' : 'SELL',
+              'price': 0,
+              'contactPhone': payload['contactPhone'],
+            }
+          : payload),
+    };
     try {
-      await ApiClient.post('/life/help', body: payload);
+      await ApiClient.post(postPath, body: postBody);
       if (!mounted) return;
       toast(context, '$type 发布成功');
       _load();
     } catch (_) {
       await OfflineSyncQueue.enqueue(
-        tableName: 'help_request',
-        payload: payload,
-        path: '/life/help',
+        tableName: tableName,
+        payload: postBody,
+        path: postPath,
       );
       if (!mounted) return;
       toast(context, '已加入待发送队列，将自动发布');

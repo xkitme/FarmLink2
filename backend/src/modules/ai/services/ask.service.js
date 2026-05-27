@@ -4,8 +4,17 @@ import { generateText } from './ollama.service.js'
 import { buildPrompt, fallbackAnswer, systemPrompt } from './fallback.service.js'
 import { searchLocalKnowledge } from './rag.service.js'
 
+async function ensureThreadId(record, threadId) {
+  if (threadId) return threadId
+  await prisma.aiQaRecord.update({
+    where: { id: record.id },
+    data: { threadId: record.id },
+  })
+  return record.id
+}
+
 /** 完整问答编排：SQLite RAG → Ollama 模型 → 规则引擎。 */
-export async function answerQuestion({ userId, scene = 'GENERAL', question }) {
+export async function answerQuestion({ userId, scene = 'GENERAL', question, threadId = null }) {
   const normalized = String(scene || 'GENERAL').toUpperCase()
   const references = await searchLocalKnowledge(normalized, question, 5)
   const prompt = buildPrompt({ scene: normalized, question, references })
@@ -34,6 +43,7 @@ export async function answerQuestion({ userId, scene = 'GENERAL', question }) {
   const record = await prisma.aiQaRecord.create({
     data: {
       userId,
+      threadId,
       scene: normalized,
       question,
       answer,
@@ -42,9 +52,11 @@ export async function answerQuestion({ userId, scene = 'GENERAL', question }) {
       referencesJson: JSON.stringify(references),
     },
   })
+  const finalThreadId = await ensureThreadId(record, threadId)
 
   return {
     recordId: record.id,
+    threadId: finalThreadId,
     scene: normalized,
     question,
     answer,

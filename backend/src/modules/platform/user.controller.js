@@ -46,7 +46,10 @@ export async function updatePassword(req, res) {
   const passwordHash = await bcrypt.hash(newPassword, 10)
   await prisma.user.update({
     where: { id: req.user.id },
-    data: { passwordHash },
+    data: {
+      passwordHash,
+      passwordChangedAt: new Date(),
+    },
   })
 
   ok(res, { ok: true }, '密码已修改，请重新登录')

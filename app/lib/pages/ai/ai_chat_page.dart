@@ -31,6 +31,7 @@ class _AiChatPageState extends State<AiChatPage> {
   final _scrollCtrl = ScrollController();
 
   final List<_ChatMessage> _messages = [];
+  int? _threadId;
   late String _scene;
   String _title = '新对话';
   bool _loadingHistory = true;
@@ -40,6 +41,7 @@ class _AiChatPageState extends State<AiChatPage> {
   @override
   void initState() {
     super.initState();
+    _threadId = widget.threadId;
     _scene = _normalizeScene(widget.initialScene);
     _loadHistory();
   }
@@ -53,10 +55,15 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   Future<void> _loadHistory() async {
-    if (widget.threadId == null) {
+    if (_threadId == null) {
       if (!mounted) return;
       setState(() {
         _title = '新对话 · ${_sceneLabel(_scene)}';
+        _messages.add(_ChatMessage(
+          fromUser: false,
+          text: '您好，我是您的智能农技助手。可以问我政策、农技、病虫害、行情等问题，也可以点击「+」上传图片让我识别。',
+          scene: _scene,
+        ));
         _loadingHistory = false;
       });
       _requestInputFocus();
@@ -64,16 +71,10 @@ class _AiChatPageState extends State<AiChatPage> {
     }
 
     try {
-      final data = await ApiClient.get('/ai/qa/records', query: {
-        'pageNum': 1,
-        'pageSize': 100,
-      });
-      final record = _recordsOf(data)
-          .where((item) => _int(item['id']) == widget.threadId)
-          .cast<Map<String, dynamic>?>()
-          .firstWhere((item) => item != null, orElse: () => null);
+      final data = await ApiClient.get('/ai/qa/threads/$_threadId');
+      final records = _recordsOf(data);
       if (!mounted) return;
-      if (record == null) {
+      if (records.isEmpty) {
         setState(() {
           _loadingHistory = false;
           _messages.add(_ChatMessage(
@@ -86,30 +87,34 @@ class _AiChatPageState extends State<AiChatPage> {
         return;
       }
 
-      final scene = _normalizeScene(record['scene']);
-      final question = _text(record['question']);
-      final answer = _text(record['answer']);
-      final createdAt = _date(record['createdAt']);
       final list = <_ChatMessage>[];
-      if (question.isNotEmpty) {
-        list.add(_ChatMessage(
-          fromUser: true,
-          text: question,
-          scene: scene,
-          createdAt: createdAt,
-        ));
+      for (final record in records) {
+        final scene = _normalizeScene(record['scene']);
+        final question = _text(record['question']);
+        final answer = _text(record['answer']);
+        final createdAt = _date(record['createdAt']);
+        if (question.isNotEmpty) {
+          list.add(_ChatMessage(
+            fromUser: true,
+            text: question,
+            scene: scene,
+            createdAt: createdAt,
+          ));
+        }
+        if (answer.isNotEmpty) {
+          list.add(_ChatMessage(
+            fromUser: false,
+            text: answer,
+            scene: scene,
+            createdAt: createdAt,
+          ));
+        }
       }
-      if (answer.isNotEmpty) {
-        list.add(_ChatMessage(
-          fromUser: false,
-          text: answer,
-          scene: scene,
-          createdAt: createdAt,
-        ));
-      }
+      final first = records.first;
+      final firstQuestion = _text(first['question']);
       setState(() {
-        _scene = scene;
-        _title = _truncate(question.isEmpty ? 'AI 对话' : question, 18);
+        _scene = _normalizeScene(first['scene']);
+        _title = _truncate(firstQuestion.isEmpty ? 'AI 对话' : firstQuestion, 18);
         _messages
           ..clear()
           ..addAll(list);
@@ -153,17 +158,18 @@ class _AiChatPageState extends State<AiChatPage> {
     _scrollToBottom();
 
     var buffer = '';
-    int? newRecordId;
+    int? newThreadId;
     try {
       final stream = ApiClient.stream('/ai/chat', {
         'scene': _scene.toLowerCase(),
         'question': question,
+        if (_threadId != null) 'threadId': _threadId,
         'stream': true,
       });
       await for (final chunk in stream) {
         final parsed = _jsonMap(chunk);
         if (parsed != null && parsed['recordId'] != null) {
-          newRecordId = _int(parsed['recordId']);
+          newThreadId = _int(parsed['threadId']);
           continue;
         }
         final delta = _deltaOf(chunk, parsed);
@@ -180,12 +186,16 @@ class _AiChatPageState extends State<AiChatPage> {
       setState(() {
         _messages[_messages.length - 1] =
             _messages.last.copyWith(streaming: false);
-        if (widget.threadId == null && question.isNotEmpty) {
+        if (_threadId == null && question.isNotEmpty) {
           _title = _truncate(question, 18);
         }
       });
-      if (widget.threadId == null && newRecordId != null && mounted) {
-        context.go('/ai/chat/$newRecordId');
+      if (_threadId == null &&
+          newThreadId != null &&
+          newThreadId > 0 &&
+          mounted) {
+        _threadId = newThreadId;
+        context.go('/ai/chat/$newThreadId');
       }
     } catch (e) {
       if (!mounted) return;
@@ -324,6 +334,15 @@ class _AiChatPageState extends State<AiChatPage> {
       final data = await ApiClient.upload('/ai/image/detect', bytes, image.name)
           as Map<String, dynamic>;
       final result = _detectResultOf(data);
+      final saved = await ApiClient.post('/ai/qa/records/detect', body: {
+        if (_threadId != null) 'threadId': _threadId,
+        'question': '请识别这张图片',
+        'answer': result.summaryText,
+        'imageUrl': _text(data['imageUrl']),
+        'modelUsed': _text(data['modelUsed'], fallback: 'platform-vision'),
+        'detect': result.toJson(),
+      }) as Map<String, dynamic>;
+      final savedThreadId = _int(saved['threadId']);
       if (!mounted) return;
       setState(() {
         _messages[_messages.length - 1] = _ChatMessage(
@@ -334,6 +353,10 @@ class _AiChatPageState extends State<AiChatPage> {
         );
       });
       _scrollToBottom();
+      if (_threadId == null && savedThreadId > 0 && mounted) {
+        _threadId = savedThreadId;
+        context.go('/ai/chat/$savedThreadId');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -968,6 +991,13 @@ class _DetectResult {
     required this.advice,
     required this.mode,
   });
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'confidence': confidence,
+        'advice': advice,
+        'mode': mode,
+      };
 
   String get summaryText {
     final confidenceText = '可信度 ${(confidence * 100).round()}%';
