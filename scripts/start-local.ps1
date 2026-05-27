@@ -7,6 +7,11 @@ param(
   [switch]$SkipMobile
 )
 
+# Force UTF-8 console output for Chinese log compatibility.
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+chcp 65001 > $null
+
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 $BackendDir = Join-Path $Root 'backend'

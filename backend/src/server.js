@@ -2,6 +2,16 @@ import app from './app.js'
 import { prisma } from './db.js'
 import { config } from './config/index.js'
 
+// Windows terminals can default to GBK; keep startup logs UTF-8 when possible.
+if (process.platform === 'win32') {
+  try {
+    process.stdout.setDefaultEncoding?.('utf8')
+    process.stderr.setDefaultEncoding?.('utf8')
+  } catch {
+    // Keep the default stream behavior if the runtime does not support it.
+  }
+}
+
 const PORT = config.port
 
 async function checkOllama() {
