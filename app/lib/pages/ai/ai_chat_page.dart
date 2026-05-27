@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
@@ -9,20 +10,29 @@ import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../widgets/common.dart';
 
-class AiPage extends StatefulWidget {
-  const AiPage({super.key});
+class AiChatPage extends StatefulWidget {
+  final int? threadId;
+  final String initialScene;
+
+  const AiChatPage({
+    super.key,
+    this.threadId,
+    this.initialScene = 'GENERAL',
+  });
 
   @override
-  State<AiPage> createState() => _AiPageState();
+  State<AiChatPage> createState() => _AiChatPageState();
 }
 
-class _AiPageState extends State<AiPage> {
+class _AiChatPageState extends State<AiChatPage> {
   final _input = TextEditingController();
+  final _inputFocus = FocusNode();
   final _picker = ImagePicker();
   final _scrollCtrl = ScrollController();
 
   final List<_ChatMessage> _messages = [];
-  String _scene = 'GENERAL';
+  late String _scene;
+  String _title = '新对话';
   bool _loadingHistory = true;
   bool _sending = false;
   bool _detecting = false;
@@ -30,66 +40,95 @@ class _AiPageState extends State<AiPage> {
   @override
   void initState() {
     super.initState();
+    _scene = _normalizeScene(widget.initialScene);
     _loadHistory();
   }
 
   @override
   void dispose() {
     _input.dispose();
+    _inputFocus.dispose();
     _scrollCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _loadHistory() async {
-    try {
-      final data = await ApiClient.get('/ai/qa/records',
-          query: {'pageNum': 1, 'pageSize': 20});
-      final page = _map(data);
-      final records = _list(page['records']);
-      final list = <_ChatMessage>[];
-      for (final record in records.reversed) {
-        final scene = _normalizeScene(record['scene']);
-        final createdAt = _date(record['createdAt']);
-        final question = _text(record['question']);
-        final answer = _text(record['answer']);
-        if (question.isNotEmpty) {
-          list.add(_ChatMessage(
-            fromUser: true,
-            text: question,
-            scene: scene,
-            createdAt: createdAt,
-          ));
-        }
-        if (answer.isNotEmpty) {
-          list.add(_ChatMessage(
-            fromUser: false,
-            text: answer,
-            scene: scene,
-            createdAt: createdAt,
-          ));
-        }
-      }
+    if (widget.threadId == null) {
       if (!mounted) return;
       setState(() {
+        _title = '新对话 · ${_sceneLabel(_scene)}';
+        _loadingHistory = false;
+      });
+      _requestInputFocus();
+      return;
+    }
+
+    try {
+      final data = await ApiClient.get('/ai/qa/records', query: {
+        'pageNum': 1,
+        'pageSize': 100,
+      });
+      final record = _recordsOf(data)
+          .where((item) => _int(item['id']) == widget.threadId)
+          .cast<Map<String, dynamic>?>()
+          .firstWhere((item) => item != null, orElse: () => null);
+      if (!mounted) return;
+      if (record == null) {
+        setState(() {
+          _loadingHistory = false;
+          _messages.add(_ChatMessage(
+            fromUser: false,
+            text: '这条对话暂时不可用，请返回列表重新选择。',
+            scene: _scene,
+          ));
+        });
+        _requestInputFocus();
+        return;
+      }
+
+      final scene = _normalizeScene(record['scene']);
+      final question = _text(record['question']);
+      final answer = _text(record['answer']);
+      final createdAt = _date(record['createdAt']);
+      final list = <_ChatMessage>[];
+      if (question.isNotEmpty) {
+        list.add(_ChatMessage(
+          fromUser: true,
+          text: question,
+          scene: scene,
+          createdAt: createdAt,
+        ));
+      }
+      if (answer.isNotEmpty) {
+        list.add(_ChatMessage(
+          fromUser: false,
+          text: answer,
+          scene: scene,
+          createdAt: createdAt,
+        ));
+      }
+      setState(() {
+        _scene = scene;
+        _title = _truncate(question.isEmpty ? 'AI 对话' : question, 18);
         _messages
           ..clear()
           ..addAll(list);
         _loadingHistory = false;
       });
       _scrollToBottom();
+      _requestInputFocus();
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loadingHistory = false;
-        if (_messages.isEmpty) {
-          _messages.add(_ChatMessage(
-            fromUser: false,
-            text: '您好，我是您的智能农技助手。可以问我政策、农技、病虫害、行情等问题，也可以点击「+」上传图片让我识别。',
-            scene: _scene,
-          ));
-        }
+        _messages.add(_ChatMessage(
+          fromUser: false,
+          text: '您好，我是您的智能农技助手。可以问我政策、农技、病虫害、行情等问题，也可以点击「+」上传图片让我识别。',
+          scene: _scene,
+        ));
       });
       _scrollToBottom();
+      _requestInputFocus();
     }
   }
 
@@ -114,6 +153,7 @@ class _AiPageState extends State<AiPage> {
     _scrollToBottom();
 
     var buffer = '';
+    int? newRecordId;
     try {
       final stream = ApiClient.stream('/ai/chat', {
         'scene': _scene.toLowerCase(),
@@ -121,7 +161,12 @@ class _AiPageState extends State<AiPage> {
         'stream': true,
       });
       await for (final chunk in stream) {
-        final delta = _deltaOf(chunk);
+        final parsed = _jsonMap(chunk);
+        if (parsed != null && parsed['recordId'] != null) {
+          newRecordId = _int(parsed['recordId']);
+          continue;
+        }
+        final delta = _deltaOf(chunk, parsed);
         if (delta.isEmpty) continue;
         buffer += delta;
         if (!mounted) return;
@@ -135,7 +180,13 @@ class _AiPageState extends State<AiPage> {
       setState(() {
         _messages[_messages.length - 1] =
             _messages.last.copyWith(streaming: false);
+        if (widget.threadId == null && question.isNotEmpty) {
+          _title = _truncate(question, 18);
+        }
       });
+      if (widget.threadId == null && newRecordId != null && mounted) {
+        context.go('/ai/chat/$newRecordId');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -147,7 +198,44 @@ class _AiPageState extends State<AiPage> {
       });
       toast(context, actionErrorMessage('问答', e), error: true);
     } finally {
-      if (mounted) setState(() => _sending = false);
+      if (mounted) {
+        setState(() => _sending = false);
+        _requestInputFocus();
+      }
+    }
+  }
+
+  Future<void> _deleteCurrentThread() async {
+    final id = widget.threadId;
+    if (id == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除此对话'),
+        content: const Text('确定删除这条 AI 对话吗？此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              '删除',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiClient.delete('/ai/qa/records/$id');
+      if (!mounted) return;
+      toast(context, '已删除此对话');
+      context.go('/ai');
+    } catch (e) {
+      if (mounted) toast(context, actionErrorMessage('删除', e), error: true);
     }
   }
 
@@ -209,7 +297,10 @@ class _AiPageState extends State<AiPage> {
     if (_detecting || _sending) return;
     try {
       final image = await _picker.pickImage(
-          source: source, imageQuality: 82, maxWidth: 1600);
+        source: source,
+        imageQuality: 82,
+        maxWidth: 1600,
+      );
       if (image == null) return;
       final bytes = await image.readAsBytes();
       if (!mounted) return;
@@ -254,8 +345,16 @@ class _AiPageState extends State<AiPage> {
       });
       toast(context, actionErrorMessage('识别', e), error: true);
     } finally {
-      if (mounted) setState(() => _detecting = false);
+      if (mounted) {
+        setState(() => _detecting = false);
+        _requestInputFocus();
+      }
     }
+  }
+
+  void _askFollowUp(String question) {
+    _input.text = question;
+    _send();
   }
 
   void _scrollToBottom() {
@@ -269,6 +368,12 @@ class _AiPageState extends State<AiPage> {
     });
   }
 
+  void _requestInputFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _inputFocus.requestFocus();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -277,22 +382,37 @@ class _AiPageState extends State<AiPage> {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        title: const Text(
-          'AI 农技助手',
-          style: TextStyle(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/ai'),
+        ),
+        title: Text(
+          _title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
             color: AppColors.primary,
             fontWeight: FontWeight.w700,
           ),
         ),
         actions: [
           IconButton(
-            tooltip: '清空对话',
-            icon: const Icon(Icons.delete_sweep_outlined,
-                color: AppColors.onSurfaceVariant),
-            onPressed: _messages.isEmpty
-                ? null
-                : () => setState(() => _messages.clear()),
+            tooltip: '历史记录',
+            icon: const Icon(Icons.history, color: AppColors.onSurfaceVariant),
+            onPressed: () => context.go('/ai'),
           ),
+          IconButton(
+            tooltip: '设置',
+            icon: const Icon(Icons.tune_rounded,
+                color: AppColors.onSurfaceVariant),
+            onPressed: () => toast(context, 'AI 服务偏好已采用默认配置'),
+          ),
+          if (widget.threadId != null)
+            IconButton(
+              tooltip: '删除此对话',
+              icon: const Icon(Icons.delete_outline, color: AppColors.error),
+              onPressed: _deleteCurrentThread,
+            ),
         ],
       ),
       body: Column(
@@ -302,8 +422,10 @@ class _AiPageState extends State<AiPage> {
             child: _loadingHistory
                 ? const Loading(text: '加载对话历史')
                 : _messages.isEmpty
-                    ? const EmptyView('和 AI 农技助手聊聊吧',
-                        icon: Icons.smart_toy_outlined)
+                    ? const EmptyView(
+                        '和 AI 农技助手聊聊吧',
+                        icon: Icons.smart_toy_outlined,
+                      )
                     : ListView.builder(
                         controller: _scrollCtrl,
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -378,6 +500,7 @@ class _AiPageState extends State<AiPage> {
             Expanded(
               child: TextField(
                 controller: _input,
+                focusNode: _inputFocus,
                 minLines: 1,
                 maxLines: 4,
                 enabled: !_sending,
@@ -385,7 +508,7 @@ class _AiPageState extends State<AiPage> {
                 onSubmitted: (_) => _send(),
                 decoration: InputDecoration(
                   hintText: _scene == 'GENERAL'
-                      ? '向 AI 助手提问...'
+                      ? '描述问题或症状...'
                       : '在「${_sceneLabel(_scene)}」场景下提问...',
                   isDense: true,
                   contentPadding:
@@ -449,60 +572,160 @@ class _AiPageState extends State<AiPage> {
         ),
         const SizedBox(width: 8),
         Flexible(
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceLow,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        msg.text.isEmpty ? ' ' : msg.text,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          height: 1.6,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                    ),
-                    if (msg.streaming) ...[
-                      const SizedBox(width: 4),
-                      const _StreamingCursor(),
-                    ],
-                  ],
-                ),
-                if (msg.detect != null) ...[
-                  const SizedBox(height: 10),
-                  _resultChip(
-                    '${msg.detect!.mode} · 可信度 ${(msg.detect!.confidence * 100).round()}%',
-                    AppColors.primary,
-                    AppColors.primaryContainer.withValues(alpha: 0.14),
+          child: msg.detect == null
+              ? _textBotBubble(msg)
+              : _detectReportCard(msg.detect!),
+        ),
+      ],
+    );
+  }
+
+  Widget _textBotBubble(_ChatMessage msg) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceLow,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(4),
+          topRight: Radius.circular(16),
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Flexible(
+                child: Text(
+                  msg.text.isEmpty ? ' ' : msg.text,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: AppColors.onSurface,
                   ),
-                ],
-                const SizedBox(height: 8),
+                ),
+              ),
+              if (msg.streaming) ...[
+                const SizedBox(width: 4),
+                const _StreamingCursor(),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _time(msg.createdAt),
+            style: const TextStyle(color: AppColors.outline, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detectReportCard(_DetectResult result) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.md),
+        border: Border.all(color: AppColors.primary, width: 1.5),
+        boxShadow: AppColors.ambientShadow,
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.verified, color: AppColors.primary, size: 18),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '智能植保诊断报告',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              StatusChip('VERIFIED', color: AppColors.primary),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryContainer.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(R.sm),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    result.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                ),
                 Text(
-                  _time(msg.createdAt),
-                  style:
-                      const TextStyle(color: AppColors.outline, fontSize: 11),
+                  '${(result.confidence * 100).toStringAsFixed(1)}%',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 10),
+          Text(
+            result.advice.isEmpty ? '识别完成，建议结合田间情况复核。' : result.advice,
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.5,
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '推荐防治方案',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _askFollowUp(
+                '请为「${result.name}」生成定制化的施药建议，包括剂量、时机和注意事项。',
+              ),
+              icon: const Icon(Icons.water_drop_outlined, size: 16),
+              label: const Text('生成定制化施药建议'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => context.go('/machinery/service'),
+              icon: const Icon(Icons.local_phone_outlined, size: 16),
+              label: const Text('呼叫周边植保服务'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -573,23 +796,10 @@ class _AiPageState extends State<AiPage> {
     );
   }
 
-  Widget _resultChip(String text, Color fg, Color bg) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: fg),
-        ),
-      );
-
   _DetectResult _detectResultOf(Map<String, dynamic> data) {
     final nested = data['result'];
-    final result = nested is Map ? nested.cast<String, dynamic>() : data;
+    final result =
+        nested is Map ? nested.map((k, v) => MapEntry('$k', v)) : data;
     final name = _text(
       result['resultLabel'] ?? result['name'],
       fallback: '未识别',
@@ -605,16 +815,18 @@ class _AiPageState extends State<AiPage> {
     );
   }
 
-  String _deltaOf(String chunk) {
+  String _deltaOf(String chunk, Map<String, dynamic>? parsed) {
+    final map = parsed ?? _jsonMap(chunk);
+    if (map != null && map['delta'] is String) return map['delta'] as String;
+    return '';
+  }
+
+  Map<String, dynamic>? _jsonMap(String chunk) {
     try {
       final parsed = jsonDecode(chunk);
-      if (parsed is Map && parsed['delta'] is String) {
-        return parsed['delta'] as String;
-      }
-      return '';
-    } catch (_) {
-      return chunk;
-    }
+      if (parsed is Map) return parsed.map((k, v) => MapEntry('$k', v));
+    } catch (_) {}
+    return null;
   }
 
   String _sceneLabel(String scene) {
@@ -636,20 +848,24 @@ class _AiPageState extends State<AiPage> {
     return 'GENERAL';
   }
 
-  static Map<String, dynamic> _map(dynamic value) {
-    if (value is Map) return value.map((k, v) => MapEntry('$k', v));
-    return {};
-  }
-
-  static List<Map<String, dynamic>> _list(dynamic value) {
-    if (value is List) {
-      return value.whereType<Map>().map((item) => _map(item)).toList();
+  static List<Map<String, dynamic>> _recordsOf(dynamic value) {
+    final map = value is Map ? value.map((k, v) => MapEntry('$k', v)) : {};
+    final records = map['records'];
+    if (records is List) {
+      return records
+          .whereType<Map>()
+          .map((item) => item.map((k, v) => MapEntry('$k', v)))
+          .toList();
     }
     return [];
   }
 
-  static DateTime _date(dynamic value) {
-    return DateTime.tryParse(_text(value)) ?? DateTime.now();
+  static DateTime _date(dynamic value) =>
+      DateTime.tryParse(_text(value)) ?? DateTime.now();
+
+  static int _int(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse('$value') ?? 0;
   }
 
   static double _double(dynamic value) {
@@ -661,6 +877,9 @@ class _AiPageState extends State<AiPage> {
     final text = '${value ?? ''}'.trim();
     return text.isEmpty || text == 'null' ? fallback : text;
   }
+
+  static String _truncate(String value, int length) =>
+      value.length <= length ? value : '${value.substring(0, length)}...';
 
   static String _time(DateTime value) => DateFormat('HH:mm').format(value);
 }

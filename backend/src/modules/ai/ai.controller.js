@@ -166,6 +166,29 @@ export async function qaRecords(req, res) {
   okPage(res, { records, total, pageNum, pageSize })
 }
 
+/** 清空当前用户所有 AI 问答记录 */
+export async function qaClearAll(req, res) {
+  const result = await prisma.aiQaRecord.deleteMany({
+    where: { userId: req.user.id },
+  })
+  ok(res, { deleted: result.count }, '已清空 AI 对话历史')
+}
+
+/** 删除单条 AI 问答记录 */
+export async function qaRemove(req, res) {
+  const id = Number(req.params.id)
+  if (!id) throw errors.param('记录 ID 不合法')
+
+  const exist = await prisma.aiQaRecord.findUnique({ where: { id } })
+  if (!exist) throw errors.notFound('记录不存在')
+  if (exist.userId !== req.user.id && req.user.role !== 'ADMIN') {
+    throw errors.forbidden('无权删除他人的对话')
+  }
+
+  await prisma.aiQaRecord.delete({ where: { id } })
+  ok(res, { id }, '已删除')
+}
+
 /** 语音识别：支持上传音频，也支持直接传 text。 */
 export async function voiceRecognize(req, res) {
   const text = String(req.body.text || req.body.transcript || '').trim()

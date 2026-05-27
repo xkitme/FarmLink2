@@ -19,6 +19,8 @@ router.post('/ai/agri/ask', wrap(ai.agriAsk))
 router.post('/ai/legal/ask', wrap(ai.legalAsk))
 router.get('/ai/kb/search', wrap(ai.kbSearch))
 router.get('/ai/qa/records', wrap(ai.qaRecords))
+router.delete('/ai/qa/records', wrap(ai.qaClearAll))
+router.delete('/ai/qa/records/:id', wrap(ai.qaRemove))
 
 // ── 语音与图像 ──────────────────────────────
 router.post('/ai/voice/recognize', upload.single('audio'), wrap(ai.voiceRecognize))

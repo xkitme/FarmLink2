@@ -6,7 +6,8 @@ import '../pages/auth/login_page.dart';
 import '../pages/auth/register_page.dart';
 import '../pages/home/shell_page.dart';
 import '../pages/home/home_page.dart';
-import '../pages/ai/ai_page.dart';
+import '../pages/ai/ai_chat_page.dart';
+import '../pages/ai/ai_threads_page.dart';
 import '../pages/market/market_page.dart';
 import '../pages/machinery/machinery_page.dart';
 import '../pages/disaster/disaster_page.dart';
@@ -61,7 +62,20 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
           builder: (ctx, state, child) => ShellPage(child: child),
           routes: [
             GoRoute(path: '/home', builder: (_, __) => const HomePage()),
-            GoRoute(path: '/ai', builder: (_, __) => const AiPage()),
+            GoRoute(path: '/ai', builder: (_, __) => const AiThreadsPage()),
+            GoRoute(
+              path: '/ai/chat/new',
+              builder: (_, state) => AiChatPage(
+                initialScene: state.uri.queryParameters['scene'] ?? 'GENERAL',
+              ),
+            ),
+            GoRoute(
+              path: '/ai/chat/:id',
+              builder: (_, state) {
+                final id = int.tryParse(state.pathParameters['id'] ?? '');
+                return AiChatPage(threadId: id);
+              },
+            ),
             GoRoute(path: '/market', builder: (_, __) => const MarketPage()),
             GoRoute(
                 path: '/machinery', builder: (_, __) => const MachineryPage()),
