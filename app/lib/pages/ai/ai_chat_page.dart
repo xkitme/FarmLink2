@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -160,19 +159,25 @@ class _AiChatPageState extends State<AiChatPage> {
     var buffer = '';
     int? newThreadId;
     try {
-      final stream = ApiClient.stream('/ai/chat', {
+      final body = {
         'scene': _scene.toLowerCase(),
         'question': question,
         if (_threadId != null) 'threadId': _threadId,
         'stream': true,
-      });
-      await for (final chunk in stream) {
-        final parsed = _jsonMap(chunk);
-        if (parsed != null && parsed['recordId'] != null) {
-          newThreadId = _int(parsed['threadId']);
-          continue;
+      };
+      await for (final event in ApiClient.streamEvents('/ai/chat', body)) {
+        if (event.type == 'done') {
+          final data = event.data;
+          if (data is Map) newThreadId = _int(data['threadId']);
+          break;
         }
-        final delta = _deltaOf(chunk, parsed);
+        if (event.type != 'message') continue;
+        final data = event.data;
+        final delta = data is Map && data['delta'] is String
+            ? data['delta'] as String
+            : data is String
+                ? data
+                : '';
         if (delta.isEmpty) continue;
         buffer += delta;
         if (!mounted) return;
@@ -836,20 +841,6 @@ class _AiChatPageState extends State<AiChatPage> {
       advice: advice,
       mode: mode,
     );
-  }
-
-  String _deltaOf(String chunk, Map<String, dynamic>? parsed) {
-    final map = parsed ?? _jsonMap(chunk);
-    if (map != null && map['delta'] is String) return map['delta'] as String;
-    return '';
-  }
-
-  Map<String, dynamic>? _jsonMap(String chunk) {
-    try {
-      final parsed = jsonDecode(chunk);
-      if (parsed is Map) return parsed.map((k, v) => MapEntry('$k', v));
-    } catch (_) {}
-    return null;
   }
 
   String _sceneLabel(String scene) {

@@ -1,6 +1,7 @@
 import app from './app.js'
 import { prisma } from './db.js'
 import { config } from './config/index.js'
+import { cleanDefaultPwdChangedAt } from './startup/clean-default-pwd-changed-at.js'
 import { migrateThreadIds } from './startup/migrate-thread-id.js'
 
 // Windows terminals can default to GBK; keep startup logs UTF-8 when possible.
@@ -29,6 +30,11 @@ async function checkOllama() {
 async function bootstrap() {
   await prisma.$connect()
   console.log('✓ SQLite 数据库已连接')
+
+  const cleanedPwdChangedAt = await cleanDefaultPwdChangedAt()
+  if (cleanedPwdChangedAt > 0) {
+    console.log(`✓ 清理 ${cleanedPwdChangedAt} 条 48a 残留 passwordChangedAt`)
+  }
 
   const migratedThreadIds = await migrateThreadIds()
   if (migratedThreadIds > 0) {

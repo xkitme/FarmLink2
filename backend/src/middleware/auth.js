@@ -22,7 +22,7 @@ function extractToken(req) {
 
 function tokenChangedBeforePassword(decoded, user) {
   if (!user.passwordChangedAt || !decoded.iat) return false
-  return decoded.iat * 1000 < user.passwordChangedAt.getTime() - 1000
+  return decoded.iat * 1000 < user.passwordChangedAt.getTime()
 }
 
 function tokenPasswordSnapshotStale(decoded, user) {

@@ -13,6 +13,13 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+class SseEvent {
+  final String type;
+  final dynamic data;
+
+  const SseEvent({required this.type, this.data});
+}
+
 /// 统一 HTTP 客户端，对接服务端 `{ code, msg, data }` 响应格式。
 class ApiClient {
   static String baseUrl = kBaseUrl;
@@ -74,20 +81,92 @@ class ApiClient {
     return _parse(await http.Response.fromStream(streamed));
   }
 
-  /// SSE 流式（AI 对话）
-  static Stream<String> stream(String path, Map<String, dynamic> body) async* {
+  static Stream<SseEvent> streamEvents(
+      String path, Map<String, dynamic> body) async* {
     final req = http.Request('POST', _uri(path))
       ..headers.addAll(_headers)
       ..body = jsonEncode(body);
     final res = await req.send().timeout(const Duration(seconds: 12));
     if (res.statusCode != 200) throw ApiException(res.statusCode, '请求失败');
+
+    var buffer = '';
+    var eventName = 'message';
+    final dataLines = <String>[];
+
+    SseEvent? flushEvent() {
+      if (dataLines.isEmpty) {
+        eventName = 'message';
+        return null;
+      }
+      final raw = dataLines.join('\n');
+      dataLines.clear();
+      final type = eventName;
+      eventName = 'message';
+      if (raw == '[DONE]') return const SseEvent(type: 'done', data: '[DONE]');
+      dynamic parsed;
+      try {
+        parsed = jsonDecode(raw);
+      } catch (_) {
+        parsed = raw;
+      }
+      return SseEvent(type: type, data: parsed);
+    }
+
+    SseEvent? handleLine(String rawLine) {
+      var line = rawLine;
+      if (line.endsWith('\r')) {
+        line = line.substring(0, line.length - 1);
+      }
+      if (line.isEmpty) return flushEvent();
+      if (line.startsWith(':')) return null;
+
+      final separator = line.indexOf(':');
+      final field = separator >= 0 ? line.substring(0, separator) : line;
+      var value = separator >= 0 ? line.substring(separator + 1) : '';
+      if (value.startsWith(' ')) value = value.substring(1);
+
+      if (field == 'event') {
+        eventName = value.trim().isEmpty ? 'message' : value.trim();
+      } else if (field == 'data') {
+        dataLines.add(value);
+      }
+      return null;
+    }
+
     await for (final chunk in res.stream.transform(utf8.decoder)) {
-      for (final line in chunk.split('\n')) {
-        if (line.startsWith('data: ')) {
-          final d = line.substring(6).trim();
-          if (d == '[DONE]') return;
-          yield d;
-        }
+      buffer += chunk;
+      while (true) {
+        final idx = buffer.indexOf('\n');
+        if (idx < 0) break;
+        final event = handleLine(buffer.substring(0, idx));
+        buffer = buffer.substring(idx + 1);
+        if (event == null) continue;
+        if (event.data == '[DONE]') return;
+        yield event;
+      }
+    }
+
+    if (buffer.isNotEmpty) {
+      final event = handleLine(buffer);
+      if (event != null) {
+        if (event.data == '[DONE]') return;
+        yield event;
+      }
+    }
+    final tailEvent = flushEvent();
+    if (tailEvent != null && tailEvent.data != '[DONE]') yield tailEvent;
+  }
+
+  /// SSE 流式（AI 对话），保留旧调用方的 delta 字符串接口。
+  static Stream<String> stream(String path, Map<String, dynamic> body) async* {
+    await for (final event in streamEvents(path, body)) {
+      if (event.type == 'done') return;
+      if (event.type != 'message') continue;
+      final data = event.data;
+      if (data is Map && data['delta'] is String) {
+        yield data['delta'] as String;
+      } else if (data is String) {
+        yield data;
       }
     }
   }
