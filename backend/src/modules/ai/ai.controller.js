@@ -235,10 +235,14 @@ export async function qaRecords(req, res) {
 export async function qaThreadRecords(req, res) {
   const threadId = threadIdOf(req.params.threadId)
   if (!threadId) throw errors.param('threadId 不合法')
+  const baseWhere = req.user.role === 'ADMIN' ? {} : { userId: req.user.id }
   const records = await prisma.aiQaRecord.findMany({
     where: {
-      threadId,
-      ...(req.user.role === 'ADMIN' ? {} : { userId: req.user.id }),
+      ...baseWhere,
+      OR: [
+        { threadId },
+        { id: threadId, threadId: null },
+      ],
     },
     orderBy: { createdAt: 'asc' },
   })
@@ -257,24 +261,29 @@ export async function qaClearAll(req, res) {
 /** 删除单条 AI 问答记录 */
 export async function qaRemove(req, res) {
   const id = Number(req.params.id)
-  if (!id) throw errors.param('记录 ID 不合法')
+  if (!Number.isInteger(id) || id <= 0) throw errors.param('记录 ID 不合法')
 
+  const baseWhere = req.user.role === 'ADMIN' ? {} : { userId: req.user.id }
   const exist = await prisma.aiQaRecord.findFirst({
     where: {
+      ...baseWhere,
       OR: [{ id }, { threadId: id }],
-      ...(req.user.role === 'ADMIN' ? {} : { userId: req.user.id }),
     },
   })
   if (!exist) throw errors.notFound('记录不存在')
 
-  const threadId = exist.threadId || exist.id
-  const result = await prisma.aiQaRecord.deleteMany({
-    where: {
-      threadId,
-      ...(req.user.role === 'ADMIN' ? {} : { userId: req.user.id }),
-    },
-  })
-  ok(res, { id, threadId, deleted: result.count }, '已删除')
+  const result = exist.threadId != null
+    ? await prisma.aiQaRecord.deleteMany({
+      where: { ...baseWhere, threadId: exist.threadId },
+    })
+    : await prisma.aiQaRecord.deleteMany({
+      where: {
+        ...baseWhere,
+        OR: [{ id: exist.id }, { threadId: exist.id }],
+      },
+    })
+  if (result.count === 0) throw errors.notFound('未找到要删除的记录')
+  ok(res, { id, threadId: exist.threadId || exist.id, deleted: result.count }, `已删除 ${result.count} 条`)
 }
 
 /** 持久化图像识别摘要到当前 AI 会话 */

@@ -26,7 +26,7 @@ model User {
   username          String    @unique
   nickname          String?
   passwordHash      String
-  passwordChangedAt DateTime  @default(now())
+  passwordChangedAt DateTime?
   phone             String?   @unique
   avatarUrl         String?
   role              String    @default("FARMER") // FARMER/BIGFARMER/VILLAGE/EXPERT/MERCHANT/ADMIN

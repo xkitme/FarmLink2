@@ -26,10 +26,11 @@ function tokenChangedBeforePassword(decoded, user) {
 }
 
 function tokenPasswordSnapshotStale(decoded, user) {
-  if (!user.passwordChangedAt || decoded.pwdAt === undefined || decoded.pwdAt === null) {
-    return tokenChangedBeforePassword(decoded, user)
+  if (!user.passwordChangedAt) return false
+  if (decoded.pwdAt !== undefined) {
+    return Number(decoded.pwdAt) !== user.passwordChangedAt.getTime()
   }
-  return Number(decoded.pwdAt) !== user.passwordChangedAt.getTime()
+  return tokenChangedBeforePassword(decoded, user)
 }
 
 /** 校验 JWT 并确保签发时间晚于最近一次改密时间 */
