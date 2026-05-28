@@ -2,25 +2,15 @@ import { prisma } from '../db.js'
 
 export async function migrateThreadIds() {
   try {
-    const rows = await prisma.aiQaRecord.findMany({
+    const pending = await prisma.aiQaRecord.count({
       where: { threadId: null },
-      select: { id: true },
     })
-    if (!rows.length) return 0
+    if (pending === 0) return 0
 
-    let success = 0
-    for (const row of rows) {
-      try {
-        await prisma.aiQaRecord.update({
-          where: { id: row.id },
-          data: { threadId: row.id },
-        })
-        success++
-      } catch (e) {
-        console.warn(`迁移 AI 记录 ${row.id} threadId 失败: ${e.message}`)
-      }
-    }
-    return success
+    const result = await prisma.$executeRawUnsafe(
+      'UPDATE t_ai_qa_record SET threadId = id WHERE threadId IS NULL',
+    )
+    return Number(result || pending)
   } catch (e) {
     console.warn('迁移 AI 记录 threadId 启动钩子失败:', e.message)
     return 0

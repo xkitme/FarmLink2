@@ -561,43 +561,7 @@ class _LifePageState extends State<LifePage> {
     }
     return Column(
       children: [
-        for (final s in _secondhand.take(3))
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              child: Row(
-                children: [
-                  _iconBox(Icons.inventory_2_outlined, AppColors.secondary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${s['title'] ?? '二手物品'}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 3),
-                        Text(
-                            '${s['category'] ?? '其他'} · ${s['description'] ?? ''}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.onSurfaceVariant)),
-                      ],
-                    ),
-                  ),
-                  Text('¥${s['price'] ?? 0}',
-                      style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700)),
-                ],
-              ),
-            ),
-          ),
+        for (final s in _secondhand.take(3)) _secondhandCard(s),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -608,6 +572,53 @@ class _LifePageState extends State<LifePage> {
         ),
       ],
     );
+  }
+
+  Widget _secondhandCard(Map<String, dynamic> item) {
+    final price = _priceOf(item['price']);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AppCard(
+        child: Row(
+          children: [
+            _iconBox(Icons.inventory_2_outlined, AppColors.secondary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${item['title'] ?? '二手物品'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 3),
+                  Text(
+                      '${item['category'] ?? '其他'} · ${item['description'] ?? ''}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.onSurfaceVariant)),
+                ],
+              ),
+            ),
+            Text(
+              price <= 0 ? '免费共享' : '￥${price.toStringAsFixed(2)}',
+              style: TextStyle(
+                color: price <= 0 ? AppColors.primary : AppColors.error,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _priceOf(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse('$value') ?? 0;
   }
 
   Widget _cultureAndEnv() {

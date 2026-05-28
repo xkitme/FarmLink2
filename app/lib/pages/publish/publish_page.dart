@@ -332,6 +332,7 @@ class _PublishPageState extends State<PublishPage> {
     final titleC = TextEditingController();
     final contentC = TextEditingController();
     final phoneC = TextEditingController();
+    final priceC = TextEditingController();
     var type = '互助求助';
     const types = [..._helpPublishTypes, ..._secondhandPublishTypes];
 
@@ -434,6 +435,19 @@ class _PublishPageState extends State<PublishPage> {
                 decoration:
                     const InputDecoration(labelText: '联系电话（选填）', filled: true),
               ),
+              if (type == '二手交易') ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceC,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: '售价（元）',
+                    hintText: '例如 80.00',
+                    filled: true,
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -442,6 +456,11 @@ class _PublishPageState extends State<PublishPage> {
                   onPressed: () {
                     if (titleC.text.trim().isEmpty) {
                       toast(ctx, '请填写标题', error: true);
+                      return;
+                    }
+                    if (type == '二手交易' &&
+                        (double.tryParse(priceC.text.trim()) ?? 0) <= 0) {
+                      toast(ctx, '请填写售价', error: true);
                       return;
                     }
                     Navigator.pop(sheetCtx, true);
@@ -455,12 +474,26 @@ class _PublishPageState extends State<PublishPage> {
       ),
     );
 
-    if (ok != true || !mounted) return;
+    if (ok != true || !mounted) {
+      titleC.dispose();
+      contentC.dispose();
+      phoneC.dispose();
+      priceC.dispose();
+      return;
+    }
+    final title = titleC.text.trim();
+    final content = contentC.text.trim();
+    final phone = phoneC.text.trim();
+    final price = type == '二手交易' ? double.tryParse(priceC.text.trim()) ?? 0 : 0;
+    titleC.dispose();
+    contentC.dispose();
+    phoneC.dispose();
+    priceC.dispose();
     final payload = <String, dynamic>{
       'type': type,
-      'title': titleC.text.trim(),
-      'content': contentC.text.trim(),
-      'contactPhone': phoneC.text.trim(),
+      'title': title,
+      'content': content,
+      'contactPhone': phone,
     };
     final isSecondhand = _secondhandPublishTypes.contains(type);
     final postPath = isSecondhand ? '/life/secondhand' : '/life/help';
@@ -470,8 +503,8 @@ class _PublishPageState extends State<PublishPage> {
           ? {
               'title': payload['title'],
               'description': payload['content'],
-              'category': type == '闲置共享' ? 'SHARE' : 'SELL',
-              'price': 0,
+              'category': type,
+              'price': price,
               'contactPhone': payload['contactPhone'],
             }
           : payload),
@@ -501,7 +534,7 @@ class _PublishPageState extends State<PublishPage> {
   }
 
   String _contentLabel(String type) {
-    if (type == '二手交易') return '物品成色 / 价格 / 取货地点';
+    if (type == '二手交易') return '物品成色 / 取货地点';
     if (type == '闲置共享') return '物品功能 / 借用规则';
     if (type == '失物招领') return '丢失时间 / 地点 / 特征';
     if (type == '招工') return '工作内容 / 时间 / 薪酬';

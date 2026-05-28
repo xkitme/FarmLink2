@@ -18,6 +18,43 @@ function threadIdOf(value) {
   return threadId
 }
 
+function numberOf(value) {
+  if (typeof value === 'bigint') return Number(value)
+  if (typeof value === 'number') return value
+  return Number(value || 0)
+}
+
+function dateOf(value) {
+  if (value instanceof Date) return value
+  if (typeof value === 'bigint' || typeof value === 'number') return new Date(Number(value))
+  if (typeof value === 'string' && /^\d+$/.test(value)) return new Date(Number(value))
+  return value || null
+}
+
+function qaBaseWhere(req) {
+  return req.user.role === 'ADMIN' ? {} : { userId: req.user.id }
+}
+
+function qaRawWhere(req) {
+  const clauses = []
+  const params = []
+  if (req.user.role !== 'ADMIN') {
+    clauses.push('userId = ?')
+    params.push(Number(req.user.id))
+  } else if (req.query.userId) {
+    clauses.push('userId = ?')
+    params.push(Number(req.query.userId))
+  }
+  if (req.query.scene) {
+    clauses.push('scene = ?')
+    params.push(String(req.query.scene).toUpperCase())
+  }
+  return {
+    whereSql: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '',
+    params,
+  }
+}
+
 async function resolveThreadId(req) {
   const threadId = threadIdOf(req.body.threadId ?? req.query.threadId)
   if (!threadId) return null
@@ -189,53 +226,68 @@ export async function kbSearch(req, res) {
 /** AI 问答记录 */
 export async function qaRecords(req, res) {
   const { pageNum, pageSize, skip, take } = pageParams(req.query)
-  const where = req.user.role === 'ADMIN' ? {} : { userId: req.user.id }
-  if (req.user.role === 'ADMIN' && req.query.userId) where.userId = Number(req.query.userId)
-  if (req.query.scene) where.scene = String(req.query.scene).toUpperCase()
-  const rows = await prisma.aiQaRecord.findMany({
-    where,
-    orderBy: { createdAt: 'asc' },
-    select: {
-      id: true,
-      userId: true,
-      threadId: true,
-      scene: true,
-      question: true,
-      answer: true,
-      modelUsed: true,
-      isOffline: true,
-      referencesJson: true,
-      createdAt: true,
-    },
-  })
-  const grouped = new Map()
-  for (const row of rows) {
-    const threadId = row.threadId || row.id
-    if (!grouped.has(threadId)) {
-      grouped.set(threadId, {
-        ...row,
-        threadId,
-        messageCount: 1,
-        lastMessageAt: row.createdAt,
-      })
-      continue
+  const { whereSql, params } = qaRawWhere(req)
+  const summaries = await prisma.$queryRawUnsafe(`
+    SELECT
+      COALESCE(threadId, id) AS threadId,
+      MIN(id) AS firstRecordId,
+      MIN(createdAt) AS firstCreatedAt,
+      MAX(createdAt) AS lastMessageAt,
+      COUNT(*) AS messageCount
+    FROM t_ai_qa_record
+    ${whereSql}
+    GROUP BY COALESCE(threadId, id)
+    ORDER BY MAX(createdAt) DESC
+    LIMIT ? OFFSET ?
+  `, ...params, take, skip)
+  const totalRows = await prisma.$queryRawUnsafe(`
+    SELECT COUNT(DISTINCT COALESCE(threadId, id)) AS total
+    FROM t_ai_qa_record
+    ${whereSql}
+  `, ...params)
+  const firstRecordIds = summaries.map((row) => numberOf(row.firstRecordId)).filter(Boolean)
+  const heads = firstRecordIds.length
+    ? await prisma.aiQaRecord.findMany({
+      where: { id: { in: firstRecordIds } },
+      select: {
+        id: true,
+        userId: true,
+        threadId: true,
+        scene: true,
+        question: true,
+        answer: true,
+        modelUsed: true,
+        isOffline: true,
+        referencesJson: true,
+        createdAt: true,
+      },
+    })
+    : []
+  const headMap = new Map(heads.map((row) => [row.id, row]))
+  const records = summaries.map((summary) => {
+    const firstRecordId = numberOf(summary.firstRecordId)
+    const head = headMap.get(firstRecordId)
+    return {
+      ...(head || {}),
+      id: firstRecordId,
+      threadId: numberOf(summary.threadId) || firstRecordId,
+      messageCount: numberOf(summary.messageCount) || 1,
+      lastMessageAt: dateOf(summary.lastMessageAt),
+      createdAt: head?.createdAt || dateOf(summary.firstCreatedAt),
+      scene: head?.scene || 'GENERAL',
+      question: head?.question || '',
+      answer: head?.answer || '',
+      referencesJson: head?.referencesJson || null,
     }
-    const group = grouped.get(threadId)
-    group.messageCount += 1
-    group.answer = row.answer || group.answer
-    group.lastMessageAt = row.createdAt
-  }
-  const records = [...grouped.values()]
-    .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt))
-    .slice(skip, skip + take)
-  okPage(res, { records, total: grouped.size, pageNum, pageSize })
+  })
+  okPage(res, { records, total: numberOf(totalRows[0]?.total), pageNum, pageSize })
 }
 
 /** 单个 AI 会话的全部问答记录 */
 export async function qaThreadRecords(req, res) {
   const threadId = threadIdOf(req.params.threadId)
   if (!threadId) throw errors.param('threadId 不合法')
-  const baseWhere = req.user.role === 'ADMIN' ? {} : { userId: req.user.id }
+  const baseWhere = qaBaseWhere(req)
   const records = await prisma.aiQaRecord.findMany({
     where: {
       ...baseWhere,
@@ -259,31 +311,39 @@ export async function qaClearAll(req, res) {
 }
 
 /** 删除单条 AI 问答记录 */
-export async function qaRemove(req, res) {
+export async function qaRemoveOne(req, res) {
   const id = Number(req.params.id)
   if (!Number.isInteger(id) || id <= 0) throw errors.param('记录 ID 不合法')
 
-  const baseWhere = req.user.role === 'ADMIN' ? {} : { userId: req.user.id }
-  const exist = await prisma.aiQaRecord.findFirst({
+  const result = await prisma.aiQaRecord.deleteMany({
+    where: { ...qaBaseWhere(req), id },
+  })
+  if (result.count === 0) throw errors.notFound('记录不存在')
+  ok(res, { id, deleted: result.count }, '已删除单条')
+}
+
+/** 删除整段 AI 对话 */
+export async function qaRemoveThread(req, res) {
+  const threadId = threadIdOf(req.params.threadId ?? req.params.id)
+  if (!threadId) throw errors.param('threadId 不合法')
+
+  const result = await prisma.aiQaRecord.deleteMany({
     where: {
-      ...baseWhere,
-      OR: [{ id }, { threadId: id }],
+      ...qaBaseWhere(req),
+      OR: [
+        { threadId },
+        { id: threadId, threadId: null },
+      ],
     },
   })
-  if (!exist) throw errors.notFound('记录不存在')
+  if (result.count === 0) throw errors.notFound('对话不存在')
+  ok(res, { threadId, deleted: result.count }, `已删除整段对话（${result.count} 条）`)
+}
 
-  const result = exist.threadId != null
-    ? await prisma.aiQaRecord.deleteMany({
-      where: { ...baseWhere, threadId: exist.threadId },
-    })
-    : await prisma.aiQaRecord.deleteMany({
-      where: {
-        ...baseWhere,
-        OR: [{ id: exist.id }, { threadId: exist.id }],
-      },
-    })
-  if (result.count === 0) throw errors.notFound('未找到要删除的记录')
-  ok(res, { id, threadId: exist.threadId || exist.id, deleted: result.count }, `已删除 ${result.count} 条`)
+/** 旧删除入口：保留为整段删除 alias，一段时间后移除。 */
+export async function qaRemove(req, res) {
+  console.warn(`[DEPRECATED] DELETE /ai/qa/records/:id 将保留为整段对话删除 alias，请改用 DELETE /ai/qa/threads/:threadId（user=${req.user.id}）`)
+  return qaRemoveThread(req, res)
 }
 
 /** 持久化图像识别摘要到当前 AI 会话 */

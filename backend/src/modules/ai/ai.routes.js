@@ -22,6 +22,8 @@ router.get('/ai/qa/records', wrap(ai.qaRecords))
 router.get('/ai/qa/threads/:threadId', wrap(ai.qaThreadRecords))
 router.post('/ai/qa/records/detect', wrap(ai.qaDetectRecord))
 router.delete('/ai/qa/records', wrap(ai.qaClearAll))
+router.delete('/ai/qa/record-items/:id', wrap(ai.qaRemoveOne))
+router.delete('/ai/qa/threads/:threadId', wrap(ai.qaRemoveThread))
 router.delete('/ai/qa/records/:id', wrap(ai.qaRemove))
 
 // ── 语音与图像 ──────────────────────────────

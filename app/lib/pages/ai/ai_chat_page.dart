@@ -240,7 +240,7 @@ class _AiChatPageState extends State<AiChatPage> {
     );
     if (ok != true) return;
     try {
-      await ApiClient.delete('/ai/qa/records/$id');
+      await ApiClient.delete('/ai/qa/threads/$id');
       if (!mounted) return;
       toast(context, '已删除此对话');
       context.go('/ai');
