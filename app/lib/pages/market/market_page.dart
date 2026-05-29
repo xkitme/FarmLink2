@@ -624,73 +624,92 @@ class _MarketPageState extends State<MarketPage> {
   void _showProductDetail(_Product product) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+      builder: (context) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(R.md),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Image.asset(
-                  product.image,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.surfaceContainer,
-                    child: const Icon(Icons.storefront,
-                        color: AppColors.primary, size: 48),
-                  ),
+            // 可滚动内容区：图片 + 标题 + 卖家
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(R.md),
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: Image.asset(
+                          product.image,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: AppColors.surfaceContainer,
+                            child: const Icon(Icons.storefront,
+                                color: AppColors.primary, size: 48),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(product.title,
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.onSurface)),
+                        ),
+                        if (product.id == null)
+                          const StatusChip('示例商品', color: AppColors.outline)
+                        else
+                          StatusChip(product.badge, color: product.badgeColor),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(product.seller,
+                        style: const TextStyle(
+                            color: AppColors.onSurfaceVariant)),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(product.title,
+            // 底部固定操作区：价格 + 加入合计（始终可见、可点）
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+              child: Row(
+                children: [
+                  Text('￥${product.price.toStringAsFixed(2)}',
                       style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.onSurface)),
-                ),
-                if (product.id == null)
-                  const StatusChip('示例商品', color: AppColors.outline)
-                else
-                  StatusChip(product.badge, color: product.badgeColor),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(product.seller,
-                style: const TextStyle(color: AppColors.onSurfaceVariant)),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Text('￥${product.price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800)),
-                Text(' / ${product.unit}',
-                    style: const TextStyle(color: AppColors.onSurfaceVariant)),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: product.id == null
-                      ? null
-                      : () {
-                          Navigator.pop(context);
-                          _addCart(product);
-                        },
-                  icon: const Icon(Icons.add_shopping_cart, size: 18),
-                  label: Text(product.id == null ? '资料更新中' : '加入合计'),
-                ),
-              ],
+                          color: AppColors.primary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800)),
+                  Text(' / ${product.unit}',
+                      style:
+                          const TextStyle(color: AppColors.onSurfaceVariant)),
+                  const Spacer(),
+                  ElevatedButton.icon(
+                    onPressed: product.id == null
+                        ? null
+                        : () {
+                            Navigator.pop(context);
+                            _addCart(product);
+                          },
+                    icon: const Icon(Icons.add_shopping_cart, size: 18),
+                    label: Text(product.id == null ? '资料更新中' : '加入合计'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

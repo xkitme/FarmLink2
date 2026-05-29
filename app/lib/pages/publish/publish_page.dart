@@ -74,14 +74,20 @@ class _PublishPageState extends State<PublishPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openComposer,
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
-        child: const Icon(Icons.edit),
+      // 发布入口改为 AppBar 右上「+」，避免 FAB 被底栏（ShellPage bottomNav）遮挡
+      appBar: FarmAppBar(
+        actions: [
+          IconButton(
+            tooltip: '发布动态',
+            onPressed: _openComposer,
+            icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.notifications_none,
+                color: AppColors.onSurfaceVariant),
+          ),
+        ],
       ),
       body: _loading
           ? const Loading(text: '正在加载乡村动态...')
@@ -109,7 +115,7 @@ class _PublishPageState extends State<PublishPage> {
                   if (_feed.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
-                      child: EmptyView('还没有乡村动态，点击右下角发布第一条'),
+                      child: EmptyView('还没有乡村动态，点击右上角发布第一条'),
                     )
                   else
                     for (final p in _feed) ...[
