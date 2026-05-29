@@ -263,6 +263,26 @@ final data = await ApiClient.post('/auth/register', body: {
 - 设置相关：[46a-我的页与设置页修复.md](46a-我的页与设置页修复.md)
 - 协作约定：[协作约定.md](协作约定.md)
 
-## 十一、实施备注（Codex 完成后填写）
+## 十一、实施备注（2026-05-29 完成）
 
-<!-- 各 Lane 改了哪些文件、复测结果、关闭了哪些 issue -->
+> 由 Claude Opus 4.8 直接实施。`flutter analyze` 全量 0 问题。各 Lane 单独 commit。
+
+- **Lane A**（commit 967cebd0）：`app/lib/main.dart` 两处 MaterialApp 抽出 `_clampTextScaler`
+  builder（textScaler clamp 0.9~1.1）；`app/lib/core/theme.dart` bodyLarge 18→16 /
+  bodyMedium 16→14 / bodySmall 14→12，height 同步收。
+- **Lane D**（commit 62bcc458）：核实注册路径此前已是 `/auth/register`（无反斜杠 bug）；
+  `auth_state.register` 检测 11 位手机号格式（`^1\d{10}$`）则同步写入 phone（后端已接收）。
+- **Lane B**（commit 566906e0）：`market_page._showProductDetail` 改 `isScrollControlled` +
+  maxHeight 0.85，内容区 `Flexible(SingleChildScrollView)`、价格/「加入合计」固定底部常驻可点；
+  `publish_page` 发布入口由 FAB 改 AppBar 右上「+」避开 ShellPage 底栏，空状态提示改「右上角」。
+- **Lane C**：复测 disaster/policy 两页结构均正常（`Column + Expanded(ListView)`，
+  GridView 用 shrinkWrap+NeverScrollable，Spacer 仅在 Row 内），无写死大高度；
+  「滑到空白」根因即 Lane A，A 修完即解决，**无额外代码改动**。
+- **Lane E**（commit 7a4806d3）：`data_dashboard_page` 平台级聚合卡（用户/商品/订单/成交额）
+  与 AI 服务状态卡改为仅 `ADMIN/VILLAGE` 可见；农户只保留自有农情。`data_service_page`
+  全为用户自有数据，无需守卫。
+- **Lane F**（commit a828393f）：`account_page`（个人资料）由 ComingSoon 占位改为可用页——
+  账号/手机号/角色只读展示，昵称+所属村可编辑，保存走 `PUT /user/profile` 后 refreshProfile。
+  其余设置子页此前已实现；存储管理本期保留信息占位（引导设置首页缓存清理）。
+- **GitHub issue**：#4~#13 对应修复均已落地，建议复测后由维护者执行
+  `gh issue close <号>` 关闭（尚未自动关闭/push）。
