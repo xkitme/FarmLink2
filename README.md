@@ -160,10 +160,17 @@ FarmLink/
 
 ```powershell
 cd backend
-npm run install:all      # 安装后端 + 管理面板依赖
-npm run db:migrate       # 初始化 SQLite 数据库
-npm run db:seed          # 写入种子数据
+copy .env.example .env   # ① 复制环境变量模板（必须，否则报 DATABASE_URL not found）
+mkdir ..\data            # ② 确保 SQLite 数据目录存在（.env 默认 file:../data/village.db）
+npm run install:all      # ③ 安装后端 + 管理面板依赖
+npm run db:push          # ④ 初始化 SQLite 表结构（全新库用 db:push，不要用 db:migrate）
+npm run db:seed          # ⑤ 写入种子数据（含三位主角的全年农事剧本）
 ```
+
+> **常见报错**
+> - `Environment variable not found: DATABASE_URL` → 漏了第 ① 步，先 `copy .env.example .env`
+> - `prisma migrate dev` 报错 → 全新 clone 没有迁移历史，请用 `npm run db:push`（已在上方）
+> - Mac/Linux 把 `copy` 换成 `cp`、`mkdir ..\data` 换成 `mkdir -p ../data`
 
 移动端首次运行前：
 
