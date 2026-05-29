@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
@@ -83,6 +85,10 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 平台级聚合（全平台用户/商品/订单/成交额、AI 服务状态）仅管理员/村委可见，
+    // 普通农户只看自己的农情（后端已按 userId 行级过滤）
+    final role = context.watch<AuthState>().user?.role ?? 'FARMER';
+    final isAdminOrVillage = role == 'ADMIN' || role == 'VILLAGE';
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: FarmAppBar(
@@ -110,11 +116,15 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
                     children: [
                       _heroCard(),
                       const SizedBox(height: 16),
-                      _metricGrid(),
-                      const SizedBox(height: 16),
+                      if (isAdminOrVillage) ...[
+                        _metricGrid(),
+                        const SizedBox(height: 16),
+                      ],
                       _syncCard(),
-                      const SizedBox(height: 16),
-                      _aiCard(),
+                      if (isAdminOrVillage) ...[
+                        const SizedBox(height: 16),
+                        _aiCard(),
+                      ],
                       const SectionTitle('种植结构'),
                       _cropAreaCard(),
                       const SectionTitle('农事与灾情'),
