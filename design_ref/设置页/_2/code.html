@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>关于田园通 - FarmLink</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#a3f69c",
+                    "on-error-container": "#93000a",
+                    "on-surface": "#1a1c1c",
+                    "tertiary": "#734e00",
+                    "background": "#f9f9f9",
+                    "surface-container-highest": "#e2e2e2",
+                    "on-secondary-container": "#795548",
+                    "error": "#ba1a1a",
+                    "inverse-on-surface": "#f1f1f1",
+                    "tertiary-fixed": "#ffdeac",
+                    "outline": "#707a6c",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed-variant": "#603f33",
+                    "surface-tint": "#1b6d24",
+                    "surface-dim": "#dadada",
+                    "on-surface-variant": "#40493d",
+                    "inverse-primary": "#88d982",
+                    "primary-container": "#2e7d32",
+                    "on-error": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#005312",
+                    "surface-bright": "#f9f9f9",
+                    "on-tertiary-fixed": "#281900",
+                    "secondary-container": "#fdcdbc",
+                    "surface-container-high": "#e8e8e8",
+                    "inverse-surface": "#2f3131",
+                    "tertiary-container": "#926500",
+                    "on-primary-container": "#cbffc2",
+                    "on-primary-fixed": "#002204",
+                    "surface": "#f9f9f9",
+                    "tertiary-fixed-dim": "#ffba38",
+                    "secondary-fixed-dim": "#ebbcac",
+                    "on-tertiary-fixed-variant": "#604100",
+                    "primary": "#0d631b",
+                    "outline-variant": "#bfcaba",
+                    "on-background": "#1a1c1c",
+                    "surface-variant": "#e2e2e2",
+                    "on-tertiary-container": "#ffefda",
+                    "error-container": "#ffdad6",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-fixed-dim": "#88d982",
+                    "secondary": "#7a5649",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-fixed": "#2e150b",
+                    "surface-container-low": "#f3f3f3",
+                    "surface-container": "#eeeeee",
+                    "secondary-fixed": "#ffdbcf"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.75rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "8px",
+                    "stack-sm": "8px",
+                    "gutter-mobile": "16px",
+                    "stack-md": "16px",
+                    "stack-lg": "24px",
+                    "margin-mobile": "20px"
+            },
+            "fontFamily": {
+                    "label-lg": ["Noto Sans"],
+                    "headline-sm": ["Noto Sans"],
+                    "headline-lg-mobile": ["Noto Sans"],
+                    "label-sm": ["Noto Sans"],
+                    "body-md": ["Noto Sans"],
+                    "headline-md": ["Noto Sans"],
+                    "body-lg": ["Noto Sans"],
+                    "headline-lg": ["Noto Sans"]
+            },
+            "fontSize": {
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #f9f9f9;
+            color: #1a1c1c;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-elevation-1 {
+            box-shadow: 0px 4px 20px 0px rgba(122, 86, 73, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col font-body-md text-body-md">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-surface dark:bg-surface-dim">
+<div class="flex items-center px-margin-mobile h-16 w-full max-w-screen-xl mx-auto">
+<button aria-label="返回" class="mr-4 p-2 rounded-full hover:bg-surface-container-low transition-colors active:opacity-70">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed">arrow_back</span>
+</button>
+<h1 class="font-headline-sm text-headline-sm dark:text-on-surface text-primary">关于田园通</h1>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow flex flex-col items-center px-margin-mobile pt-stack-lg pb-stack-lg max-w-screen-md mx-auto w-full">
+<!-- App Logo & Version Section -->
+<section class="flex flex-col items-center mb-10 text-center">
+<div class="w-24 h-24 mb-4 rounded-[1.5rem] bg-primary-container flex items-center justify-center tonal-elevation-1 overflow-hidden">
+<img alt="FarmLink Logo" class="w-16 h-16" data-alt="A minimalist and modern corporate logo for an agricultural technology app. The logo features a stylized leaf intertwined with a digital circuit pattern, using a palette of Leaf Green and Earthy Brown. It is presented on a clean, soft-white background with professional studio lighting that emphasizes its sleek, organic yet high-tech aesthetic. The overall mood is one of reliable innovation and growth." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfNd5jLrzFGsqGq77BSzTOpsCX_4SRmMYK0iQjkbEcVkvwfON2cp3rSqSbc-vyt_iQl-xzhC4tfqy3AZXHa3b6puKqXi15hfuwFXABUaaewsUQVMrttL4Lsa90TIfZjIPwv47cFFPH47I1GToEYrB_MjNbPTfjley2AEoit7iRo7Xd7O0A-5t1jKQJKCcr5XXKfKqQz2hBUNUjhBn3stADfDuU-nCfRQ12XAtxlu0-088fjigA1R0Hr8_g_TmUOD63tvbk0QywB9Lj"/>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-1">田园通 FarmLink</h2>
+<p class="text-on-surface-variant font-label-lg text-label-lg mb-6">版本 v2.4.0</p>
+<button class="px-8 py-3 bg-primary text-on-primary rounded-full font-label-lg text-label-lg hover:opacity-90 active:scale-95 transition-all shadow-sm" onclick="checkUpdate()">
+                检查更新
+            </button>
+</section>
+<!-- List Items (Bento-lite Layout) -->
+<section class="w-full space-y-4">
+<div class="bg-surface-container-lowest rounded-DEFAULT tonal-elevation-1 overflow-hidden">
+<!-- Service Agreement -->
+<a class="flex items-center justify-between p-stack-md hover:bg-surface-container-low transition-colors active:bg-surface-variant/50" href="#">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary">description</span>
+<span class="text-on-surface font-label-lg text-label-lg">服务协议</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+</a>
+<!-- Divider -->
+<div class="mx-stack-md border-t border-outline-variant"></div>
+<!-- Privacy Policy -->
+<a class="flex items-center justify-between p-stack-md hover:bg-surface-container-low transition-colors active:bg-surface-variant/50" href="#">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary">policy</span>
+<span class="text-on-surface font-label-lg text-label-lg">隐私政策</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+</a>
+<!-- Divider -->
+<div class="mx-stack-md border-t border-outline-variant"></div>
+<!-- Official Website -->
+<a class="flex items-center justify-between p-stack-md hover:bg-surface-container-low transition-colors active:bg-surface-variant/50" href="#">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary">language</span>
+<span class="text-on-surface font-label-lg text-label-lg">官网站点</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">open_in_new</span>
+</a>
+</div>
+<!-- Additional Info Card -->
+<div class="p-stack-md bg-secondary-container/30 rounded-DEFAULT border border-secondary-container/50">
+<p class="text-on-secondary-container font-label-sm text-label-sm leading-relaxed">
+                    田园通致力于为现代农业提供智能化解决方案。通过AI土壤分析、智能排灌与实时气候监测，我们助力每一位耕耘者实现科技助农、丰收万家。
+                </p>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="mt-auto py-8 px-margin-mobile text-center">
+<p class="text-on-surface-variant font-label-sm text-label-sm">
+            © 2024 田园通科技 (FarmLink Tech)<br/>
+            All Rights Reserved. 粤ICP备88888888号
+        </p>
+</footer>
+<script>
+        function checkUpdate() {
+            const btn = event.currentTarget;
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="flex items-center gap-2"><span class="animate-spin material-symbols-outlined text-[18px]">progress_activity</span> 检查中...</span>';
+            
+            setTimeout(() => {
+                btn.innerHTML = '已是最新版本';
+                btn.classList.replace('bg-primary', 'bg-surface-variant');
+                btn.classList.replace('text-on-primary', 'text-on-surface-variant');
+                
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    btn.classList.replace('bg-surface-variant', 'bg-primary');
+                    btn.classList.replace('text-on-surface-variant', 'text-on-primary');
+                }, 3000);
+            }, 1500);
+        }
+    </script>
+</body></html>

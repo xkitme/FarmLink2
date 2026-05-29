@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>气象预警提醒 - FarmLink</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "primary-fixed": "#a3f69c",
+                "on-error-container": "#93000a",
+                "on-surface": "#1a1c1c",
+                "tertiary": "#734e00",
+                "background": "#f9f9f9",
+                "surface-container-highest": "#e2e2e2",
+                "on-secondary-container": "#795548",
+                "error": "#ba1a1a",
+                "inverse-on-surface": "#f1f1f1",
+                "tertiary-fixed": "#ffdeac",
+                "outline": "#707a6c",
+                "on-primary": "#ffffff",
+                "on-secondary-fixed-variant": "#603f33",
+                "surface-tint": "#1b6d24",
+                "surface-dim": "#dadada",
+                "on-surface-variant": "#40493d",
+                "inverse-primary": "#88d982",
+                "primary-container": "#2e7d32",
+                "on-error": "#ffffff",
+                "on-secondary": "#ffffff",
+                "on-primary-fixed-variant": "#005312",
+                "surface-bright": "#f9f9f9",
+                "on-tertiary-fixed": "#281900",
+                "secondary-container": "#fdcdbc",
+                "surface-container-high": "#e8e8e8",
+                "inverse-surface": "#2f3131",
+                "tertiary-container": "#926500",
+                "on-primary-container": "#cbffc2",
+                "on-primary-fixed": "#002204",
+                "surface": "#f9f9f9",
+                "tertiary-fixed-dim": "#ffba38",
+                "secondary-fixed-dim": "#ebbcac",
+                "on-tertiary-fixed-variant": "#604100",
+                "primary": "#0d631b",
+                "outline-variant": "#bfcaba",
+                "on-background": "#1a1c1c",
+                "surface-variant": "#e2e2e2",
+                "on-tertiary-container": "#ffefda",
+                "error-container": "#ffdad6",
+                "surface-container-lowest": "#ffffff",
+                "primary-fixed-dim": "#88d982",
+                "secondary": "#7a5649",
+                "on-tertiary": "#ffffff",
+                "on-secondary-fixed": "#2e150b",
+                "surface-container-low": "#f3f3f3",
+                "surface-container": "#eeeeee",
+                "secondary-fixed": "#ffdbcf"
+            },
+            "borderRadius": {
+                "DEFAULT": "12px",
+                "lg": "2rem",
+                "xl": "3rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "unit": "8px",
+                "stack-sm": "8px",
+                "gutter-mobile": "16px",
+                "stack-md": "16px",
+                "stack-lg": "24px",
+                "margin-mobile": "20px"
+            },
+            "fontFamily": {
+                "label-lg": ["Noto Sans"],
+                "headline-sm": ["Noto Sans"],
+                "headline-lg-mobile": ["Noto Sans"],
+                "label-sm": ["Noto Sans"],
+                "body-md": ["Noto Sans"],
+                "headline-md": ["Noto Sans"],
+                "body-lg": ["Noto Sans"],
+                "headline-lg": ["Noto Sans"]
+            },
+            "fontSize": {
+                "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500"}],
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Noto Sans', sans-serif;
+            background-color: #f9f9f9;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .weather-card-shadow {
+            box-shadow: 0px 4px 20px 0px rgba(122, 86, 73, 0.05);
+        }
+        .toggle-checkbox:checked + .toggle-slot {
+            background-color: #0d631b;
+        }
+        .toggle-checkbox:checked + .toggle-slot .toggle-dot {
+            transform: translateX(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen pb-stack-lg">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-surface dark:bg-surface-dim">
+<div class="flex items-center px-margin-mobile h-16 w-full max-w-screen-xl mx-auto">
+<button aria-label="返回" class="mr-4 p-2 rounded-full hover:bg-surface-container-low transition-colors active:opacity-70">
+<span class="material-symbols-outlined text-primary" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-sm text-headline-sm dark:text-on-surface">气象预警提醒</h1>
+</div>
+</header>
+<main class="max-w-md mx-auto px-margin-mobile pt-stack-md space-y-stack-lg">
+<!-- Hero Illustration / Context -->
+<section class="relative w-full h-40 rounded-[12px] overflow-hidden weather-card-shadow">
+<img alt="Weather visualization" class="w-full h-full object-cover" data-alt="A lush green agricultural landscape under a dramatic sky with soft, diffused sunlight filtering through rolling clouds. The style is professional and clean with a high-key, modern aesthetic. The colors are dominated by organic leaf greens and earthy browns, maintaining a sense of technological vitality and professional reliability for a farming application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqDWyjdTgyKQvjn45BXbKxK0PcXeK8bzoMhuT-l-Jfbai-tBUCmaPZ0YoMzZwBXJrb0WbW0vUtxPHvdejH2REPVbg79qOFsEfkv6L9I0-F8BQW9qz4xYyaAOikLD4ZFvj5gyrHuCe_EjhxMrY5MjI_UGJNggFmIGgisIjFU8TblrBPePDew0tOcovNntjoj9CMAshyB9_ImJD6KsqQPZhY-57cHEE5C9wzjLeCTmasNfrRaPy5GmQ-4mWGVFXJV6gR7zVQufw_UEET"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-stack-md">
+<p class="text-white font-label-lg text-label-lg">配置您的精准农业气象监控</p>
+</div>
+</section>
+<!-- Toggle Groups -->
+<section class="space-y-stack-sm">
+<h2 class="font-label-lg text-label-lg text-on-surface-variant px-1">预警类型</h2>
+<div class="bg-surface-container-lowest rounded-[12px] weather-card-shadow overflow-hidden divide-y divide-outline-variant">
+<!-- Toggle Item: Heavy Rain -->
+<div class="flex items-center justify-between p-stack-md hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" data-icon="rainy">rainy</span>
+</div>
+<div>
+<p class="font-body-md text-body-md">暴雨预警</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">降水量超警戒值提醒</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only toggle-checkbox" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full transition-colors toggle-slot">
+<div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform toggle-dot"></div>
+</div>
+</label>
+</div>
+<!-- Toggle Item: High Temp -->
+<div class="flex items-center justify-between p-stack-md hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-tertiary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary" data-icon="thermostat">thermostat</span>
+</div>
+<div>
+<p class="font-body-md text-body-md">高温预警</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">超过35℃极端气温预警</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only toggle-checkbox" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full transition-colors toggle-slot">
+<div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform toggle-dot"></div>
+</div>
+</label>
+</div>
+<!-- Toggle Item: Frost -->
+<div class="flex items-center justify-between p-stack-md hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="ac_unit">ac_unit</span>
+</div>
+<div>
+<p class="font-body-md text-body-md">霜冻预警</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">作物冻害风险提示</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only toggle-checkbox" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full transition-colors toggle-slot">
+<div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform toggle-dot"></div>
+</div>
+</label>
+</div>
+<!-- Toggle Item: Typhoon -->
+<div class="flex items-center justify-between p-stack-md hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" data-icon="cyclone">cyclone</span>
+</div>
+<div>
+<p class="font-body-md text-body-md">台风预警</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">风力等级及路径追踪</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only toggle-checkbox" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full transition-colors toggle-slot">
+<div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform toggle-dot">
+</div>
+</div>
+</label>
+</div>
+</div>
+</section>
+<!-- Frequency Selector -->
+<section class="space-y-stack-sm">
+<h2 class="font-label-lg text-label-lg text-on-surface-variant px-1">通知频率</h2>
+<div class="grid grid-cols-2 gap-stack-sm"><!-- Option: Real-time -->
+<button class="freq-btn relative flex flex-col items-center justify-center p-stack-md bg-surface-container-lowest rounded-[12px] border-2 border-primary weather-card-shadow group transition-all" onclick="selectFreq(this)">
+<span class="material-symbols-outlined text-primary mb-2" data-icon="notifications_active">notifications_active</span>
+<p class="font-body-md text-body-md text-primary font-bold">实时推送</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">即时掌握动态</p>
+<div class="absolute top-2 right-2">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="check_circle" data-weight="fill">check_circle</span>
+</div>
+</button>
+<!-- Option: Daily Summary -->
+<button class="freq-btn relative flex flex-col items-center justify-center p-stack-md bg-surface-container-lowest rounded-[12px] border-2 border-transparent hover:border-outline-variant weather-card-shadow group transition-all" onclick="selectFreq(this)">
+<span class="material-symbols-outlined text-on-surface-variant mb-2" data-icon="event_note">event_note</span>
+<p class="font-body-md text-body-md">每日总结</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">每日 18:00 推送</p>
+<div class="absolute top-2 right-2 hidden group-[.active]:block">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="check_circle" data-weight="fill">check_circle</span>
+</div>
+</button></div>
+</section>
+<!-- Informational Card -->
+<section class="p-stack-md bg-primary-container/10 border-l-4 border-primary rounded-r-[12px]">
+<div class="flex gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="info">info</span>
+<div>
+<h3 class="font-label-lg text-label-lg text-primary">温馨提示</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">
+                        开启实时预警后，系统将结合您的农场地理位置（GPS）进行精准下发，请确保应用拥有通知权限。
+                    </p>
+</div>
+</div>
+</section>
+<!-- Save Button -->
+<section class="pt-stack-md">
+<button class="w-full py-4 bg-primary text-on-primary font-label-lg text-label-lg hover:brightness-110 active:scale-[0.98] transition-all shadow-md rounded-[12px]">
+                保存设置
+            </button>
+<button class="w-full mt-stack-sm py-4 border-2 border-secondary text-secondary font-label-lg text-label-lg hover:bg-secondary/5 transition-colors rounded-[12px]">
+                恢复默认配置
+            </button>
+</section>
+</main>
+<script>
+        function selectFreq(element) {
+            // Remove active styles from all buttons
+            document.querySelectorAll('.freq-btn').forEach(btn => {
+                btn.classList.remove('border-primary');
+                btn.classList.add('border-transparent');
+                btn.querySelector('p').classList.remove('text-primary', 'font-bold');
+                btn.querySelector('span').classList.replace('text-primary', 'text-on-surface-variant');
+                btn.querySelector('.absolute').classList.add('hidden');
+            });
+
+            // Add active styles to clicked button
+            element.classList.remove('border-transparent');
+            element.classList.add('border-primary');
+            element.querySelector('p').classList.add('text-primary', 'font-bold');
+            element.querySelector('span').classList.replace('text-on-surface-variant', 'text-primary');
+            element.querySelector('.absolute').classList.remove('hidden');
+        }
+
+        // Simple haptic-like feedback for toggles
+        document.querySelectorAll('.toggle-checkbox').forEach(toggle => {
+            toggle.addEventListener('change', () => {
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(10);
+                }
+            });
+        });
+    </script>
+</body></html>

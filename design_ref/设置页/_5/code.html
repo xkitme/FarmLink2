@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FarmLink - 修改密码</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#a3f69c",
+                        "on-error-container": "#93000a",
+                        "on-surface": "#1a1c1c",
+                        "tertiary": "#734e00",
+                        "background": "#f9f9f9",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-secondary-container": "#795548",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#f1f1f1",
+                        "tertiary-fixed": "#ffdeac",
+                        "outline": "#707a6c",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#603f33",
+                        "surface-tint": "#1b6d24",
+                        "surface-dim": "#dadada",
+                        "on-surface-variant": "#40493d",
+                        "inverse-primary": "#88d982",
+                        "primary-container": "#2e7d32",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed-variant": "#005312",
+                        "surface-bright": "#f9f9f9",
+                        "on-tertiary-fixed": "#281900",
+                        "secondary-container": "#fdcdbc",
+                        "surface-container-high": "#e8e8e8",
+                        "inverse-surface": "#2f3131",
+                        "tertiary-container": "#926500",
+                        "on-primary-container": "#cbffc2",
+                        "on-primary-fixed": "#002204",
+                        "surface": "#f9f9f9",
+                        "tertiary-fixed-dim": "#ffba38",
+                        "secondary-fixed-dim": "#ebbcac",
+                        "on-tertiary-fixed-variant": "#604100",
+                        "primary": "#0d631b",
+                        "outline-variant": "#bfcaba",
+                        "on-background": "#1a1c1c",
+                        "surface-variant": "#e2e2e2",
+                        "on-tertiary-container": "#ffefda",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#88d982",
+                        "secondary": "#7a5649",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed": "#2e150b",
+                        "surface-container-low": "#f3f3f3",
+                        "surface-container": "#eeeeee",
+                        "secondary-fixed": "#ffdbcf"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.75rem", // 12px as requested
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "8px",
+                        "stack-sm": "8px",
+                        "gutter-mobile": "16px",
+                        "stack-md": "16px",
+                        "stack-lg": "24px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "label-lg": ["Noto Sans"],
+                        "headline-sm": ["Noto Sans"],
+                        "headline-lg-mobile": ["Noto Sans"],
+                        "label-sm": ["Noto Sans"],
+                        "body-md": ["Noto Sans"],
+                        "headline-md": ["Noto Sans"],
+                        "body-lg": ["Noto Sans"],
+                        "headline-lg": ["Noto Sans"]
+                    },
+                    "fontSize": {
+                        "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Noto Sans', sans-serif;
+            background-color: #f9f9f9; /* Level 0 Base */
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .card-shadow {
+            box-shadow: 0px 4px 20px 0px rgba(122, 86, 73, 0.05);
+        }
+        .input-focus-effect:focus-within {
+            border-color: #1b6d24;
+            transition: border-color 0.2s ease;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col">
+<!-- TopAppBar (Based on Shared Components JSON) -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface-dim z-50">
+<div class="flex items-center px-margin-mobile h-16 w-full max-w-screen-xl mx-auto">
+<button aria-label="返回" class="mr-4 text-primary dark:text-primary-fixed active:opacity-70 transition-opacity flex items-center justify-center p-2 rounded-full hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-sm text-headline-sm dark:text-on-surface flex-grow">修改密码</h1>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow px-margin-mobile pt-stack-lg max-w-lg mx-auto w-full">
+<!-- Visual Anchor/Context Image -->
+<div class="mb-stack-lg rounded-lg overflow-hidden card-shadow">
+<div class="h-40 bg-cover bg-center" data-alt="A tranquil, sunlit agricultural landscape featuring rolling green fields under a clear morning sky. The image has a soft, organic aesthetic with a high-key lighting style that emphasizes the vitality and professional growth of a modern farm. The color palette is dominated by deep leaf greens and earthy browns, creating a sense of reliability and calm. Minimalist and clean, the atmosphere is bright and inviting for a professional corporate agricultural application." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAK5FuZsTpHYM7qUCV9mmJl9s3oEzx8yZUux19AJURN3ktRiNBKIJSzW3hhHrIHy2TF_sRRf_A7D5QKOEoNK66DvTOrihWbwWb6D2d9ebF-BX-V1ujMwRNstNX7O1onlAwJFStv6lF2nRVuLqilBdO-ddLM5TIDpPRLmvoVD79A1PDfcmuDC-mTLSLh0aeB8kqsyUTnVmqPouHDdZlK8wxD6lXb-mIekcUk6Ogi5sp1q4WTlc-1qnknkftmFaZ1vOkyir8qFMJ3vSii')"></div>
+</div>
+<!-- Password Change Form Card -->
+<div class="bg-surface-container-lowest p-stack-lg rounded-lg card-shadow border border-surface-variant/20">
+<form class="space-y-stack-lg" id="changePasswordForm">
+<!-- Current Password Field -->
+<div class="space-y-stack-sm">
+<label class="font-label-lg text-label-lg text-on-surface-variant" for="currentPassword">当前密码</label>
+<div class="relative flex items-center bg-surface-container-low rounded-t-sm border-b-2 border-secondary focus-within:border-primary transition-all duration-200">
+<input class="w-full bg-transparent border-none focus:ring-0 px-4 py-3 font-body-md text-body-md" id="currentPassword" name="currentPassword" placeholder="请输入当前密码" required="" type="password"/>
+<button class="px-3 text-on-surface-variant hover:text-primary transition-colors" onclick="togglePassword('currentPassword')" type="button">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- New Password Field -->
+<div class="space-y-stack-sm">
+<label class="font-label-lg text-label-lg text-on-surface-variant" for="newPassword">新密码</label>
+<div class="relative flex items-center bg-surface-container-low rounded-t-sm border-b-2 border-secondary focus-within:border-primary transition-all duration-200">
+<input class="w-full bg-transparent border-none focus:ring-0 px-4 py-3 font-body-md text-body-md" id="newPassword" name="newPassword" placeholder="请输入至少8位新密码" required="" type="password"/>
+<button class="px-3 text-on-surface-variant hover:text-primary transition-colors" onclick="togglePassword('newPassword')" type="button">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+</div>
+<p class="text-label-sm font-label-sm text-on-surface-variant/70 px-1">密码应包含字母、数字及特殊符号</p>
+</div>
+<!-- Confirm New Password Field -->
+<div class="space-y-stack-sm">
+<label class="font-label-lg text-label-lg text-on-surface-variant" for="confirmPassword">确认新密码</label>
+<div class="relative flex items-center bg-surface-container-low rounded-t-sm border-b-2 border-secondary focus-within:border-primary transition-all duration-200">
+<input class="w-full bg-transparent border-none focus:ring-0 px-4 py-3 font-body-md text-body-md" id="confirmPassword" name="confirmPassword" placeholder="请再次输入新密码" required="" type="password"/>
+<button class="px-3 text-on-surface-variant hover:text-primary transition-colors" onclick="togglePassword('confirmPassword')" type="button">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- Forgot Password Link -->
+<div class="flex justify-end pt-2">
+<a class="font-label-lg text-label-lg text-primary hover:opacity-80 active:scale-95 transition-all inline-flex items-center gap-1" href="#">
+                        忘记密码?
+                        <span class="material-symbols-outlined text-[18px]" data-icon="open_in_new">open_in_new</span>
+</a>
+</div>
+</form>
+</div>
+<!-- Success/Info Alert (Hidden by default) -->
+<div class="hidden mt-stack-lg p-4 rounded-lg bg-primary-container text-on-primary-container flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-300" id="statusAlert">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+<div>
+<p class="font-label-lg text-label-lg">密码已成功更新</p>
+<p class="text-label-sm font-label-sm opacity-90">下次登录时请使用新密码。</p>
+</div>
+</div>
+</main>
+<!-- Bottom Action Button Container -->
+<div class="p-margin-mobile mt-auto max-w-lg mx-auto w-full">
+<button class="w-full h-12 bg-primary text-on-primary rounded-full font-label-lg text-label-lg shadow-lg active:scale-95 hover:opacity-90 transition-all flex items-center justify-center gap-2" form="changePasswordForm" id="saveButton" type="submit">
+<span class="material-symbols-outlined" data-icon="save">save</span>
+            保存修改
+        </button>
+<p class="text-center text-label-sm font-label-sm text-on-surface-variant mt-4 opacity-50">
+            FarmLink 安全中心保护您的隐私
+        </p>
+</div>
+<!-- Interaction Script -->
+<script>
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = input.nextElementSibling.querySelector('.material-symbols-outlined');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.innerText = 'visibility_off';
+            } else {
+                input.type = 'password';
+                icon.innerText = 'visibility';
+            }
+        }
+
+        document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('saveButton');
+            const alert = document.getElementById('statusAlert');
+            
+            // Micro-interaction
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin" data-icon="progress_activity">progress_activity</span> 正在保存...';
+            btn.disabled = true;
+            btn.classList.add('opacity-70');
+
+            setTimeout(() => {
+                btn.innerHTML = '<span class="material-symbols-outlined" data-icon="done_all">done_all</span> 修改成功';
+                btn.classList.remove('bg-primary');
+                btn.classList.add('bg-primary-container', 'text-on-primary-container');
+                alert.classList.remove('hidden');
+                
+                // Vibrate for feedback if supported
+                if ("vibrate" in navigator) {
+                    navigator.vibrate(50);
+                }
+            }, 1500);
+        });
+    </script>
+</body></html>
