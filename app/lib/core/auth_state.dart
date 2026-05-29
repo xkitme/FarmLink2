@@ -62,10 +62,13 @@ class AuthState extends ChangeNotifier {
 
   Future<void> register(
       String username, String password, String nickname) async {
+    // 「手机号/账号」单字段：若填的是手机号格式（11 位、1 开头），同步写入 phone
+    final isPhone = RegExp(r'^1\d{10}$').hasMatch(username);
     final data = await ApiClient.post('/auth/register', body: {
       'username': username,
       'password': password,
-      'nickname': nickname
+      'nickname': nickname,
+      if (isPhone) 'phone': username,
     });
     await _save(data as Map<String, dynamic>);
   }
