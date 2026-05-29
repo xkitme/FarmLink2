@@ -133,11 +133,11 @@ ThemeData buildAppTheme() {
           fontSize: 16,
           fontWeight: FontWeight.w600),
       bodyLarge:
-          TextStyle(color: AppColors.onSurface, fontSize: 18, height: 1.55),
+          TextStyle(color: AppColors.onSurface, fontSize: 16, height: 1.45),
       bodyMedium:
-          TextStyle(color: AppColors.onSurface, fontSize: 16, height: 1.5),
+          TextStyle(color: AppColors.onSurface, fontSize: 14, height: 1.4),
       bodySmall: TextStyle(
-          color: AppColors.onSurfaceVariant, fontSize: 14, height: 1.45),
+          color: AppColors.onSurfaceVariant, fontSize: 12, height: 1.35),
       labelLarge: TextStyle(
           color: AppColors.onSurface,
           fontSize: 14,

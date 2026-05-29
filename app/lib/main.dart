@@ -39,6 +39,7 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
         title: '田园通 FarmLink',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
+        builder: _clampTextScaler,
         home: const Scaffold(
           body: Center(child: CircularProgressIndicator()),
         ),
@@ -51,7 +52,18 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
         routerConfig: _router,
+        builder: _clampTextScaler,
       ),
+    );
+  }
+
+  /// 限制系统字体缩放在 0.9~1.1，避免系统大字体把卡片撑爆（issue #4~#13 根因）
+  Widget _clampTextScaler(BuildContext context, Widget? child) {
+    final mq = MediaQuery.of(context);
+    final clamped = mq.textScaler.clamp(minScaleFactor: 0.9, maxScaleFactor: 1.1);
+    return MediaQuery(
+      data: mq.copyWith(textScaler: clamped),
+      child: child!,
     );
   }
 }
