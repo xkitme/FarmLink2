@@ -111,13 +111,18 @@ class _DisasterPageState extends State<DisasterPage> {
                         ),
                       _alertSection(),
                       const SectionTitle('风险指数'),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(child: _fireCard()),
-                          const SizedBox(width: 12),
-                          Expanded(child: _droughtCard()),
-                        ],
+                      // 在竖向 ListView 里，Row 的高度约束是无限的；直接用
+                      // CrossAxisAlignment.stretch 会把卡片拉伸到无限高而抛异常。
+                      // 用 IntrinsicHeight 把 Row 收成两卡的等高有限高度。
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: _fireCard()),
+                            const SizedBox(width: 12),
+                            Expanded(child: _droughtCard()),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 12),
                       _frostCard(),
