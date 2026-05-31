@@ -5,7 +5,8 @@ import '../../core/notification_state.dart';
 
 class ShellPage extends StatefulWidget {
   final Widget child;
-  const ShellPage({super.key, required this.child});
+  final String location;
+  const ShellPage({super.key, required this.child, required this.location});
 
   @override
   State<ShellPage> createState() => _ShellPageState();
@@ -33,12 +34,23 @@ class _ShellPageState extends State<ShellPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final loc = GoRouterState.of(context).uri.path;
+    final loc = widget.location;
     if (_lastLocation == loc) return;
     _lastLocation = loc;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) NotificationState.refresh();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant ShellPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.location != widget.location) {
+      _lastLocation = widget.location;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) NotificationState.refresh();
+      });
+    }
   }
 
   int _index(String loc) {
@@ -52,7 +64,7 @@ class _ShellPageState extends State<ShellPage> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = GoRouterState.of(context).uri.path;
+    final loc = widget.location;
     final showBar = _isTopLevelTab(loc);
     final idx = _index(loc);
     return Scaffold(

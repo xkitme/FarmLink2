@@ -59,7 +59,8 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
         ),
         ShellRoute(
           navigatorKey: _shellKey,
-          builder: (ctx, state, child) => ShellPage(child: child),
+          builder: (ctx, state, child) =>
+              ShellPage(location: state.uri.path, child: child),
           routes: [
             GoRoute(path: '/home', builder: (_, __) => const HomePage()),
             GoRoute(path: '/ai', builder: (_, __) => const AiThreadsPage()),
