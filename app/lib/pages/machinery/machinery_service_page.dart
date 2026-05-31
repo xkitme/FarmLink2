@@ -78,7 +78,8 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
         backgroundColor: AppColors.surface,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
-          onPressed: () => context.go('/machinery'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/machinery'),
         ),
         title: const Text('农机服务',
             style: TextStyle(

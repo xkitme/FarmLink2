@@ -100,7 +100,8 @@ class _DisasterPageState extends State<DisasterPage>
         backgroundColor: AppColors.surface,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
-          onPressed: () => context.go('/home'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/home'),
         ),
         title: const Text('气象灾害',
             style: TextStyle(

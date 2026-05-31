@@ -200,7 +200,7 @@ class _HomePageState extends State<HomePage> {
     final wind = _int(t['windLevel']);
     final soil = _soilStatusOf(humidity, cond);
     return AppCard(
-      onTap: () => context.go('/disaster'),
+      onTap: () => context.push('/disaster'),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
@@ -404,7 +404,7 @@ class _HomePageState extends State<HomePage> {
             title: '待发送',
             badge: '$_waiting',
             subtitle: _waiting > 0 ? (_queueHint ?? '有数据等待发送') : '数据已同步',
-            onTap: () => context.go('/data/service'),
+            onTap: () => context.push('/data/service'),
           ),
         ),
         const SizedBox(width: 8),
@@ -532,21 +532,21 @@ class _HomePageState extends State<HomePage> {
   void _openSection(BuildContext context, String key) {
     switch (key) {
       case 'market':
-        context.go('/market');
+        context.push('/market');
       case 'machinery':
-        context.go('/machinery');
+        context.push('/machinery');
       case 'policy':
-        context.go('/policy');
+        context.push('/policy');
       case 'agri':
-        context.go('/agri');
+        context.push('/agri');
       case 'ai':
         context.go('/ai');
       case 'life':
-        context.go('/life');
+        context.push('/life');
       case 'data':
-        context.go('/data');
+        context.push('/data');
       case 'disaster':
-        context.go('/disaster');
+        context.push('/disaster');
       default:
         toast(context, '该服务暂时不可用，请稍后重试');
     }

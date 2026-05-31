@@ -119,7 +119,8 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
         backgroundColor: AppColors.surface,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
-          onPressed: () => context.go('/policy'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/policy'),
         ),
         title: const Text('政策服务',
             style: TextStyle(

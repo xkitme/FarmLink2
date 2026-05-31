@@ -187,7 +187,7 @@ class _PolicyPageState extends State<PolicyPage> {
       appBar: FarmAppBar(showBack: true, actions: [
         IconButton(
           tooltip: '政策服务',
-          onPressed: () => context.go('/policy/service'),
+          onPressed: () => context.push('/policy/service'),
           icon: const Icon(Icons.dashboard_customize_outlined,
               color: AppColors.onSurfaceVariant),
         ),

@@ -239,7 +239,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return AppCard(
       padding: EdgeInsets.zero,
-      onTap: () => context.go('/data/service'),
+      onTap: () => context.push('/data/service'),
       child: Column(
         children: [
           Padding(
@@ -345,7 +345,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _menu(
       BuildContext context, IconData icon, String label, String route) {
-    return _menuAction(context, icon, label, () => context.go(route));
+    return _menuAction(context, icon, label, () => context.push(route));
   }
 
   Widget _menuAction(

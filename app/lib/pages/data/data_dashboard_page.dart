@@ -96,7 +96,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
         actions: [
           IconButton(
             tooltip: '数据管理服务',
-            onPressed: () => context.go('/data/service'),
+            onPressed: () => context.push('/data/service'),
             icon: const Icon(Icons.tune, color: AppColors.onSurfaceVariant),
           ),
           IconButton(

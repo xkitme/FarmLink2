@@ -80,7 +80,8 @@ class _MarketServicePageState extends State<MarketServicePage> {
         backgroundColor: AppColors.surface,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
-          onPressed: () => context.go('/market'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/market'),
         ),
         title: const Text('流通服务',
             style: TextStyle(

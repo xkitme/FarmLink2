@@ -165,7 +165,7 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
       backgroundColor: AppColors.background,
       appBar: const FarmAppBar(),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/ai/chat/new'),
+        onPressed: () => context.push('/ai/chat/new'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
@@ -281,9 +281,9 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
         borderRadius: BorderRadius.circular(R.md),
         onTap: () {
           if (isReport) {
-            context.go('/data/service');
+            context.push('/data/service');
           } else {
-            context.go('/ai/chat/${thread.id}');
+            context.push('/ai/chat/${thread.id}');
           }
         },
         child: Container(

@@ -786,7 +786,7 @@ class _AiChatPageState extends State<AiChatPage> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => context.go('/machinery/service'),
+              onPressed: () => context.push('/machinery/service'),
               icon: const Icon(Icons.local_phone_outlined, size: 16),
               label: const Text('呼叫周边植保服务'),
             ),

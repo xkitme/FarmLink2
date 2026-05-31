@@ -156,7 +156,7 @@ class _MachineryPageState extends State<MachineryPage> {
       appBar: FarmAppBar(showBack: true, actions: [
         IconButton(
           tooltip: '农机服务',
-          onPressed: () => context.go('/machinery/service'),
+          onPressed: () => context.push('/machinery/service'),
           icon: const Icon(Icons.dashboard_customize_outlined,
               color: AppColors.onSurfaceVariant),
         ),

@@ -32,20 +32,20 @@ class SettingsHomePage extends StatelessWidget {
                 _ProfileTile(
                   name: user?.displayName ?? '未登录',
                   subtitle: '个人资料',
-                  onTap: () => context.go('/profile/settings/account'),
+                  onTap: () => context.push('/profile/settings/account'),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
                   icon: Icons.phone_iphone,
                   label: '手机号绑定',
                   trailingText: _maskPhone(user?.phone),
-                  onTap: () => context.go('/profile/settings/account'),
+                  onTap: () => context.push('/profile/settings/account'),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
                   icon: Icons.lock_outline,
                   label: '修改密码',
-                  onTap: () => context.go('/profile/settings/password'),
+                  onTap: () => context.push('/profile/settings/password'),
                 ),
               ],
             ),
@@ -58,13 +58,13 @@ class SettingsHomePage extends StatelessWidget {
                 SettingTile(
                   icon: Icons.notifications_outlined,
                   label: '消息推送设置',
-                  onTap: () => context.go('/profile/settings/push'),
+                  onTap: () => context.push('/profile/settings/push'),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
                   icon: Icons.thunderstorm_outlined,
                   label: '气象预警提醒',
-                  onTap: () => context.go('/profile/settings/weather'),
+                  onTap: () => context.push('/profile/settings/weather'),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
@@ -77,7 +77,7 @@ class SettingsHomePage extends StatelessWidget {
                 SettingTile(
                   icon: Icons.storage_outlined,
                   label: '存储空间管理',
-                  onTap: () => context.go('/profile/settings/storage'),
+                  onTap: () => context.push('/profile/settings/storage'),
                 ),
               ],
             ),
@@ -90,7 +90,7 @@ class SettingsHomePage extends StatelessWidget {
                 SettingTile(
                   icon: Icons.shield_outlined,
                   label: '隐私设置',
-                  onTap: () => context.go('/profile/settings/privacy'),
+                  onTap: () => context.push('/profile/settings/privacy'),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
@@ -103,14 +103,14 @@ class SettingsHomePage extends StatelessWidget {
                 SettingTile(
                   icon: Icons.help_outline,
                   label: '帮助与反馈',
-                  onTap: () => context.go('/profile/settings/help'),
+                  onTap: () => context.push('/profile/settings/help'),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
                   icon: Icons.info_outline,
                   label: '关于田园通',
                   trailingText: 'v1.0.0',
-                  onTap: () => context.go('/profile/settings/about'),
+                  onTap: () => context.push('/profile/settings/about'),
                 ),
               ],
             ),

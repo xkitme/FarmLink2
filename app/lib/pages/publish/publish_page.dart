@@ -382,7 +382,7 @@ class _PublishPageState extends State<PublishPage> {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(sheetCtx, false);
-                        context.go('/disaster');
+                        context.push('/disaster');
                       },
                       icon: const Icon(Icons.thunderstorm_outlined, size: 16),
                       label: const Text('灾情上报'),
@@ -393,7 +393,7 @@ class _PublishPageState extends State<PublishPage> {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(sheetCtx, false);
-                        context.go('/agri');
+                        context.push('/agri');
                       },
                       icon: const Icon(Icons.eco_outlined, size: 16),
                       label: const Text('农事记录'),
