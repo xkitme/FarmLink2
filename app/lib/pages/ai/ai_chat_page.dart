@@ -32,7 +32,6 @@ class _AiChatPageState extends State<AiChatPage> {
   final List<_ChatMessage> _messages = [];
   int? _threadId;
   late String _scene;
-  String _title = '新对话';
   bool _loadingHistory = true;
   bool _sending = false;
   bool _detecting = false;
@@ -57,7 +56,6 @@ class _AiChatPageState extends State<AiChatPage> {
     if (_threadId == null) {
       if (!mounted) return;
       setState(() {
-        _title = '新对话 · ${_sceneLabel(_scene)}';
         _messages.add(_ChatMessage(
           fromUser: false,
           text: '您好，我是您的智能农技助手。可以问我政策、农技、病虫害、行情等问题，也可以点击「+」上传图片让我识别。',
@@ -110,10 +108,8 @@ class _AiChatPageState extends State<AiChatPage> {
         }
       }
       final first = records.first;
-      final firstQuestion = _text(first['question']);
       setState(() {
         _scene = _normalizeScene(first['scene']);
-        _title = _truncate(firstQuestion.isEmpty ? 'AI 对话' : firstQuestion, 18);
         _messages
           ..clear()
           ..addAll(list);
@@ -191,9 +187,6 @@ class _AiChatPageState extends State<AiChatPage> {
       setState(() {
         _messages[_messages.length - 1] =
             _messages.last.copyWith(streaming: false);
-        if (_threadId == null && question.isNotEmpty) {
-          _title = _truncate(question, 18);
-        }
       });
       if (_threadId == null &&
           newThreadId != null &&
@@ -414,14 +407,34 @@ class _AiChatPageState extends State<AiChatPage> {
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
           onPressed: () => context.canPop() ? context.pop() : context.go('/ai'),
         ),
-        title: Text(
-          _title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.w700,
-          ),
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'AI 农技助手',
+              style: TextStyle(
+                color: AppColors.onSurface,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(Icons.circle, size: 9, color: AppColors.primary),
+                SizedBox(width: 6),
+                Text(
+                  '专家在线诊断',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -543,6 +556,10 @@ class _AiChatPageState extends State<AiChatPage> {
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   filled: true,
                   fillColor: AppColors.surfaceLow,
+                  suffixIcon: const Icon(
+                    Icons.mic_none_outlined,
+                    color: AppColors.outline,
+                  ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(999),
                     borderSide:
@@ -703,20 +720,34 @@ class _AiChatPageState extends State<AiChatPage> {
                     ),
                   ),
                 ),
-                Text(
-                  '${(result.confidence * 100).toStringAsFixed(1)}%',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      '诊断置信度',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                    Text(
+                      '${(result.confidence * 100).toStringAsFixed(1)}%',
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 10),
           Text(
-            result.advice.isEmpty ? '识别完成，建议结合田间情况复核。' : result.advice,
+            result.advice.isEmpty
+                ? '基于深度学习模型分析，识别完成。建议结合田间情况复核。'
+                : '基于深度学习模型分析，${result.advice}',
             style: const TextStyle(
               fontSize: 13,
               height: 1.5,
@@ -724,13 +755,20 @@ class _AiChatPageState extends State<AiChatPage> {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            '推荐防治方案',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.onSurface,
-            ),
+          const Row(
+            children: [
+              Icon(Icons.checklist_rounded,
+                  color: AppColors.tertiary, size: 18),
+              SizedBox(width: 6),
+              Text(
+                '推荐防治方案',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.onSurface,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           SizedBox(
@@ -891,9 +929,6 @@ class _AiChatPageState extends State<AiChatPage> {
     final text = '${value ?? ''}'.trim();
     return text.isEmpty || text == 'null' ? fallback : text;
   }
-
-  static String _truncate(String value, int length) =>
-      value.length <= length ? value : '${value.substring(0, length)}...';
 
   static String _time(DateTime value) => DateFormat('HH:mm').format(value);
 }

@@ -154,3 +154,12 @@ D:\dgitc_project\InkFlow\design_ref\ai页\ai_2\screen.png
 - 验证：`flutter analyze lib` 通过。
 
 <!-- Lane H 完成后继续追加设计稿对照差异、issue 状态与 commit hash。 -->
+
+### Lane H · 2026-05-31 Codex 实施
+
+- 实施前已打开并对照 `design_ref/ai页/ai_1/screen.png`、`design_ref/ai页/ai_2/screen.png`。
+- `app/lib/pages/ai/ai_threads_page.dart`：搜索框补大地棕描边，历史标题增强；修正过去会话左边框为灰色 1px，今天会话保持绿色 3px，主动生成报告使用麦金 3px 左边框。
+- `app/lib/pages/ai/ai_chat_page.dart`：顶栏改为固定“AI 农技助手 / 专家在线诊断”，保留历史、设置和单会话删除能力；输入框补录音图标；诊断卡补“诊断置信度”、模型分析说明和推荐方案图标层级。
+- 已核对并保留既有一致项：历史搜索、时间分组、年度报告混排、右下 FAB、用户图片圆角缩略图、拍照/相册/语音入口、两项防治方案按钮。
+- 验证：`flutter analyze lib` 通过。
+- Issue：#14 已在 `68a7c4a5` 修复并关闭；#15 随 Lane H 提交关闭。

@@ -185,7 +185,7 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
                       const Text(
                         'AI 历史记录',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.w700,
                           color: AppColors.onSurface,
                         ),
@@ -235,6 +235,7 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
         decoration: BoxDecoration(
           color: AppColors.surfaceLow,
           borderRadius: BorderRadius.circular(R.md),
+          border: Border.all(color: AppColors.secondary, width: 1),
         ),
         child: Row(
           children: [
@@ -291,8 +292,12 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
             borderRadius: BorderRadius.circular(R.md),
             border: Border(
               left: BorderSide(
-                color: isToday ? AppColors.primary : AppColors.outlineVariant,
-                width: 3,
+                color: isReport
+                    ? AppColors.gold
+                    : isToday
+                        ? AppColors.primary
+                        : AppColors.outlineVariant,
+                width: isToday || isReport ? 3 : 1,
               ),
             ),
             boxShadow: AppColors.ambientShadow,
