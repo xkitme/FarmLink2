@@ -6,8 +6,10 @@ import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
-/// 气象灾害板块 —— 预警 / 灾情上报 / 保险理赔 / 应急预案 /
-/// 冻害防护 / 火险预警 / 干旱指数 / 一键求助（8 项均接服务端）
+/// 气象灾害板块 —— 天气预报式界面。
+/// 顶部「天气态势」hero 随当前最高灾情自动变色（暴雨 / 干旱 / 冻害 /
+/// 火险 / 平稳），内嵌火险·干旱·冻害三项指数；下方依次为生效预警、
+/// 冻害防护、应急预案、上报与求助。8 项功能均接服务端。
 class DisasterPage extends StatefulWidget {
   const DisasterPage({super.key});
 
@@ -15,7 +17,8 @@ class DisasterPage extends StatefulWidget {
   State<DisasterPage> createState() => _DisasterPageState();
 }
 
-class _DisasterPageState extends State<DisasterPage> {
+class _DisasterPageState extends State<DisasterPage>
+    with SingleTickerProviderStateMixin {
   bool _loading = true;
   bool _fromCache = false;
   String? _error;
@@ -26,10 +29,21 @@ class _DisasterPageState extends State<DisasterPage> {
   Map<String, dynamic> _drought = {};
   Map<String, dynamic> _frost = {};
 
+  late final AnimationController _pulse;
+
   @override
   void initState() {
     super.initState();
+    _pulse = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1600))
+      ..repeat(reverse: true);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
   }
 
   Map<String, dynamic> _m(dynamic v) =>
@@ -79,6 +93,7 @@ class _DisasterPageState extends State<DisasterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final wx = _wx();
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -102,183 +117,304 @@ class _DisasterPageState extends State<DisasterPage> {
                   color: AppColors.primary,
                   onRefresh: _load,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                    padding: EdgeInsets.zero,
                     children: [
                       if (_fromCache)
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 12),
-                          child: AlertBanner('数据更新中，下拉刷新可重试', critical: false),
-                        ),
-                      _alertSection(),
-                      const SectionTitle('风险指数'),
-                      // 在竖向 ListView 里，Row 的高度约束是无限的；直接用
-                      // CrossAxisAlignment.stretch 会把卡片拉伸到无限高而抛异常。
-                      // 用 IntrinsicHeight 把 Row 收成两卡的等高有限高度。
-                      IntrinsicHeight(
-                        child: Row(
+                        const AlertBanner('数据更新中，下拉刷新可重试',
+                            critical: false),
+                      _hero(wx),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Expanded(child: _fireCard()),
-                            const SizedBox(width: 12),
-                            Expanded(child: _droughtCard()),
+                            if (_alerts.isNotEmpty) ...[
+                              const SectionTitle('生效预警'),
+                              ..._alertCards(),
+                            ],
+                            const SectionTitle('冻害防护'),
+                            _frostCard(),
+                            const SectionTitle('应急预案'),
+                            ..._guides.map(_guideTile),
+                            if (_guides.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: EmptyView('暂无应急预案'),
+                              ),
+                            const SectionTitle('上报与求助'),
+                            _actionGrid(),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      _frostCard(),
-                      const SectionTitle('应急预案'),
-                      ..._guides.map(_guideTile),
-                      if (_guides.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: EmptyView('暂无应急预案'),
-                        ),
-                      const SectionTitle('上报与求助'),
-                      _actionGrid(),
                     ],
                   ),
                 ),
     );
   }
 
-  // ── 当前预警 ──────────────────────────────
-  Widget _alertSection() {
-    if (_alerts.isEmpty) {
-      return const AppCard(
-        child: Row(
-          children: [
-            Icon(Icons.verified, color: AppColors.primary),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text('当前暂无生效的气象灾害预警',
-                  style: TextStyle(
-                      fontSize: 15, color: AppColors.onSurfaceVariant)),
-            ),
-          ],
+  // ── 天气态势 hero（随最高灾情变色 + 内嵌三指数）──────────
+  Widget _hero(_Wx wx) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: wx.sky,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-      );
-    }
-    return Column(
-      children: [
-        for (final a in _alerts)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.error,
-                borderRadius: BorderRadius.circular(R.md),
-                boxShadow: AppColors.ambientShadow,
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+        boxShadow: AppColors.ambientShadow,
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // 背景大图标，营造天气氛围
+          Positioned(
+            right: -16,
+            top: -8,
+            child: Icon(wx.icon,
+                size: 132, color: Colors.white.withValues(alpha: 0.10)),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      color: Colors.white, size: 24),
-                  const SizedBox(width: 12),
+                  const Icon(Icons.place_outlined,
+                      size: 15, color: Colors.white70),
+                  const SizedBox(width: 4),
+                  Text('本地 · ${_today()}',
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 13)),
+                  const Spacer(),
+                  _heroBadge(wx),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _heroIcon(wx),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '【${a['alertLevel'] ?? '预警'}】${a['title'] ?? a['alertType'] ?? '气象预警'}',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700),
-                        ),
+                        Text(wx.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2)),
                         const SizedBox(height: 4),
-                        Text('${a['content'] ?? ''}',
+                        Text(wx.sub,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 13,
-                                height: 1.5)),
+                                height: 1.4)),
                       ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  // ── 火险 / 干旱 指数 ───────────────────────
-  Widget _fireCard() {
-    final level = _int(_fire['level']);
-    final label = '${_fire['label'] ?? '—'}';
-    final color = level >= 4
-        ? AppColors.error
-        : level == 3
-            ? AppColors.warning
-            : AppColors.primary;
-    return _indexCard(
-      icon: Icons.local_fire_department,
-      iconColor: color,
-      title: '火险等级',
-      big: level > 0 ? '$level 级' : '—',
-      sub: label,
-      detail: '${_fire['advice'] ?? ''}\n${_fire['hotline'] ?? ''}',
-      sheetTitle: '火险预警',
-    );
-  }
-
-  Widget _droughtCard() {
-    final index = _int(_drought['index']);
-    final level = '${_drought['level'] ?? '—'}';
-    final color = index >= 60
-        ? AppColors.error
-        : index >= 40
-            ? AppColors.warning
-            : AppColors.primary;
-    return _indexCard(
-      icon: Icons.water_drop_outlined,
-      iconColor: color,
-      title: '干旱指数',
-      big: '$index',
-      sub: level,
-      detail: '${_drought['advice'] ?? ''}\n${_drought['note'] ?? ''}',
-      sheetTitle: '干旱监测指数',
-    );
-  }
-
-  Widget _indexCard({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String big,
-    required String sub,
-    required String detail,
-    required String sheetTitle,
-  }) {
-    return AppCard(
-      onTap: () => _infoSheet(sheetTitle, detail),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: iconColor),
-              const SizedBox(width: 6),
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 0.4,
-                      color: AppColors.onSurfaceVariant)),
+              const SizedBox(height: 20),
+              _indexStrip(),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(big,
-              style: TextStyle(
-                  fontSize: 24, fontWeight: FontWeight.w700, color: iconColor)),
-          const SizedBox(height: 2),
-          Text(sub,
-              style: const TextStyle(
-                  fontSize: 13, color: AppColors.onSurfaceVariant)),
         ],
       ),
     );
+  }
+
+  Widget _heroBadge(_Wx wx) {
+    final txt = wx.alerts > 0 ? '${wx.alerts} 条预警生效' : '实时监测';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(R.sm),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(wx.alerts > 0 ? Icons.warning_amber_rounded : Icons.sensors,
+              size: 13, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(txt,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroIcon(_Wx wx) {
+    final pulse = wx.severity >= 3;
+    return SizedBox(
+      width: 72,
+      height: 72,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (pulse)
+            AnimatedBuilder(
+              animation: _pulse,
+              builder: (_, __) {
+                final t = _pulse.value;
+                return Container(
+                  width: 50 + 22 * t,
+                  height: 50 + 22 * t,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.22 * (1 - t)),
+                  ),
+                );
+              },
+            ),
+          Icon(wx.icon, size: 56, color: Colors.white),
+        ],
+      ),
+    );
+  }
+
+  /// 三项指数条（火险 / 干旱 / 冻害），半透明白底贴在 hero 渐变上
+  Widget _indexStrip() {
+    final fireLv = _int(_fire['level']);
+    final droughtIdx = _int(_drought['index']);
+    final frostAlert = _frost['hasAlert'] == true;
+    final measures = (_frost['measures'] as List? ?? []).cast<dynamic>();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(R.md),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            _indexCell(
+              icon: Icons.local_fire_department,
+              big: fireLv > 0 ? '$fireLv 级' : '—',
+              label: '火险等级',
+              onTap: () => _infoSheet('火险预警',
+                  '${_fire['advice'] ?? '暂无火险建议'}\n${_fire['hotline'] ?? ''}'),
+            ),
+            _cellDivider(),
+            _indexCell(
+              icon: Icons.water_drop_outlined,
+              big: '$droughtIdx',
+              label: '干旱指数',
+              onTap: () => _infoSheet('干旱监测指数',
+                  '${_drought['advice'] ?? '暂无干旱建议'}\n${_drought['note'] ?? ''}'),
+            ),
+            _cellDivider(),
+            _indexCell(
+              icon: Icons.ac_unit,
+              big: frostAlert ? '预警' : '正常',
+              label: '冻害风险',
+              onTap: () => _infoSheet(
+                  '冻害防护',
+                  measures.isEmpty
+                      ? '当前暂无低温冻害预警。'
+                      : measures.map((m) => '· $m').join('\n')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _cellDivider() => Container(
+      width: 1, color: Colors.white.withValues(alpha: 0.18));
+
+  Widget _indexCell({
+    required IconData icon,
+    required String big,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(R.sm),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: Colors.white70),
+                const SizedBox(height: 6),
+                Text(big,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text(label,
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 11)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── 生效预警卡片 ──────────────────────────────
+  List<Widget> _alertCards() {
+    return [
+      for (final a in _alerts)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.error,
+              borderRadius: BorderRadius.circular(R.md),
+              boxShadow: AppColors.ambientShadow,
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.warning_amber_rounded,
+                    color: Colors.white, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '【${a['alertLevel'] ?? '预警'}】${a['title'] ?? a['alertType'] ?? '气象预警'}',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('${a['content'] ?? ''}',
+                          style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              height: 1.5)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+    ];
   }
 
   // ── 冻害防护 ──────────────────────────────
@@ -304,27 +440,38 @@ class _DisasterPageState extends State<DisasterPage> {
                   color: hasAlert ? AppColors.error : AppColors.primary),
             ],
           ),
-          const SizedBox(height: 10),
-          for (var i = 0; i < measures.length && i < 5; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('· ',
-                      style: TextStyle(
-                          color: AppColors.tertiary,
-                          fontWeight: FontWeight.w700)),
-                  Expanded(
-                    child: Text('${measures[i]}',
-                        style: const TextStyle(
-                            fontSize: 13,
-                            height: 1.5,
-                            color: AppColors.onSurface)),
-                  ),
-                ],
+          if (measures.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Text('当前低温风险可控，关注后续气温变化即可。',
+                  style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: AppColors.onSurfaceVariant)),
+            )
+          else ...[
+            const SizedBox(height: 10),
+            for (var i = 0; i < measures.length && i < 5; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('· ',
+                        style: TextStyle(
+                            color: AppColors.tertiary,
+                            fontWeight: FontWeight.w700)),
+                    Expanded(
+                      child: Text('${measures[i]}',
+                          style: const TextStyle(
+                              fontSize: 13,
+                              height: 1.5,
+                              color: AppColors.onSurface)),
+                    ),
+                  ],
+                ),
               ),
-            ),
+          ],
         ],
       ),
     );
@@ -732,4 +879,182 @@ class _DisasterPageState extends State<DisasterPage> {
         return status.isEmpty ? '已提交' : status;
     }
   }
+
+  // ── 天气态势推断 ──────────────────────────────
+  String _today() {
+    final n = DateTime.now();
+    const wd = ['一', '二', '三', '四', '五', '六', '日'];
+    return '${n.month}月${n.day}日 周${wd[n.weekday - 1]}';
+  }
+
+  /// 预警等级 → 排序权重（红 > 橙 > 黄 > 蓝）
+  int _alertRank(String level) {
+    if (level.contains('红')) return 4;
+    if (level.contains('橙')) return 3;
+    if (level.contains('黄')) return 2;
+    if (level.contains('蓝')) return 1;
+    return 3; // 文案未含颜色时，按警告级处理
+  }
+
+  /// 灾种关键词 → 条件键（决定图标与渐变）
+  String _condKey(String s) {
+    if (s.contains('雹')) return 'hail';
+    if (s.contains('雨') || s.contains('涝') || s.contains('洪')) return 'rain';
+    if (s.contains('旱')) return 'drought';
+    if (s.contains('冻') ||
+        s.contains('霜') ||
+        s.contains('雪') ||
+        s.contains('寒') ||
+        s.contains('低温')) {
+      return 'frost';
+    }
+    if (s.contains('火')) return 'fire';
+    if (s.contains('风') || s.contains('台')) return 'wind';
+    if (s.contains('高温') || s.contains('热')) return 'heat';
+    return 'rain';
+  }
+
+  IconData _condIcon(String k) {
+    switch (k) {
+      case 'hail':
+        return Icons.grain;
+      case 'drought':
+      case 'heat':
+        return Icons.wb_sunny;
+      case 'frost':
+        return Icons.ac_unit;
+      case 'fire':
+        return Icons.local_fire_department;
+      case 'wind':
+        return Icons.air;
+      case 'clear':
+        return Icons.wb_cloudy;
+      default:
+        return Icons.thunderstorm; // rain / generic
+    }
+  }
+
+  List<Color> _condSky(String k) {
+    switch (k) {
+      case 'hail':
+        return const [Color(0xFF566580), Color(0xFF2B3848)];
+      case 'drought':
+        return const [Color(0xFFC77800), Color(0xFF7A3D00)];
+      case 'heat':
+        return const [Color(0xFFCE6A1F), Color(0xFF8A3A00)];
+      case 'frost':
+        return const [Color(0xFF4F74A8), Color(0xFF2A3C5C)];
+      case 'fire':
+        return const [Color(0xFFC0392B), Color(0xFF6E140C)];
+      case 'wind':
+        return const [Color(0xFF3E7A6F), Color(0xFF1E3D38)];
+      case 'clear':
+        return const [Color(0xFF2E7D32), Color(0xFF0D631B)];
+      default: // rain / generic
+        return const [Color(0xFF40627A), Color(0xFF1F3340)];
+    }
+  }
+
+  _Wx _wx() {
+    final count = _alerts.length;
+    Map<String, dynamic>? top;
+    int topRank = -1;
+    for (final a in _alerts) {
+      final r = _alertRank('${a['alertLevel'] ?? ''}');
+      if (r > topRank) {
+        topRank = r;
+        top = a;
+      }
+    }
+    if (top != null) {
+      final level = '${top['alertLevel'] ?? '预警'}';
+      final type = '${top['alertType'] ?? '气象灾害'}';
+      final key = _condKey('$type$level${top['title'] ?? ''}');
+      final sev = topRank >= 3 ? 3 : (topRank == 2 ? 2 : 1);
+      return _Wx(
+        title: '${top['title'] ?? '$type$level预警'}',
+        sub: '${top['content'] ?? '请注意防范，关注后续预警更新'}',
+        icon: _condIcon(key),
+        sky: _condSky(key),
+        severity: sev,
+        alerts: count,
+      );
+    }
+
+    final fireLv = _int(_fire['level']);
+    final droughtIdx = _int(_drought['index']);
+    final frostAlert = _frost['hasAlert'] == true;
+    final measures = (_frost['measures'] as List? ?? []).cast<dynamic>();
+
+    if (fireLv >= 4) {
+      return _Wx(
+          title: '高火险 · $fireLv 级',
+          sub: '${_fire['advice'] ?? '严禁野外用火，注意林地防火'}',
+          icon: _condIcon('fire'),
+          sky: _condSky('fire'),
+          severity: 3,
+          alerts: 0);
+    }
+    if (droughtIdx >= 60) {
+      return _Wx(
+          title: '干旱橙色 · 指数 $droughtIdx',
+          sub: '${_drought['advice'] ?? '注意抗旱灌溉与节水'}',
+          icon: _condIcon('drought'),
+          sky: _condSky('drought'),
+          severity: 3,
+          alerts: 0);
+    }
+    if (frostAlert) {
+      return _Wx(
+          title: '低温冻害预警',
+          sub: measures.isNotEmpty ? '${measures.first}' : '做好防冻保温准备',
+          icon: _condIcon('frost'),
+          sky: _condSky('frost'),
+          severity: 2,
+          alerts: 0);
+    }
+    if (fireLv == 3) {
+      return _Wx(
+          title: '火险偏高 · 3 级',
+          sub: '${_fire['advice'] ?? '谨慎用火'}',
+          icon: _condIcon('fire'),
+          sky: _condSky('fire'),
+          severity: 2,
+          alerts: 0);
+    }
+    if (droughtIdx >= 40) {
+      return _Wx(
+          title: '轻度干旱 · 指数 $droughtIdx',
+          sub: '${_drought['advice'] ?? '关注田间墒情'}',
+          icon: _condIcon('drought'),
+          sky: _condSky('drought'),
+          severity: 1,
+          alerts: 0);
+    }
+    return _Wx(
+        title: '天气平稳',
+        sub: '各项气象指数正常，暂无灾害预警',
+        icon: _condIcon('clear'),
+        sky: _condSky('clear'),
+        severity: 0,
+        alerts: 0);
+  }
+}
+
+/// 天气态势数据（驱动 hero 的标题 / 渐变 / 图标 / 脉冲）
+class _Wx {
+  final String title;
+  final String sub;
+  final IconData icon;
+  final List<Color> sky;
+  final int severity; // 0 平稳 · 1 提示 · 2 警告 · 3 严重（脉冲）
+  final int alerts;
+  const _Wx({
+    required this.title,
+    required this.sub,
+    required this.icon,
+    required this.sky,
+    required this.severity,
+    required this.alerts,
+  });
 }
