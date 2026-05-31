@@ -195,7 +195,7 @@ class _MarketPageState extends State<MarketPage> {
     final visibleProducts = _products.isEmpty ? _fallback : _products;
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: FarmAppBar(actions: [
+      appBar: FarmAppBar(showBack: true, actions: [
         IconButton(
           tooltip: '流通服务',
           onPressed: () => context.go('/market/service'),

@@ -4,11 +4,22 @@ import 'package:go_router/go_router.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 
-/// 品牌顶栏：白底 h64，左农机图标、居中「FarmLink 田园通」粗体绿、右铃铛
+/// 品牌顶栏：白底 h64，左农机图标（或返回箭头）、居中「FarmLink 田园通」粗体绿、右铃铛
+///
+/// 一级 tab 页：直接 `FarmAppBar()`，左侧是品牌叶 icon。
+/// 详情页：`FarmAppBar(showBack: true, backFallback: '/home')`，左侧变返回箭头。
 class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final VoidCallback? onBell;
-  const FarmAppBar({super.key, this.actions, this.onBell});
+  final bool showBack;
+  final String backFallback;
+  const FarmAppBar({
+    super.key,
+    this.actions,
+    this.onBell,
+    this.showBack = false,
+    this.backFallback = '/home',
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(64);
@@ -19,9 +30,24 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
       toolbarHeight: 64,
       automaticallyImplyLeading: false,
       titleSpacing: 0,
-      leading: const Center(
-        child: Icon(Icons.agriculture, color: AppColors.primary, size: 26),
-      ),
+      leading: showBack
+          ? IconButton(
+              tooltip: '返回',
+              icon: const Icon(Icons.arrow_back,
+                  color: AppColors.onSurfaceVariant),
+              onPressed: () {
+                final router = GoRouter.of(context);
+                if (router.canPop()) {
+                  router.pop();
+                } else {
+                  router.go(backFallback);
+                }
+              },
+            )
+          : const Center(
+              child:
+                  Icon(Icons.agriculture, color: AppColors.primary, size: 26),
+            ),
       title: const Text('FarmLink 田园通',
           style: TextStyle(
               color: AppColors.primary,

@@ -153,7 +153,7 @@ class _MachineryPageState extends State<MachineryPage> {
     final selected = _selected ?? _fallback.first;
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: FarmAppBar(actions: [
+      appBar: FarmAppBar(showBack: true, actions: [
         IconButton(
           tooltip: '农机服务',
           onPressed: () => context.go('/machinery/service'),

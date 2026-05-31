@@ -141,7 +141,7 @@ class _LifePageState extends State<LifePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(),
+      appBar: const FarmAppBar(showBack: true),
       body: _loading
           ? const Loading(text: '正在加载生活服务...')
           : _error != null
