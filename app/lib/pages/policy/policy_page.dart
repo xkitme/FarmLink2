@@ -367,6 +367,7 @@ class _PolicyPageState extends State<PolicyPage> {
 
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,

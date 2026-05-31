@@ -117,6 +117,7 @@ class _MessagesPageState extends State<MessagesPage> {
     if (!mounted) return;
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(

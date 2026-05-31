@@ -636,6 +636,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
   void _sheet(String title, {required Widget child}) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
@@ -667,6 +668,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
       {required String title, required List<Widget> fields}) {
     return showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(

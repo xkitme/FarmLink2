@@ -163,6 +163,7 @@ class _DataServicePageState extends State<DataServicePage> {
     final now = DateTime.now().year;
     return showModalBottomSheet<int>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(R.md)),
@@ -201,6 +202,7 @@ class _DataServicePageState extends State<DataServicePage> {
     final year = _int(report['year']);
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
@@ -261,6 +263,7 @@ class _DataServicePageState extends State<DataServicePage> {
     // F5：表单抽成 _StatFormSheet StatefulWidget，controller 在 dispose 中释放
     final result = await showModalBottomSheet<_StatFormData>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
@@ -297,6 +300,7 @@ class _DataServicePageState extends State<DataServicePage> {
     // 在 sheet 关闭后刷新一次，以反映立即同步后的最新队列
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(

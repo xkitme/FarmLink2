@@ -125,6 +125,7 @@ class AboutPage extends StatelessWidget {
   void _showTextSheet(BuildContext context, String title) {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(

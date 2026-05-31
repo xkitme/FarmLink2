@@ -250,6 +250,7 @@ class _AiChatPageState extends State<AiChatPage> {
   void _openPlusSheet() {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),

@@ -120,8 +120,7 @@ class _DisasterPageState extends State<DisasterPage>
                     padding: EdgeInsets.zero,
                     children: [
                       if (_fromCache)
-                        const AlertBanner('数据更新中，下拉刷新可重试',
-                            critical: false),
+                        const AlertBanner('数据更新中，下拉刷新可重试', critical: false),
                       _hero(wx),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
@@ -185,8 +184,8 @@ class _DisasterPageState extends State<DisasterPage>
                       size: 15, color: Colors.white70),
                   const SizedBox(width: 4),
                   Text('本地 · ${_today()}',
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 13)),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13)),
                   const Spacer(),
                   _heroBadge(wx),
                 ],
@@ -332,8 +331,8 @@ class _DisasterPageState extends State<DisasterPage>
     );
   }
 
-  Widget _cellDivider() => Container(
-      width: 1, color: Colors.white.withValues(alpha: 0.18));
+  Widget _cellDivider() =>
+      Container(width: 1, color: Colors.white.withValues(alpha: 0.18));
 
   Widget _indexCell({
     required IconData icon,
@@ -361,8 +360,8 @@ class _DisasterPageState extends State<DisasterPage>
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 2),
                 Text(label,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 11)),
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 11)),
               ],
             ),
           ),
@@ -752,6 +751,7 @@ class _DisasterPageState extends State<DisasterPage>
   void _sheet(String title, {required Widget child}) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
@@ -785,6 +785,7 @@ class _DisasterPageState extends State<DisasterPage>
   }) {
     return showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(

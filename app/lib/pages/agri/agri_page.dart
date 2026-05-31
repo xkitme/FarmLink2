@@ -358,6 +358,7 @@ class _AgriPageState extends State<AgriPage> {
   Future<ImageSource?> _pickSource() {
     return showModalBottomSheet<ImageSource>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
@@ -651,6 +652,7 @@ class _AgriPageState extends State<AgriPage> {
   void _sheet(String title, {required Widget child}) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
@@ -682,6 +684,7 @@ class _AgriPageState extends State<AgriPage> {
       {required String title, required List<Widget> fields}) {
     return showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(

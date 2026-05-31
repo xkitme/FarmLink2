@@ -509,6 +509,7 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
   void _sheet(String title, {required Widget child}) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
@@ -540,6 +541,7 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
       {required String title, required List<Widget> fields}) {
     return showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(

@@ -624,6 +624,7 @@ class _MarketPageState extends State<MarketPage> {
   void _showProductDetail(_Product product) {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: AppColors.surface,
@@ -678,8 +679,8 @@ class _MarketPageState extends State<MarketPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(product.seller,
-                        style: const TextStyle(
-                            color: AppColors.onSurfaceVariant)),
+                        style:
+                            const TextStyle(color: AppColors.onSurfaceVariant)),
                   ],
                 ),
               ),

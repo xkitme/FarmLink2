@@ -80,7 +80,8 @@ class _PublishPageState extends State<PublishPage> {
           IconButton(
             tooltip: '发布动态',
             onPressed: _openComposer,
-            icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+            icon:
+                const Icon(Icons.add_circle_outline, color: AppColors.primary),
           ),
           IconButton(
             onPressed: () {},
@@ -324,6 +325,7 @@ class _PublishPageState extends State<PublishPage> {
   Future<void> _openDetail(Map<String, dynamic> post) async {
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
@@ -344,6 +346,7 @@ class _PublishPageState extends State<PublishPage> {
 
     final ok = await showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(

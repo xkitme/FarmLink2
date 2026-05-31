@@ -1167,6 +1167,7 @@ class _LifePageState extends State<LifePage> {
       {required String title, required List<Widget> fields}) {
     return showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
@@ -1245,6 +1246,7 @@ class _LifePageState extends State<LifePage> {
   void _sheet(String title, {required Widget child}) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
