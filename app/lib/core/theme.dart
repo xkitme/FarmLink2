@@ -28,6 +28,19 @@ ThemeData buildAppTheme() {
     scaffoldBackgroundColor: AppColors.background,
     splashFactory: InkRipple.splashFactory,
 
+    // 页面切换：全平台统一 Cupertino 右进左出，back 自动反向，前进/返回视觉对称。
+    // M3 默认的 ZoomPageTransitionsBuilder 进出方向一致，会给人"不协调"的观感。
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: CupertinoPageTransitionsBuilder(),
+      },
+    ),
+
     // 白底顶栏
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.surface,
