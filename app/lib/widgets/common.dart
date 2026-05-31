@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/api_client.dart';
 import '../core/constants.dart';
@@ -30,9 +31,10 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: actions ??
           [
             IconButton(
-              onPressed: onBell ?? () {},
+              onPressed: onBell ?? () => GoRouter.of(context).go('/messages'),
               icon: const Icon(Icons.notifications_none,
                   color: AppColors.onSurfaceVariant),
+              tooltip: '消息通知',
             ),
           ],
     );

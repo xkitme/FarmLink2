@@ -148,4 +148,9 @@ D:\dgitc_project\InkFlow\design_ref\ai页\ai_2\screen.png
 
 ## 七、实施备注（Codex 完成后填写）
 
-<!-- 改了哪些文件、实际看图对照后的差异清单、关 issue commit hash -->
+### Lane G · 2026-05-31 Codex 实施
+
+- `app/lib/widgets/common.dart`：`FarmAppBar` 默认铃铛由空函数改为跳转 `/messages`，并补充“消息通知” tooltip；保留调用方自定义 `actions` 时整体覆盖默认铃铛的既有行为。
+- 验证：`flutter analyze lib` 通过。
+
+<!-- Lane H 完成后继续追加设计稿对照差异、issue 状态与 commit hash。 -->
