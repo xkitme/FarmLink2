@@ -2,6 +2,10 @@
 .tools/
 dist/
 
+# Claude Code 本机配置（启用插件 / 本地权限），机器相关不进库
+.claude/settings.json
+.claude/settings.local.json
+
 # 宣传片生成项目的大二进制产物（字体/渲染视频）不进主库
 promo-video/node_modules/
 promo-video/renders/
