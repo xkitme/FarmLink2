@@ -64,7 +64,7 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
       if (!mounted) return;
       setState(() {
         _fromCache = _reminders.isNotEmpty || _transfers.isNotEmpty;
-        _error = _fromCache ? null : '服务暂时不可用，请稍后重试';
+        _error = _fromCache ? null : serviceUnavailableMessage;
         _loading = false;
       });
     }

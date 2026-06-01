@@ -49,7 +49,9 @@ class _Machine {
       deposit: (json['deposit'] as num?)?.toDouble() ?? 0,
       rating: (json['rating'] as num?)?.toDouble() ?? 4.8,
       owner: '机主 ${json['ownerId'] ?? '-'}',
-      distance: '${2.5 + index * 1.1} km',
+      // 后端暂无距离字段，按列表序生成的占位距离需定格 1 位小数，
+      // 否则浮点累加会露出 "5.800000000000001 km" 这类脏数据。
+      distance: '${(2.5 + index * 1.1).toStringAsFixed(1)} km',
       fromApi: true,
     );
   }
@@ -128,8 +130,10 @@ class _MachineryPageState extends State<MachineryPage> {
           _Machine.fromApi(records[i], i),
       ];
 
-      // K2：首次加载时从 records 取 distinct machineType 生成 chips
-      if (initChips) {
+      // K2：从 records 取 distinct machineType 生成 chips。
+      // 仅在「全部」（无类型过滤）的响应上重算，否则按类型过滤的响应
+      // 只含单一类型，会把其余 chip 抹掉。
+      if (initChips && typeQuery == null) {
         final distinctTypes = records
             .map((r) => '${r['machineType'] ?? ''}')
             .where((t) => t.isNotEmpty)
@@ -595,12 +599,19 @@ class _BookingSheetState extends State<_BookingSheet> {
   final _remarkCtrl = TextEditingController();
   bool _submitting = false;
 
+  // 仅取日期（零点），避免与 showDatePicker 的 firstDate 因时分秒漂移
+  // 导致 initialDate < firstDate 触发断言、日期选择器点了打不开。
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  DateTime get _earliestStart =>
+      _dateOnly(DateTime.now()).add(const Duration(days: 1));
+
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _startDate = now.add(const Duration(days: 1));
-    _endDate = now.add(const Duration(days: 2));
+    final today = _dateOnly(DateTime.now());
+    _startDate = today.add(const Duration(days: 1));
+    _endDate = today.add(const Duration(days: 2));
   }
 
   @override
@@ -617,30 +628,34 @@ class _BookingSheetState extends State<_BookingSheet> {
   double get _estimatedRent => widget.machine.price * _days;
 
   Future<void> _pickStart() async {
+    final earliest = _earliestStart;
+    final initial = _startDate.isBefore(earliest) ? earliest : _startDate;
     final picked = await showDatePicker(
       context: context,
-      initialDate: _startDate,
-      firstDate: DateTime.now().add(const Duration(days: 1)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initial,
+      firstDate: earliest,
+      lastDate: earliest.add(const Duration(days: 365)),
     );
     if (picked == null) return;
     setState(() {
-      _startDate = picked;
+      _startDate = _dateOnly(picked);
       if (_endDate.isBefore(_startDate)) {
-        _endDate = _startDate.add(const Duration(days: 1));
+        _endDate = _startDate;
       }
     });
   }
 
   Future<void> _pickEnd() async {
+    final earliest = _startDate;
+    final initial = _endDate.isBefore(earliest) ? earliest : _endDate;
     final picked = await showDatePicker(
       context: context,
-      initialDate: _endDate.isBefore(_startDate) ? _startDate : _endDate,
-      firstDate: _startDate,
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initial,
+      firstDate: earliest,
+      lastDate: earliest.add(const Duration(days: 365)),
     );
     if (picked == null) return;
-    setState(() => _endDate = picked);
+    setState(() => _endDate = _dateOnly(picked));
   }
 
   Future<void> _submit() async {
@@ -654,8 +669,18 @@ class _BookingSheetState extends State<_BookingSheet> {
         'remark': _remarkCtrl.text.trim(),
       });
       if (!mounted) return;
+      // 先抓住根 messenger，再 pop —— 否则 pop 后用 sheet 自身 context
+      // 取 ScaffoldMessenger 会落到正被销毁的子树上，toast 可能不弹。
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
-      toast(context, '预约已提交，等待机主确认');
+      messenger.showSnackBar(SnackBar(
+        content: const Text('预约已提交，等待机主确认'),
+        backgroundColor: AppColors.primaryContainer,
+        behavior: SnackBarBehavior.floating,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
+        duration: const Duration(seconds: 2),
+      ));
     } catch (e) {
       if (mounted) {
         toast(context, actionErrorMessage('预约', e), error: true);
@@ -901,8 +926,17 @@ class _PublishMachineSheetState extends State<_PublishMachineSheet> {
         'description': _descCtrl.text.trim(),
       });
       if (!mounted) return;
+      // 同预约：先抓根 messenger 再 pop，保证发布成功 toast 一定弹出。
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
-      toast(context, '农机已发布');
+      messenger.showSnackBar(SnackBar(
+        content: const Text('农机已发布'),
+        backgroundColor: AppColors.primaryContainer,
+        behavior: SnackBarBehavior.floating,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
+        duration: const Duration(seconds: 2),
+      ));
       widget.onSuccess();
     } catch (e) {
       if (mounted) {
