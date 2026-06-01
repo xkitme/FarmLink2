@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
-import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../widgets/common.dart';
 
@@ -92,73 +90,26 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
   }
 
   Future<void> _clearAll() async {
-    final isAdmin = context.read<AuthState>().user?.role == 'ADMIN';
-    var scope = 'mine';
-    if (isAdmin) {
-      // G5：ADMIN 列表看到全平台数据，清空需先选范围，避免「看到 80 条只删自己 10 条」的错觉
-      final choice = await showDialog<String>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('清空范围'),
-          content: const Text('您是管理员，请选择清空范围：'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, 'mine'),
-                child: const Text('仅我自己')),
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, 'all'),
-                child: const Text('全平台',
-                    style: TextStyle(color: AppColors.error))),
-          ],
-        ),
-      );
-      if (choice == null) return;
-      scope = choice;
-    } else {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('清空全部对话'),
-          content: const Text('确定清空所有 AI 对话历史吗？此操作不可恢复。'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消')),
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('清空',
-                    style: TextStyle(color: AppColors.error))),
-          ],
-        ),
-      );
-      if (ok != true) return;
-    }
-    if (scope == 'all') {
-      if (!mounted) return;
-      // 全平台删除是破坏性运维操作，加一道二次确认防误触
-      final confirmAll = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('确认清空全平台？'),
-          content: const Text('将删除所有用户的 AI 对话历史，影响全平台、不可恢复。'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消')),
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('确认清空全平台',
-                    style: TextStyle(color: AppColors.error))),
-          ],
-        ),
-      );
-      if (confirmAll != true) return;
-    }
+    // 仅清空当前用户自己的 AI 对话历史。App 端不提供「全平台删除」入口
+    // （破坏性运维操作不应暴露给普通使用者，留给后台运维）。
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('清空我的对话'),
+        content: const Text('确定清空我的全部 AI 对话历史吗？此操作不可恢复。'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('清空', style: TextStyle(color: AppColors.error))),
+        ],
+      ),
+    );
+    if (ok != true) return;
     try {
-      await ApiClient.delete(
-          scope == 'all' ? '/ai/qa/records?scope=all' : '/ai/qa/records');
+      await ApiClient.delete('/ai/qa/records');
       if (!mounted) return;
       toast(context, '已清空 AI 对话历史');
       await _load();
