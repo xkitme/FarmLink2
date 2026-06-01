@@ -34,31 +34,41 @@ class _ProfilePageState extends State<ProfilePage> {
       _loading = true;
       _error = null;
     });
+    // 在 await 之前捕获，避免跨异步间隙用 context
+    final auth = context.read<AuthState>();
+    // 本地队列始终先取（离线也能读）——保证同步卡入口在离线/在线失败时仍可见，
+    // 否则 G7 的重试入口恰恰在最需要它的离线场景不可达。
+    var queue = _queue;
     try {
-      await context.read<AuthState>().refreshProfile();
+      queue = await OfflineSyncQueue.all();
+    } catch (_) {}
+    try {
+      await auth.refreshProfile();
       final results = await Future.wait<dynamic>([
         ApiClient.get('/data/dashboard'),
         ApiClient.get('/data/sync/status'),
-        OfflineSyncQueue.all(),
       ]);
       if (!mounted) return;
       setState(() {
         _dashboard = _map(results[0]);
         _syncStatus = _map(results[1]);
-        _queue = results[2] as List<SyncQueueItem>;
+        _queue = queue;
+        _error = null;
         _loading = false;
       });
-      final waiting =
-          _queue.where((item) => item.status != SyncStatus.synced).length;
-      if (triggerAutoSync && waiting > 0 && !_autoSyncing) {
-        _autoSyncSilently();
-      }
     } catch (e) {
+      // 在线部分失败：保留本地队列，降级为内联提示，不整屏报错（缓存用户 + 队列仍可用）
       if (!mounted) return;
       setState(() {
+        _queue = queue;
         _error = serviceErrorMessage(e);
         _loading = false;
       });
+    }
+    final waiting =
+        _queue.where((item) => item.status != SyncStatus.synced).length;
+    if (triggerAutoSync && waiting > 0 && !_autoSyncing) {
+      _autoSyncSilently();
     }
   }
 
@@ -88,7 +98,9 @@ class _ProfilePageState extends State<ProfilePage> {
       appBar: const FarmAppBar(),
       body: _loading
           ? const Loading(text: '正在读取个人数据')
-          : _error != null
+          // 只有在「无缓存用户、也无任何数据」时才整屏报错；
+          // 否则降级渲染（缓存用户 + 本地同步队列），G7 重试入口离线仍可达。
+          : (_error != null && user == null && _dashboard.isEmpty)
               ? ErrorRetry(message: _error!, onRetry: _load)
               : RefreshIndicator(
                   onRefresh: _load,
@@ -96,6 +108,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                     children: [
+                      if (_error != null) ...[
+                        AlertBanner(_error!, critical: false),
+                        const SizedBox(height: 12),
+                      ],
                       _profileHero(user),
                       const SizedBox(height: 16),
                       _overview(cards),

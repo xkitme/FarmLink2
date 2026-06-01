@@ -135,6 +135,27 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
       );
       if (ok != true) return;
     }
+    if (scope == 'all') {
+      if (!mounted) return;
+      // 全平台删除是破坏性运维操作，加一道二次确认防误触
+      final confirmAll = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('确认清空全平台？'),
+          content: const Text('将删除所有用户的 AI 对话历史，影响全平台、不可恢复。'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('取消')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('确认清空全平台',
+                    style: TextStyle(color: AppColors.error))),
+          ],
+        ),
+      );
+      if (confirmAll != true) return;
+    }
     try {
       await ApiClient.delete(
           scope == 'all' ? '/ai/qa/records?scope=all' : '/ai/qa/records');
