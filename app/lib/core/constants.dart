@@ -121,6 +121,25 @@ const List<Map<String, dynamic>> kSections = [
   },
 ];
 
+// ── 行政区划名称（来自 backend/seeds/index.js 的 region 种子） ─────
+// 用于把商品/卖家携带的 regionCode 数字码翻译成产地名称，避免向用户展示裸码。
+const Map<String, String> kRegionNames = {
+  '510000': '四川省',
+  '510100': '成都市',
+  '510131': '蒲江县',
+  '510131100': '寿安街道',
+  '510131100201': '松华村',
+  '510131100202': '长滩村',
+};
+
+/// 把 regionCode 翻译为产地名称；未知或为空时回退到通用文案「乡村产地」，
+/// 永不向用户展示裸数字码。
+String regionName(String? code) {
+  final key = code?.trim() ?? '';
+  if (key.isEmpty) return '乡村产地';
+  return kRegionNames[key] ?? '乡村产地';
+}
+
 // ── 角色 ──────────────────────────────────────────────
 const Map<String, String> kRoleLabels = {
   'FARMER': '普通农户',

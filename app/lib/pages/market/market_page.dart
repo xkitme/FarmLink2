@@ -22,6 +22,7 @@ class _Product {
   final String seller;
   final String badge;
   final Color badgeColor;
+  final int stock;
   final bool fromApi;
 
   const _Product({
@@ -33,6 +34,7 @@ class _Product {
     required this.seller,
     required this.badge,
     required this.badgeColor,
+    this.stock = 99,
     this.fromApi = false,
   });
 
@@ -45,6 +47,7 @@ class _Product {
       title: '${json['title'] ?? '乡村好物'}',
       price: (json['price'] as num?)?.toDouble() ?? 0,
       unit: '${json['unit'] ?? '件'}',
+      stock: (json['stock'] as num?)?.toInt() ?? 0,
       seller: '合作社 ${json['sellerId'] ?? '-'}',
       badge: category == '畜禽'
           ? 'AI质检'
@@ -508,8 +511,14 @@ class _MarketPageState extends State<MarketPage> {
       _marketToast('商品资料更新中，请稍后下单');
       return;
     }
+    final current = _cart[product.id!] ?? 0;
+    // 库存上限（stock<=0 视为未知，不拦截）
+    if (product.stock > 0 && current >= product.stock) {
+      _marketToast('库存仅 ${product.stock} ${product.unit}');
+      return;
+    }
     setState(() {
-      _cart[product.id!] = (_cart[product.id!] ?? 0) + 1;
+      _cart[product.id!] = current + 1;
       _cartProducts[product.id!] = product;
     });
     _marketToast('${product.title} 已加入合计');
@@ -809,8 +818,12 @@ class _MarketPageState extends State<MarketPage> {
       ),
     );
     if (!mounted || qty == null || qty <= 0) return;
+    final merged = (_cart[id] ?? 0) + qty;
+    // 合并回购物车时也夹住库存上限
+    final next =
+        product.stock > 0 && merged > product.stock ? product.stock : merged;
     setState(() {
-      _cart[id] = (_cart[id] ?? 0) + qty;
+      _cart[id] = next;
       _cartProducts[id] = product;
     });
     _marketToast('${product.title} 已加入合计');

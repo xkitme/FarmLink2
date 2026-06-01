@@ -123,7 +123,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   String get _origin {
     final village = '${_seller?['villageName'] ?? ''}'.trim();
-    return village.isNotEmpty ? village : (_regionCode ?? '乡村产地');
+    // 无村名时用地区码→名称映射，绝不向用户展示裸数字码
+    return village.isNotEmpty ? village : regionName(_regionCode);
   }
 
   String? get _sellerPhone {
