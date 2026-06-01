@@ -107,6 +107,161 @@ class AppCard extends StatelessWidget {
   }
 }
 
+/// 全局搜索框（Agro-Modernist 标准）：方角 `R.sm` + 1.5px 描边 + 无阴影 + 方角品牌绿「搜索」钮。
+///
+/// 聚焦时描边与搜索图标转主绿。沉淀自农机页搜索框，作为全局唯一搜索框标准——
+/// 各页顶部搜索一律用本组件，**禁**圆角胶囊 / 阴影 / 渐变。
+class AppSearchField extends StatefulWidget {
+  final TextEditingController controller;
+  final String hintText;
+
+  /// 回车或点「搜索」钮触发，回传当前文本。传入时右侧才显示绿「搜索」钮。
+  final ValueChanged<String>? onSubmitted;
+
+  /// 实时过滤场景（边打边滤）用。传入时通常不传 `onSubmitted`，即不显示搜索钮。
+  final ValueChanged<String>? onChanged;
+
+  /// 清空已有文本后触发，可用于提交式搜索恢复完整列表。
+  final VoidCallback? onClear;
+  const AppSearchField({
+    super.key,
+    required this.controller,
+    this.hintText = '搜索',
+    this.onSubmitted,
+    this.onChanged,
+    this.onClear,
+  });
+
+  @override
+  State<AppSearchField> createState() => _AppSearchFieldState();
+}
+
+class _AppSearchFieldState extends State<AppSearchField> {
+  final _focus = FocusNode();
+  bool _focused = false;
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hasText = widget.controller.text.isNotEmpty;
+    widget.controller.addListener(_onTextChanged);
+    _focus.addListener(() {
+      if (_focus.hasFocus != _focused) {
+        setState(() => _focused = _focus.hasFocus);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant AppSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onTextChanged);
+      widget.controller.addListener(_onTextChanged);
+      _hasText = widget.controller.text.isNotEmpty;
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTextChanged);
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    final hasText = widget.controller.text.isNotEmpty;
+    if (hasText != _hasText) setState(() => _hasText = hasText);
+  }
+
+  void _clear() {
+    widget.controller.clear();
+    widget.onChanged?.call('');
+    widget.onClear?.call();
+  }
+
+  void _submit() => widget.onSubmitted?.call(widget.controller.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _focused ? AppColors.primary : null;
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(
+          color: accent ?? AppColors.outlineVariant,
+          width: 1.5,
+        ),
+      ),
+      padding: const EdgeInsets.only(left: 14, right: 6),
+      child: Row(
+        children: [
+          Icon(Icons.search,
+              color: accent ?? AppColors.onSurfaceVariant, size: 21),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              focusNode: _focus,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _submit(),
+              onChanged: widget.onChanged,
+              // 自定义容器内的输入框：清掉主题里的填充与下划线
+              decoration: InputDecoration(
+                hintText: widget.hintText,
+                hintStyle:
+                    const TextStyle(fontSize: 14, color: AppColors.outline),
+                filled: false,
+                isCollapsed: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+              style: const TextStyle(fontSize: 15, color: AppColors.onSurface),
+            ),
+          ),
+          if (_hasText)
+            IconButton(
+              tooltip: '清除',
+              onPressed: _clear,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.close,
+                  size: 18, color: AppColors.onSurfaceVariant),
+            ),
+          // 方角品牌绿「搜索」按钮：仅提交式（传 onSubmitted）才显示
+          if (widget.onSubmitted != null) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: _submit,
+              child: Container(
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(R.sm - 2),
+                ),
+                child: const Text(
+                  '搜索',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ] else
+            const SizedBox(width: 6),
+        ],
+      ),
+    );
+  }
+}
+
 /// 小节标题
 class SectionTitle extends StatelessWidget {
   final String text;
@@ -303,11 +458,15 @@ class PlaceholderPanel extends StatelessWidget {
 }
 
 /// 轻提示
-void toast(BuildContext context, String msg, {bool error = false}) {
+void toast(BuildContext context, String msg,
+    {bool error = false, double? bottomMargin}) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
     content: Text(msg),
     backgroundColor: error ? AppColors.error : AppColors.primaryContainer,
     behavior: SnackBarBehavior.floating,
+    margin: bottomMargin == null
+        ? null
+        : EdgeInsets.fromLTRB(16, 0, 16, bottomMargin),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
     duration: const Duration(seconds: 2),
   ));

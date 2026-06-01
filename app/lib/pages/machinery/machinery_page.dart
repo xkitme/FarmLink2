@@ -124,7 +124,8 @@ class _MachineryPageState extends State<MachineryPage> {
       if (!mounted) return;
 
       final machines = [
-        for (var i = 0; i < records.length; i++) _Machine.fromApi(records[i], i),
+        for (var i = 0; i < records.length; i++)
+          _Machine.fromApi(records[i], i),
       ];
 
       // K2：首次加载时从 records 取 distinct machineType 生成 chips
@@ -151,7 +152,10 @@ class _MachineryPageState extends State<MachineryPage> {
       final cacheTime = await OfflineCache.updatedAt(key);
       if (!mounted) return;
       final machines = cached.isNotEmpty
-          ? [for (var i = 0; i < cached.length; i++) _Machine.fromApi(cached[i], i)]
+          ? [
+              for (var i = 0; i < cached.length; i++)
+                _Machine.fromApi(cached[i], i)
+            ]
           : _fallback;
       _allMachines = machines;
       setState(() {
@@ -278,11 +282,10 @@ class _MachineryPageState extends State<MachineryPage> {
                 sliver: SliverList.separated(
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemCount: _machines.length,
-                  itemBuilder: (ctx, i) =>
-                      _MachineListCard(
-                        machine: _machines[i],
-                        onTap: () => _openBookingSheet(ctx, _machines[i]),
-                      ),
+                  itemBuilder: (ctx, i) => _MachineListCard(
+                    machine: _machines[i],
+                    onTap: () => _openBookingSheet(ctx, _machines[i]),
+                  ),
                 ),
               ),
           ],
@@ -291,65 +294,14 @@ class _MachineryPageState extends State<MachineryPage> {
     );
   }
 
-  // ── K1 真搜索框 ──────────────────────────────────────
+  // ── K1 真搜索框（统一用全局 AppSearchField）──────────────
 
-  Widget _searchBar() {
-    return Container(
-      height: 50,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(R.sm),
-        border: Border.all(color: AppColors.outlineVariant, width: 1.5),
-      ),
-      padding: const EdgeInsets.only(left: 14, right: 6),
-      child: Row(
-        children: [
-          const Icon(Icons.search, color: AppColors.onSurfaceVariant, size: 21),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: _keywordCtrl,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _onSearch(),
-              // 自定义容器内的输入框：清掉主题里的填充与下划线
-              decoration: const InputDecoration(
-                hintText: '搜索农机名称或类型',
-                hintStyle: TextStyle(fontSize: 14, color: AppColors.outline),
-                filled: false,
-                isCollapsed: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-              ),
-              style: const TextStyle(fontSize: 15, color: AppColors.onSurface),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // 方角品牌绿搜索按钮（取代原灰色圆形 tune 钮）
-          GestureDetector(
-            onTap: _onSearch,
-            child: Container(
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(R.sm - 2),
-              ),
-              child: const Text(
-                '搜索',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _searchBar() => AppSearchField(
+        controller: _keywordCtrl,
+        hintText: '搜索农机名称或类型',
+        onSubmitted: (_) => _onSearch(),
+        onClear: _onSearch,
+      );
 
   // ── K2 数据驱动筛选行 ─────────────────────────────────
 
@@ -421,7 +373,8 @@ class _MachineryPageState extends State<MachineryPage> {
               top: 12,
               right: 12,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: AppColors.primaryContainer.withValues(alpha: 0.88),
                   borderRadius: BorderRadius.circular(999),
@@ -464,8 +417,7 @@ class _MachineryPageState extends State<MachineryPage> {
               border: Border.all(color: Colors.white, width: 2),
               boxShadow: AppColors.ambientShadow,
             ),
-            child: const Icon(Icons.agriculture,
-                color: Colors.white, size: 18),
+            child: const Icon(Icons.agriculture, color: Colors.white, size: 18),
           ),
         ),
     ];
@@ -573,8 +525,7 @@ class _MachineListCard extends StatelessWidget {
                             ),
                           ),
                           if (machine.id == null)
-                            const StatusChip('更新中',
-                                color: AppColors.outline),
+                            const StatusChip('更新中', color: AppColors.outline),
                         ],
                       ),
                       // 类型
@@ -1052,8 +1003,7 @@ class _Field extends StatelessWidget {
       child: TextField(
         controller: controller,
         maxLines: lines,
-        keyboardType:
-            number ? TextInputType.number : TextInputType.text,
+        keyboardType: number ? TextInputType.number : TextInputType.text,
         decoration: InputDecoration(labelText: label, filled: true),
       ),
     );
@@ -1065,9 +1015,7 @@ class _ChipsField extends StatelessWidget {
   final String selected;
   final ValueChanged<String> onChanged;
   const _ChipsField(
-      {required this.options,
-      required this.selected,
-      required this.onChanged});
+      {required this.options, required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -1091,5 +1039,4 @@ class _ChipsField extends StatelessWidget {
 
 // ── 工具函数 ─────────────────────────────────────────────
 
-String _formatDate(DateTime value) =>
-    value.toIso8601String().substring(0, 10);
+String _formatDate(DateTime value) => value.toIso8601String().substring(0, 10);

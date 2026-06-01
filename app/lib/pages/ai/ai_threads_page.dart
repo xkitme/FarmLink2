@@ -230,30 +230,10 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
     );
   }
 
-  Widget _searchBar() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceLow,
-          borderRadius: BorderRadius.circular(R.md),
-          border: Border.all(color: AppColors.secondary, width: 1),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.search, color: AppColors.outline),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _searchCtrl,
-                decoration: const InputDecoration(
-                  hintText: '搜索话题或关键词...',
-                  border: InputBorder.none,
-                  isDense: true,
-                ),
-                onChanged: (value) => setState(() => _query = value.trim()),
-              ),
-            ),
-          ],
-        ),
+  Widget _searchBar() => AppSearchField(
+        controller: _searchCtrl,
+        hintText: '搜索话题或关键词…',
+        onChanged: (value) => setState(() => _query = value.trim()),
       );
 
   Widget _groupLabel(String text) => Padding(
