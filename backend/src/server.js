@@ -4,15 +4,8 @@ import { config } from './config/index.js'
 import { cleanDefaultPwdChangedAt } from './startup/clean-default-pwd-changed-at.js'
 import { migrateThreadIds } from './startup/migrate-thread-id.js'
 
-// Windows terminals can default to GBK; keep startup logs UTF-8 when possible.
-if (process.platform === 'win32') {
-  try {
-    process.stdout.setDefaultEncoding?.('utf8')
-    process.stderr.setDefaultEncoding?.('utf8')
-  } catch {
-    // Keep the default stream behavior if the runtime does not support it.
-  }
-}
+// 注：Windows 控制台中文乱码的真正修复在 start.bat 的 chcp 65001（47a 已验证）；
+// setDefaultEncoding 对控制台代码页无效，已移除避免误导。
 
 const PORT = config.port
 

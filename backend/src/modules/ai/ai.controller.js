@@ -302,12 +302,18 @@ export async function qaThreadRecords(req, res) {
   ok(res, { records })
 }
 
-/** 清空当前用户所有 AI 问答记录 */
+/** 清空 AI 问答记录。
+ *  G5：ADMIN 可传 ?scope=all 清全平台，默认 mine（仅自己）。
+ *  G4：清空与正在生成的 SSE 落库存在竞态——deleteMany 后短暂等待再扫一次，
+ *      兜住流式回答刚好在清空后落库的漏网记录。 */
 export async function qaClearAll(req, res) {
-  const result = await prisma.aiQaRecord.deleteMany({
-    where: { userId: req.user.id },
-  })
-  ok(res, { deleted: result.count }, '已清空 AI 对话历史')
+  const isAdmin = req.user.role === 'ADMIN'
+  const scope = isAdmin && req.query.scope === 'all' ? 'all' : 'mine'
+  const where = scope === 'all' ? {} : { userId: req.user.id }
+  const first = await prisma.aiQaRecord.deleteMany({ where })
+  await new Promise((resolve) => setTimeout(resolve, 1200))
+  const second = await prisma.aiQaRecord.deleteMany({ where })
+  ok(res, { deleted: first.count + second.count, scope }, '已清空 AI 对话历史')
 }
 
 /** 删除单条 AI 问答记录 */

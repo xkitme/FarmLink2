@@ -540,7 +540,8 @@ class _HomePageState extends State<HomePage> {
       case 'agri':
         context.push('/agri');
       case 'ai':
-        context.go('/ai');
+        // G8：首页「AI 智能助手」直接进对话页，而非空的会话列表
+        context.push('/ai/chat/new');
       case 'life':
         context.push('/life');
       case 'data':

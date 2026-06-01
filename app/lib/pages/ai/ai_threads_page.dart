@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../widgets/common.dart';
 
@@ -66,6 +68,8 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
       for (final report in _recordsOf(data)) {
         final id = _int(report['id']);
         if (id == 0) continue;
+        // C2：负 id 用于区分「年度报告」thread 与普通 qaRecord thread；
+        // onTap 通过 kind == 'REPORT' 路由，勿直接拿负 id 跳 /ai/chat/:id。
         list.add(_Thread(
           id: -id,
           title: '${_int(report['year'])} 年度农事报告',
@@ -88,29 +92,52 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
   }
 
   Future<void> _clearAll() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('清空全部对话'),
-        content: const Text('确定清空所有 AI 对话历史吗？此操作不可恢复。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              '清空',
-              style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+    final isAdmin = context.read<AuthState>().user?.role == 'ADMIN';
+    var scope = 'mine';
+    if (isAdmin) {
+      // G5：ADMIN 列表看到全平台数据，清空需先选范围，避免「看到 80 条只删自己 10 条」的错觉
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('清空范围'),
+          content: const Text('您是管理员，请选择清空范围：'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, 'mine'),
+                child: const Text('仅我自己')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, 'all'),
+                child: const Text('全平台',
+                    style: TextStyle(color: AppColors.error))),
+          ],
+        ),
+      );
+      if (choice == null) return;
+      scope = choice;
+    } else {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('清空全部对话'),
+          content: const Text('确定清空所有 AI 对话历史吗？此操作不可恢复。'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('取消')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('清空',
+                    style: TextStyle(color: AppColors.error))),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
     try {
-      await ApiClient.delete('/ai/qa/records');
+      await ApiClient.delete(
+          scope == 'all' ? '/ai/qa/records?scope=all' : '/ai/qa/records');
       if (!mounted) return;
       toast(context, '已清空 AI 对话历史');
       await _load();
@@ -208,12 +235,25 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
                   ),
                   const SizedBox(height: 8),
                   if (filtered.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
-                      child: EmptyView(
-                        '暂无对话，点 + 开始新对话',
-                        icon: Icons.smart_toy_outlined,
-                      ),
+                    Column(
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: EmptyView(
+                            '暂无对话',
+                            icon: Icons.smart_toy_outlined,
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: ElevatedButton.icon(
+                            onPressed: () => context.go('/ai/chat/new'),
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('立即开始对话'),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                     )
                   else
                     for (final entry in grouped.entries) ...[

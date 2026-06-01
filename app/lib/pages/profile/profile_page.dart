@@ -221,6 +221,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final failed = _int(_syncStatus['failed']);
     final conflict = _int(_syncStatus['conflict']);
     final total = _int(_syncStatus['total']);
+    final hasError = (failed + conflict + waiting) > 0;
     String stateLabel;
     Color stateColor;
     if (_autoSyncing) {
@@ -239,7 +240,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return AppCard(
       padding: EdgeInsets.zero,
-      onTap: () => context.push('/data/service'),
+      // G7：有待发送/失败/冲突时，卡片本身不再整块跳转，改露重试入口
+      onTap: hasError ? null : () => context.push('/data/service'),
       child: Column(
         children: [
           Padding(
@@ -285,6 +287,29 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
+          if (hasError)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _autoSyncing ? null : _autoSyncSilently,
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: Text(_autoSyncing ? '同步中' : '立即重试'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => context.push('/data/service'),
+                      icon: const Icon(Icons.list_alt, size: 16),
+                      label: const Text('查看详情'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (_autoSyncing)
             const LinearProgressIndicator(
               minHeight: 2,

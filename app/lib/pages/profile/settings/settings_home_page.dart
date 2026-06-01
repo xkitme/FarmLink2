@@ -151,13 +151,9 @@ class SettingsHomePage extends StatelessWidget {
 
   static Future<void> _clearCache(BuildContext context) async {
     final sp = await SharedPreferences.getInstance();
-    final keys = sp
-        .getKeys()
-        .where((key) =>
-            key.startsWith('cache:') ||
-            key.startsWith('dashboard:') ||
-            key.startsWith('service:'))
-        .toList();
+    // C1：仅 `cache:` 前缀有 writer，dashboard:/service: 为死前缀，去掉
+    final keys =
+        sp.getKeys().where((key) => key.startsWith('cache:')).toList();
     for (final key in keys) {
       await sp.remove(key);
     }
