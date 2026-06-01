@@ -103,14 +103,10 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
                           padding: EdgeInsets.only(bottom: 12),
                           child: AlertBanner('数据更新中，下拉刷新可重试', critical: false),
                         ),
+                      const SectionTitle('农机服务'),
+                      _serviceGrid(),
                       const SectionTitle('维保提醒'),
                       _reminderList(),
-                      const SectionTitle('农机工具'),
-                      _toolRow([
-                        (Icons.build_circle, '故障诊断', _faultSheet),
-                        (Icons.calculate, '成本核算', _costSheet),
-                        (Icons.route, '作业轨迹', _trackSheet),
-                      ]),
                       SectionTitle('土地流转',
                           trailing: TextButton.icon(
                             onPressed: _createTransfer,
@@ -118,11 +114,6 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
                             label: const Text('发布'),
                           )),
                       _transferList(),
-                      const SectionTitle('保险与认证'),
-                      _toolRow([
-                        (Icons.shield, '农机投保', _insuranceSheet),
-                        (Icons.verified_user, '机手认证', _certSheet),
-                      ]),
                     ],
                   ),
                 ),
@@ -469,27 +460,120 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
         '认证申请已提交，等待审核');
   }
 
-  // ── 通用 ──────────────────────────────────
-  Widget _toolRow(List<(IconData, String, VoidCallback)> items) {
-    return Row(
-      children: [
-        for (final it in items) ...[
-          Expanded(
-            child: AppCard(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              onTap: it.$3,
-              child: Column(
-                children: [
-                  Icon(it.$1, color: AppColors.secondary, size: 26),
-                  const SizedBox(height: 6),
-                  Text(it.$2, style: const TextStyle(fontSize: 13)),
-                ],
+  // ── 农机服务工具墙（7 项，3 列 grid）────────────────────
+  Widget _serviceGrid() {
+    final items = <(IconData, String, VoidCallback)>[
+      (Icons.handyman, '维保提醒', _scrollToReminders),
+      (Icons.build_circle, '故障诊断', _faultSheet),
+      (Icons.calculate, '成本核算', _costSheet),
+      (Icons.route, '作业轨迹', _trackSheet),
+      (Icons.swap_horiz, '土地流转', _createTransfer),
+      (Icons.shield, '农机投保', _insuranceSheet),
+      (Icons.verified_user, '机手认证', _certSheet),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.0,
+      ),
+      itemCount: items.length,
+      itemBuilder: (_, i) {
+        final icon = items[i].$1;
+        final label = items[i].$2;
+        final onTap = items[i].$3;
+        return AppCard(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+          onTap: onTap,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(R.md),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 24),
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.onSurface,
+                  height: 1.3,
+                ),
+              ),
+            ],
           ),
-          if (it != items.last) const SizedBox(width: 12),
-        ],
-      ],
+        );
+      },
+    );
+  }
+
+  /// 「维保提醒」tile 点击 —— 弹出 sheet 展示提醒列表
+  void _scrollToReminders() {
+    _sheet(
+      '维保提醒',
+      child: _reminders.isEmpty
+          ? const Text('你名下暂无农机，发布农机后将自动提醒维保',
+              style: TextStyle(color: AppColors.onSurfaceVariant))
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final r in _reminders)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: (r['level'] == 'DUE'
+                                    ? AppColors.error
+                                    : AppColors.primary)
+                                .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(R.md),
+                          ),
+                          child: Icon(Icons.handyman,
+                              size: 20,
+                              color: r['level'] == 'DUE'
+                                  ? AppColors.error
+                                  : AppColors.primary),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${r['machineName'] ?? '农机'}',
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600)),
+                              Text('${r['advice'] ?? ''}',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      height: 1.4,
+                                      color: AppColors.onSurfaceVariant)),
+                            ],
+                          ),
+                        ),
+                        if (r['level'] == 'DUE')
+                          const StatusChip('待保养', color: AppColors.error),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 
