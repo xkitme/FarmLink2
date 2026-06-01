@@ -2,6 +2,7 @@ class AppUser {
   final int id;
   final String username;
   final String? nickname;
+  final String? realName;
   final String? phone;
   final String? avatarUrl;
   final String role;
@@ -14,6 +15,7 @@ class AppUser {
     required this.id,
     required this.username,
     this.nickname,
+    this.realName,
     this.phone,
     this.avatarUrl,
     this.role = 'FARMER',
@@ -29,6 +31,7 @@ class AppUser {
         id: j['id'] as int,
         username: j['username'] as String? ?? '',
         nickname: j['nickname'] as String?,
+        realName: j['realName'] as String?,
         phone: j['phone'] as String?,
         avatarUrl: j['avatarUrl'] as String?,
         role: j['role'] as String? ?? 'FARMER',
@@ -42,6 +45,7 @@ class AppUser {
         'id': id,
         'username': username,
         'nickname': nickname,
+        'realName': realName,
         'phone': phone,
         'avatarUrl': avatarUrl,
         'role': role,

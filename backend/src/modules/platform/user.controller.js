@@ -13,7 +13,7 @@ export async function getProfile(req, res) {
 
 /** 更新个人资料 */
 export async function updateProfile(req, res) {
-  const { nickname, avatarUrl, realName, villageName, regionCode, isElderMode } = req.body
+  const { nickname, avatarUrl, realName, phone, villageName, regionCode, isElderMode } = req.body
   const data = {}
   if (nickname !== undefined) data.nickname = nickname
   if (avatarUrl !== undefined) data.avatarUrl = avatarUrl
@@ -21,6 +21,17 @@ export async function updateProfile(req, res) {
   if (villageName !== undefined) data.villageName = villageName
   if (regionCode !== undefined) data.regionCode = regionCode
   if (isElderMode !== undefined) data.isElderMode = !!isElderMode
+  if (phone !== undefined) {
+    const trimmed = (phone || '').trim()
+    if (trimmed === '') {
+      data.phone = null
+    } else {
+      if (!/^1\d{10}$/.test(trimmed)) throw errors.param('请输入有效的 11 位手机号')
+      const exists = await prisma.user.findUnique({ where: { phone: trimmed } })
+      if (exists && exists.id !== req.user.id) throw errors.param('该手机号已被其他账号绑定')
+      data.phone = trimmed
+    }
+  }
   if (Object.keys(data).length === 0) throw errors.param('没有可更新的字段')
 
   const user = await prisma.user.update({ where: { id: req.user.id }, data })
