@@ -40,6 +40,7 @@
 
 - 根目录 `D:\dgitc_project\InkFlow`;Flutter `C:\dev\flutter\bin\flutter.bat`;Flutter 工程在 `app/`(analyze 要 `cd app`)
 - 后端 :8000 / 管理台 :5173 / 移动web :5000;启动 `scripts/start-local.ps1`
+- 移动 Web 预览**只能使用 `http://localhost:5000`**；遇到旧资源先清浏览器缓存 / Service Worker 并强制刷新，禁止另起 5001 等临时端口。
 - **commit 一律中文** + 结尾 `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`;前缀 feat/fix/docs/chore 保留;**视觉/重写改动等用户点头再 commit**
 - 设计系统 Agro-Modernist Tech:主绿 `AppColors.primary`(0xFF0D631B)/大地棕/麦金/背景 `background`;圆角 `R.sm=8/md=16/lg=32`;阴影 `ambientShadow`(柔棕,禁纯黑);公共件 `FarmAppBar(showBack)`/`AppCard`/`SectionTitle`/`StatusChip`。**禁** generic 渐变/半透明白浮层/脉冲光。**输入框要利落方正小圆角**。
 - 导航:5 一级 tab `/home /ai /publish /messages /profile`;底栏只在精确等于这 5 路径显示;`showModalBottomSheet` 必带 `useRootNavigator:true`;tab 用 `context.go`、详情入口 `context.push`、back `canPop?pop:go(fallback)`

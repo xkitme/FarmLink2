@@ -9,6 +9,7 @@ import '../pages/home/home_page.dart';
 import '../pages/ai/ai_chat_page.dart';
 import '../pages/ai/ai_threads_page.dart';
 import '../pages/market/market_page.dart';
+import '../pages/market/product_detail_page.dart';
 import '../pages/machinery/machinery_page.dart';
 import '../pages/disaster/disaster_page.dart';
 import '../pages/agri/agri_page.dart';
@@ -78,6 +79,13 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
               },
             ),
             GoRoute(path: '/market', builder: (_, __) => const MarketPage()),
+            GoRoute(
+              path: '/market/product/:id',
+              builder: (_, state) => ProductDetailPage(
+                productId: int.tryParse(state.pathParameters['id'] ?? ''),
+                preview: state.extra as ProductPreview?,
+              ),
+            ),
             GoRoute(
                 path: '/machinery', builder: (_, __) => const MachineryPage()),
             GoRoute(

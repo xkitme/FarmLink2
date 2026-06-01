@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
+import 'product_detail_page.dart';
 
 class MarketPage extends StatefulWidget {
   const MarketPage({super.key});
@@ -62,6 +63,7 @@ class _Product {
 
 class _MarketPageState extends State<MarketPage> {
   static const _cacheKey = 'market:products';
+  static const _toastBottomMargin = 118.0;
   static const _chips = ['全部', '当季水果', '有机蔬菜', '土特产'];
   var _activeChip = 0;
   var _loading = true;
@@ -71,6 +73,10 @@ class _MarketPageState extends State<MarketPage> {
   String? _error;
   List<_Product> _products = [];
   final Map<int, int> _cart = {};
+  final Map<int, _Product> _cartProducts = {};
+  final _keywordCtrl = TextEditingController();
+  String _keyword = '';
+  var _loadGeneration = 0;
 
   static const _fallback = [
     _Product(
@@ -117,7 +123,19 @@ class _MarketPageState extends State<MarketPage> {
     _loadProducts();
   }
 
+  @override
+  void dispose() {
+    _keywordCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    setState(() => _keyword = _keywordCtrl.text.trim());
+    _loadProducts();
+  }
+
   Future<void> _loadProducts() async {
+    final generation = ++_loadGeneration;
     setState(() {
       _loading = true;
       _error = null;
@@ -127,27 +145,33 @@ class _MarketPageState extends State<MarketPage> {
       final data = await ApiClient.get('/market/product/list', query: {
         'pageSize': 20,
         if (category != null) 'category': category,
+        if (_keyword.isNotEmpty) 'keyword': _keyword,
       });
       final records = (data['records'] as List? ?? [])
           .whereType<Map>()
           .map((item) => item.cast<String, dynamic>())
           .toList();
-      await OfflineCache.saveList('$_cacheKey:${category ?? 'all'}', records);
-      if (!mounted) return;
+      await OfflineCache.saveList(_productsCacheKey(category), records);
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _products = [
           for (var i = 0; i < records.length; i++)
             _Product.fromApi(records[i], i),
         ];
+        for (final product in _products) {
+          if (product.id != null && _cart.containsKey(product.id)) {
+            _cartProducts[product.id!] = product;
+          }
+        }
         _fromCache = false;
         _loading = false;
       });
     } catch (error) {
       final category = _categoryQuery;
-      final key = '$_cacheKey:${category ?? 'all'}';
+      final key = _productsCacheKey(category);
       final cached = await OfflineCache.readList(key);
       final cacheTime = await OfflineCache.updatedAt(key);
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _products = cached.isNotEmpty
             ? [
@@ -161,6 +185,13 @@ class _MarketPageState extends State<MarketPage> {
         _loading = false;
       });
     }
+  }
+
+  String _productsCacheKey(String? category) {
+    final keyword = _keyword.toLowerCase();
+    final suffix =
+        keyword.isEmpty ? '' : ':keyword:${Uri.encodeComponent(keyword)}';
+    return '$_cacheKey:${category ?? 'all'}$suffix';
   }
 
   String? get _categoryQuery {
@@ -181,10 +212,8 @@ class _MarketPageState extends State<MarketPage> {
   double get _cartTotal {
     double total = 0;
     for (final entry in _cart.entries) {
-      final product = _products
-          .where((item) => item.id == entry.key)
-          .cast<_Product?>()
-          .firstOrNull;
+      final product = _cartProducts[entry.key] ??
+          _products.where((item) => item.id == entry.key).firstOrNull;
       if (product != null) total += product.price * entry.value;
     }
     return total;
@@ -192,7 +221,6 @@ class _MarketPageState extends State<MarketPage> {
 
   @override
   Widget build(BuildContext context) {
-    final visibleProducts = _products.isEmpty ? _fallback : _products;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: FarmAppBar(showBack: true, actions: [
@@ -203,95 +231,71 @@ class _MarketPageState extends State<MarketPage> {
               color: AppColors.onSurfaceVariant),
         ),
       ]),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            color: AppColors.primary,
-            onRefresh: _loadProducts,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 128),
-              children: [
-                _searchBar(),
-                const SizedBox(height: 20),
-                _categoryChips(),
-                if (_fromCache) ...[
-                  const SizedBox(height: 12),
-                  AlertBanner(
-                      '商品数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
-                      critical: false),
-                ],
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  AppCard(
-                    color: AppColors.errorContainer,
-                    child: Text(_error!,
-                        style: const TextStyle(color: AppColors.error)),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                if (_loading)
-                  const SizedBox(
-                      height: 360, child: Loading(text: '正在同步乡村集市...'))
-                else
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: visibleProducts.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 20,
-                      childAspectRatio: 0.58,
-                    ),
-                    itemBuilder: (context, index) =>
-                        _productCard(context, visibleProducts[index]),
-                  ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 18,
-            child: _cartBar(context),
-          ),
-        ],
+      bottomNavigationBar: Padding(
+        // 用真 bottomNavigationBar 承载购物车栏：浮动 toast 会自动避让其上方，
+        // 不再压住这张底部圆角卡片。
+        padding: const EdgeInsets.fromLTRB(20, 6, 20, 18),
+        child: _cartBar(context),
+      ),
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _loadProducts,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          children: [
+            _searchBar(),
+            const SizedBox(height: 20),
+            _categoryChips(),
+            if (_fromCache) ...[
+              const SizedBox(height: 12),
+              AlertBanner(
+                  '商品数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
+                  critical: false),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              AppCard(
+                color: AppColors.errorContainer,
+                child: Text(_error!,
+                    style: const TextStyle(color: AppColors.error)),
+              ),
+            ],
+            const SizedBox(height: 24),
+            if (_loading)
+              const SizedBox(height: 360, child: Loading(text: '正在同步乡村集市...'))
+            else if (_products.isEmpty)
+              const AppCard(
+                child: Text(
+                  '没有找到匹配商品，换个关键词试试',
+                  style: TextStyle(color: AppColors.onSurfaceVariant),
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _products.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 20,
+                  childAspectRatio: 0.58,
+                ),
+                itemBuilder: (context, index) =>
+                    _productCard(context, _products[index]),
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _searchBar() {
-    return Container(
-      height: 64,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(999),
-        border: const Border(
-          bottom: BorderSide(color: AppColors.secondary, width: 2),
-        ),
-        boxShadow: AppColors.ambientShadow,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      child: const Row(
-        children: [
-          Icon(Icons.search, color: AppColors.outline, size: 28),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              '搜索生鲜、农资、合作社...',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppColors.outlineVariant,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Icon(Icons.mic_none, color: AppColors.primary, size: 26),
-        ],
-      ),
-    );
-  }
+  Widget _searchBar() => AppSearchField(
+        controller: _keywordCtrl,
+        hintText: '搜索生鲜、农资、合作社…',
+        onSubmitted: (_) => _onSearch(),
+        onClear: _onSearch,
+      );
 
   Widget _categoryChips() {
     return SizedBox(
@@ -501,13 +505,18 @@ class _MarketPageState extends State<MarketPage> {
 
   void _addCart(_Product product) {
     if (product.id == null) {
-      toast(context, '商品资料更新中，请稍后下单');
+      _marketToast('商品资料更新中，请稍后下单');
       return;
     }
     setState(() {
       _cart[product.id!] = (_cart[product.id!] ?? 0) + 1;
+      _cartProducts[product.id!] = product;
     });
-    toast(context, '${product.title} 已加入合计');
+    _marketToast('${product.title} 已加入合计');
+  }
+
+  void _marketToast(String message, {bool error = false}) {
+    toast(context, message, error: error, bottomMargin: _toastBottomMargin);
   }
 
   Widget _cartBar(BuildContext context) {
@@ -521,57 +530,70 @@ class _MarketPageState extends State<MarketPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.shopping_basket_outlined,
-                    color: Colors.white, size: 28),
-              ),
-              if (_cartCount > 0)
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text('$_cartCount',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700)),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 16),
+          // 篮子 + 合计可点：展开购物车清单
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('合计预估',
-                    style: TextStyle(
-                        color: AppColors.onSurfaceVariant, fontSize: 15)),
-                Text('￥${_cartTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                        color: AppColors.onSurface,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700)),
-              ],
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _cartCount == 0 ? null : _showCart,
+              child: Row(
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primaryContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.shopping_basket_outlined,
+                            color: Colors.white, size: 28),
+                      ),
+                      if (_cartCount > 0)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: AppColors.error,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text('$_cartCount',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700)),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_cartCount == 0 ? '购物车' : '合计预估 · 查看清单',
+                            style: const TextStyle(
+                                color: AppColors.onSurfaceVariant,
+                                fontSize: 14)),
+                        Text('￥${_cartTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                color: AppColors.onSurface,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: _cartCount == 0 || _checkingOut ? null : _checkout,
             child: _checkingOut
@@ -595,127 +617,203 @@ class _MarketPageState extends State<MarketPage> {
     );
   }
 
-  Future<void> _checkout() async {
+  Future<void> _showCart() async {
     if (_cart.isEmpty) return;
-    setState(() => _checkingOut = true);
-    try {
-      final first = _cart.entries.first;
-      await ApiClient.post('/market/order', body: {
-        'productId': first.key,
-        'quantity': first.value,
-        'receiverInfo': {
-          'name': '默认用户',
-          'phone': '13800000000',
-          'address': '默认收货地址',
-        },
-        'remark': '移动端下单',
-      });
-      if (!mounted) return;
-      setState(() => _cart.clear());
-      toast(context, '订单已提交，可在后台订单表查看');
-      _loadProducts();
-    } catch (error) {
-      if (mounted) toast(context, actionErrorMessage('下单', error), error: true);
-    } finally {
-      if (mounted) setState(() => _checkingOut = false);
-    }
-  }
-
-  void _showProductDetail(_Product product) {
-    showModalBottomSheet<void>(
+    final shouldCheckout = await showModalBottomSheet<bool>(
       context: context,
       useRootNavigator: true,
-      isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
       ),
-      builder: (context) => ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 可滚动内容区：图片 + 标题 + 卖家
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(R.md),
-                      child: AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: Image.asset(
-                          product.image,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: AppColors.surfaceContainer,
-                            child: const Icon(Icons.storefront,
-                                color: AppColors.primary, size: 48),
-                          ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheet) {
+          final entries = _cart.entries.toList();
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '购物车清单',
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 14),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(sheetContext).size.height * 0.48,
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: entries.length,
+                      separatorBuilder: (_, __) => const Divider(
+                        height: 20,
+                        color: AppColors.surfaceHigh,
+                      ),
+                      itemBuilder: (_, index) {
+                        final entry = entries[index];
+                        final product = _cartProducts[entry.key] ??
+                            _products
+                                .where((item) => item.id == entry.key)
+                                .firstOrNull;
+                        if (product == null) return const SizedBox.shrink();
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '￥${product.price.toStringAsFixed(2)} / ${product.unit} · ${entry.value} 件',
+                                    style: const TextStyle(
+                                      color: AppColors.onSurfaceVariant,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '￥${(product.price * entry.value).toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: '移除',
+                              onPressed: () {
+                                setState(() {
+                                  _cart.remove(entry.key);
+                                  _cartProducts.remove(entry.key);
+                                });
+                                if (_cart.isEmpty) {
+                                  Navigator.pop(sheetContext);
+                                } else {
+                                  setSheet(() {});
+                                }
+                              },
+                              icon: const Icon(Icons.delete_outline,
+                                  color: AppColors.error),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      const Text(
+                        '合计预估',
+                        style: TextStyle(color: AppColors.onSurfaceVariant),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '￥${_cartTotal.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _checkingOut
+                          ? null
+                          : () => Navigator.pop(sheetContext, true),
+                      icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+                      label: const Text('立即订购'),
                     ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(product.title,
-                              style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.onSurface)),
-                        ),
-                        if (product.id == null)
-                          const StatusChip('示例商品', color: AppColors.outline)
-                        else
-                          StatusChip(product.badge, color: product.badgeColor),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(product.seller,
-                        style:
-                            const TextStyle(color: AppColors.onSurfaceVariant)),
-                  ],
-                ),
-              ),
-            ),
-            // 底部固定操作区：价格 + 加入合计（始终可见、可点）
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-              child: Row(
-                children: [
-                  Text('￥${product.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800)),
-                  Text(' / ${product.unit}',
-                      style:
-                          const TextStyle(color: AppColors.onSurfaceVariant)),
-                  const Spacer(),
-                  ElevatedButton.icon(
-                    onPressed: product.id == null
-                        ? null
-                        : () {
-                            Navigator.pop(context);
-                            _addCart(product);
-                          },
-                    icon: const Icon(Icons.add_shopping_cart, size: 18),
-                    label: Text(product.id == null ? '资料更新中' : '加入合计'),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
+    if (shouldCheckout == true && mounted) await _checkout();
+  }
+
+  Future<void> _checkout() async {
+    if (!mounted || _cart.isEmpty || _checkingOut) return;
+    setState(() => _checkingOut = true);
+    final submittedIds = <int>[];
+    try {
+      for (final entry in _cart.entries.toList()) {
+        await ApiClient.post('/market/order', body: {
+          'productId': entry.key,
+          'quantity': entry.value,
+          'receiverInfo': {
+            'name': '默认用户',
+            'phone': '13800000000',
+            'address': '默认收货地址',
+          },
+          'remark': '移动端下单',
+        });
+        submittedIds.add(entry.key);
+      }
+      if (!mounted) return;
+      setState(() {
+        _cart.clear();
+        _cartProducts.clear();
+      });
+      _marketToast('订单已提交，可在后台订单表查看');
+      _loadProducts();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          for (final id in submittedIds) {
+            _cart.remove(id);
+            _cartProducts.remove(id);
+          }
+        });
+        _marketToast(actionErrorMessage('下单', error), error: true);
+      }
+    } finally {
+      if (mounted) setState(() => _checkingOut = false);
+    }
+  }
+
+  Future<void> _showProductDetail(_Product product) async {
+    if (product.id == null) {
+      _marketToast('商品资料更新中，请稍后下单');
+      return;
+    }
+    final id = product.id!;
+    final qty = await context.push<int>(
+      '/market/product/$id',
+      extra: ProductPreview(
+        image: product.image,
+        title: product.title,
+        price: product.price,
+        unit: product.unit,
+      ),
+    );
+    if (!mounted || qty == null || qty <= 0) return;
+    setState(() {
+      _cart[id] = (_cart[id] ?? 0) + qty;
+      _cartProducts[id] = product;
+    });
+    _marketToast('${product.title} 已加入合计');
   }
 }
 
