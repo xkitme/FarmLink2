@@ -1,6 +1,36 @@
 import 'package:flutter/material.dart';
 import 'constants.dart';
 
+/// 全平台统一的「右进左出」页面切换：新页从右滑入、旧页向左轻微视差移出，
+/// back 自动反向，前进/返回视觉对称。
+///
+/// 不用 `CupertinoPageTransitionsBuilder`——该符号在不同 Flutter 版本的归属
+/// 不一致（3.32 在 material、3.44 在 material 已移除），跨机编译会失败；
+/// 自定义 `PageTransitionsBuilder` 是全版本稳定 API。
+class _SlidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const _SlidePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final enter = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+        .chain(CurveTween(curve: Curves.easeOutCubic))
+        .animate(animation);
+    final leave = Tween<Offset>(begin: Offset.zero, end: const Offset(-0.25, 0))
+        .chain(CurveTween(curve: Curves.easeOutCubic))
+        .animate(secondaryAnimation);
+    return SlideTransition(
+      position: leave,
+      child: SlideTransition(position: enter, child: child),
+    );
+  }
+}
+
 /// Agro-Modernist Tech 主题（参考 docs/设计参考.md）
 ThemeData buildAppTheme() {
   const cs = ColorScheme(
@@ -28,16 +58,16 @@ ThemeData buildAppTheme() {
     scaffoldBackgroundColor: AppColors.background,
     splashFactory: InkRipple.splashFactory,
 
-    // 页面切换：全平台统一 Cupertino 右进左出，back 自动反向，前进/返回视觉对称。
-    // M3 默认的 ZoomPageTransitionsBuilder 进出方向一致，会给人"不协调"的观感。
+    // 页面切换：全平台统一右进左出（自定义 builder，跨 Flutter 版本稳定），
+    // back 自动反向，前进/返回视觉对称。M3 默认 Zoom 进出方向一致，观感"不协调"。
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.fuchsia: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.android: _SlidePageTransitionsBuilder(),
+        TargetPlatform.iOS: _SlidePageTransitionsBuilder(),
+        TargetPlatform.linux: _SlidePageTransitionsBuilder(),
+        TargetPlatform.macOS: _SlidePageTransitionsBuilder(),
+        TargetPlatform.windows: _SlidePageTransitionsBuilder(),
+        TargetPlatform.fuchsia: _SlidePageTransitionsBuilder(),
       },
     ),
 
