@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -40,6 +41,9 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
         title: '田园通 FarmLink',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        supportedLocales: const [Locale('zh'), Locale('en')],
+        locale: const Locale('zh'),
         builder: _appBuilder,
         home: const Scaffold(
           body: Center(child: CircularProgressIndicator()),
@@ -52,6 +56,9 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
         title: '田园通 FarmLink',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        supportedLocales: const [Locale('zh'), Locale('en')],
+        locale: const Locale('zh'),
         routerConfig: _router,
         builder: _appBuilder,
       ),

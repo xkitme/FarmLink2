@@ -280,7 +280,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFFB40000))),
+                      color: AppColors.priceRed)),
               Padding(
                 padding: const EdgeInsets.only(bottom: 4, left: 2),
                 child: Text('/$_unit',

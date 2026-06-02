@@ -35,6 +35,7 @@ class _AiChatPageState extends State<AiChatPage> {
   bool _loadingHistory = true;
   bool _sending = false;
   bool _detecting = false;
+  bool _hasOutgoingMessage = false;
 
   @override
   void initState() {
@@ -115,7 +116,7 @@ class _AiChatPageState extends State<AiChatPage> {
           ..addAll(list);
         _loadingHistory = false;
       });
-      _scrollToBottom();
+      _scrollToBottom(animate: false);
       _requestInputFocus();
     } catch (_) {
       if (!mounted) return;
@@ -127,7 +128,7 @@ class _AiChatPageState extends State<AiChatPage> {
           scene: _scene,
         ));
       });
-      _scrollToBottom();
+      _scrollToBottom(animate: false);
       _requestInputFocus();
     }
   }
@@ -135,6 +136,7 @@ class _AiChatPageState extends State<AiChatPage> {
   Future<void> _send() async {
     final question = _input.text.trim();
     if (question.isEmpty || _sending) return;
+    final animateScroll = _animateNextOutgoingScroll();
     _input.clear();
     setState(() {
       _messages.add(_ChatMessage(
@@ -150,7 +152,7 @@ class _AiChatPageState extends State<AiChatPage> {
       ));
       _sending = true;
     });
-    _scrollToBottom();
+    _scrollToBottom(animate: animateScroll);
 
     var buffer = '';
     int? newThreadId;
@@ -181,7 +183,7 @@ class _AiChatPageState extends State<AiChatPage> {
           _messages[_messages.length - 1] =
               _messages.last.copyWith(text: buffer);
         });
-        _scrollToBottom();
+        _scrollToBottom(animate: animateScroll);
       }
       if (!mounted) return;
       setState(() {
@@ -313,6 +315,7 @@ class _AiChatPageState extends State<AiChatPage> {
       if (image == null) return;
       final bytes = await image.readAsBytes();
       if (!mounted) return;
+      final animateScroll = _animateNextOutgoingScroll();
       setState(() {
         _messages.add(_ChatMessage(
           fromUser: true,
@@ -328,7 +331,7 @@ class _AiChatPageState extends State<AiChatPage> {
         ));
         _detecting = true;
       });
-      _scrollToBottom();
+      _scrollToBottom(animate: animateScroll);
 
       final data = await ApiClient.upload('/ai/image/detect', bytes, image.name)
           as Map<String, dynamic>;
@@ -351,7 +354,7 @@ class _AiChatPageState extends State<AiChatPage> {
           detect: result,
         );
       });
-      _scrollToBottom();
+      _scrollToBottom(animate: animateScroll);
       if (_threadId == null && savedThreadId > 0 && mounted) {
         _threadId = savedThreadId;
         context.go('/ai/chat/$savedThreadId');
@@ -379,14 +382,25 @@ class _AiChatPageState extends State<AiChatPage> {
     _send();
   }
 
-  void _scrollToBottom() {
+  bool _animateNextOutgoingScroll() {
+    final animate = widget.threadId == null || _hasOutgoingMessage;
+    _hasOutgoingMessage = true;
+    return animate;
+  }
+
+  void _scrollToBottom({bool animate = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollCtrl.hasClients) return;
-      _scrollCtrl.animateTo(
-        _scrollCtrl.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeOut,
-      );
+      final bottom = _scrollCtrl.position.maxScrollExtent;
+      if (animate) {
+        _scrollCtrl.animateTo(
+          bottom,
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollCtrl.jumpTo(bottom);
+      }
     });
   }
 

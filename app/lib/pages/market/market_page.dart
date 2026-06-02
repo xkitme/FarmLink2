@@ -414,7 +414,7 @@ class _MarketPageState extends State<MarketPage> {
                         style: const TextStyle(
                           fontSize: 23,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFFB40000),
+                          color: AppColors.priceRed,
                         ),
                       ),
                       const SizedBox(width: 2),

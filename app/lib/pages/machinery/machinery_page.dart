@@ -49,7 +49,7 @@ class _Machine {
       deposit: (json['deposit'] as num?)?.toDouble() ?? 0,
       rating: (json['rating'] as num?)?.toDouble() ?? 4.8,
       owner: '机主 ${json['ownerId'] ?? '-'}',
-      // 后端暂无距离字段，按列表序生成的占位距离需定格 1 位小数，
+      // 后端尚未提供距离字段，按列表序生成的占位距离需定格 1 位小数，
       // 否则浮点累加会露出 "5.800000000000001 km" 这类脏数据。
       distance: '${(2.5 + index * 1.1).toStringAsFixed(1)} km',
       fromApi: true,
@@ -77,7 +77,7 @@ class _MachineryPageState extends State<MachineryPage> {
   String? _error;
   List<_Machine> _machines = [];
 
-  // 已加载的完整列表（用于本地关键字过滤）
+  // 已加载的完整列表（用于前端关键字过滤）
   List<_Machine> _allMachines = [];
 
   static const _fallback = [
@@ -172,7 +172,7 @@ class _MachineryPageState extends State<MachineryPage> {
     }
   }
 
-  // K1：本地关键字过滤
+  // K1：前端关键字过滤
   List<_Machine> _applyKeyword(List<_Machine> source) {
     if (_keyword.trim().isEmpty) return source;
     final kw = _keyword.trim().toLowerCase();
@@ -185,7 +185,7 @@ class _MachineryPageState extends State<MachineryPage> {
 
   void _onSearch() {
     setState(() {
-      _keyword = _keywordCtrl.text;
+      _keyword = _keywordCtrl.text.trim();
       _machines = _applyKeyword(_allMachines);
     });
   }
@@ -271,7 +271,7 @@ class _MachineryPageState extends State<MachineryPage> {
                       child: Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
                         child: Text(
-                          '附近暂无可租农机',
+                          '附近还没有可租农机',
                           style: TextStyle(
                               color: AppColors.onSurfaceVariant, fontSize: 15),
                         ),

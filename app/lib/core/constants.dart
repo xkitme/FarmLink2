@@ -29,6 +29,7 @@ class AppColors {
   static const error = Color(0xFFBA1A1A);
   static const errorContainer = Color(0xFFFFDAD6);
   static const warning = Color(0xFFB26000);
+  static const priceRed = Color(0xFFB40000);
 
   // 表面层
   static const background = Color(0xFFF9F9F9);
