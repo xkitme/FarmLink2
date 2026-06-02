@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FarmLink 田园通 - 智慧农耕助手</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#1b6d24",
+                    "on-secondary-fixed": "#2e150b",
+                    "tertiary-fixed-dim": "#ffba38",
+                    "surface-container": "#eeeeee",
+                    "on-tertiary-fixed": "#281900",
+                    "surface-container-high": "#e8e8e8",
+                    "on-error-container": "#93000a",
+                    "secondary-container": "#fdcdbc",
+                    "primary-fixed-dim": "#88d982",
+                    "on-primary-container": "#cbffc2",
+                    "on-secondary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "surface-container-highest": "#e2e2e2",
+                    "error-container": "#ffdad6",
+                    "inverse-surface": "#2f3131",
+                    "on-secondary-fixed-variant": "#603f33",
+                    "background": "#f9f9f9",
+                    "on-primary-fixed": "#002204",
+                    "inverse-primary": "#88d982",
+                    "surface-container-low": "#f3f3f3",
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "surface-variant": "#e2e2e2",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed-variant": "#604100",
+                    "on-surface": "#1a1c1c",
+                    "inverse-on-surface": "#f1f1f1",
+                    "surface-dim": "#dadada",
+                    "secondary-fixed-dim": "#ebbcac",
+                    "on-primary-fixed-variant": "#005312",
+                    "on-surface-variant": "#40493d",
+                    "secondary": "#7a5649",
+                    "on-background": "#1a1c1c",
+                    "primary-fixed": "#a3f69c",
+                    "tertiary-container": "#926500",
+                    "outline": "#707a6c",
+                    "surface-bright": "#f9f9f9",
+                    "primary": "#0d631b",
+                    "surface": "#f9f9f9",
+                    "on-secondary-container": "#795548",
+                    "tertiary-fixed": "#ffdeac",
+                    "on-tertiary-container": "#ffefda",
+                    "tertiary": "#734e00",
+                    "primary-container": "#2e7d32",
+                    "secondary-fixed": "#ffdbcf",
+                    "outline-variant": "#bfcaba"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-md": "16px",
+                    "stack-lg": "24px",
+                    "margin-mobile": "20px",
+                    "stack-sm": "8px",
+                    "gutter-mobile": "16px",
+                    "unit": "8px"
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body { font-family: 'Noto Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen">
+<!-- Top AppBar (from JSON but customized for context) -->
+<header class="sticky top-0 z-50 bg-surface/80 backdrop-blur-md px-margin-mobile h-16 flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm font-bold text-primary">FarmLink 田园通</span>
+<span class="text-[10px] text-outline uppercase tracking-wider">Xihe Village | 李大叔</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+<div class="w-10 h-10 rounded-full border-2 border-primary-fixed overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAapA64YzQv2gZhLhclqfu2EX-pBVScFAvZ5NBNLZ7yr7QSqujgnI74LjrTRicCuw2TDIa78iNI6Nn6MR31rMSZkiHZ1ZGAY-RaJiAeEtZ4r01RJI8XpVi90YcQ5nyNOmz2K6DP1ufqk8VgqF4RpNswX3n-DBOAb428hZVSPh_NDlohoaqOOr2ZnUEAICrAcRmNtz0mDqjNIwXQryA5tyO-mR3RYniT1xuHEXYkEjxmonK7wSHzHe1DV0Dw2hTK1TfnbwGCwyv1J6Ct"/>
+</div>
+</div>
+</header>
+<main class="px-margin-mobile pb-12 pt-4 space-y-stack-lg">
+<!-- Search Bar -->
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-12 pr-4 py-3 bg-surface-container-lowest border-none rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 text-body-md" placeholder="搜索农技、农资或服务..." type="text"/>
+</div>
+<!-- Weather & Risk Card -->
+<section class="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary-container to-primary text-on-primary p-5 shadow-lg">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h2 class="text-headline-sm font-bold">早安，李大叔</h2>
+<p class="text-label-sm opacity-90 mt-1">水稻 12亩 · 溪河村 · 多云 26°C</p>
+</div>
+<div class="flex flex-col items-end">
+<span class="material-symbols-outlined text-4xl">cloudy</span>
+<span class="text-label-lg font-bold">14:00 预警</span>
+</div>
+</div>
+<div class="bg-error-container text-on-error-container p-3 rounded-lg flex items-start gap-3 animate-pulse">
+<span class="material-symbols-outlined">warning</span>
+<div class="flex-1">
+<p class="text-label-sm font-bold">今晚预计有雨，建议暂停喷药</p>
+<p class="text-[11px] opacity-80">当前病虫害风险：中等 (稻纵卷叶螟)</p>
+</div>
+</div>
+</section>
+<!-- Today's Farming Advice -->
+<section class="bg-surface-container-lowest p-5 rounded-xl shadow-sm border border-outline-variant/30">
+<div class="flex justify-between items-center mb-4">
+<div>
+<h3 class="text-headline-sm font-bold text-on-surface">今日农事建议</h3>
+<p class="text-label-sm text-outline">水稻当前处于：分蘖期</p>
+</div>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed px-3 py-1 rounded-full text-label-sm font-bold">关键期</span>
+</div>
+<ul class="space-y-3 mb-5">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-0.5">check_circle</span>
+<p class="text-body-md text-on-surface-variant">查看叶色，必要时追施分蘖肥</p>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-error mt-0.5">cancel</span>
+<p class="text-body-md text-on-surface-variant">未来6小时不宜进行喷雾作业</p>
+</li>
+</ul>
+<div class="grid grid-cols-2 gap-3">
+<button class="bg-primary text-on-primary py-3 rounded-full flex items-center justify-center gap-2 font-label-lg transition-transform active:scale-95 shadow-md">
+<span class="material-symbols-outlined text-lg">calendar_month</span> 农事历
+                </button>
+<button class="border-2 border-secondary text-secondary py-3 rounded-full flex items-center justify-center gap-2 font-label-lg transition-transform active:scale-95">
+<span class="material-symbols-outlined text-lg">smart_toy</span> AI 识虫
+                </button>
+</div>
+</section>
+<!-- Quick Access Grid -->
+<section class="grid grid-cols-4 gap-y-6 text-center">
+<div class="group flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 rounded-2xl bg-secondary-container flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-on-secondary-container text-3xl" style="font-variation-settings: 'FILL' 1;">bug_report</span>
+</div>
+<span class="text-label-sm text-on-surface-variant">AI 识虫</span>
+</div>
+<div class="group flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 rounded-2xl bg-primary-fixed flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-on-primary-fixed-variant text-3xl">thermostat</span>
+</div>
+<span class="text-label-sm text-on-surface-variant">精准气象</span>
+</div>
+<div class="group flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 rounded-2xl bg-tertiary-fixed flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-on-tertiary-fixed-variant text-3xl">event_available</span>
+</div>
+<span class="text-label-sm text-on-surface-variant">农历建议</span>
+</div>
+<div class="group flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 rounded-2xl bg-surface-container-highest flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-outline text-3xl">trending_up</span>
+</div>
+<span class="text-label-sm text-on-surface-variant">市场行情</span>
+</div>
+<div class="group flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-orange-800 text-3xl">shopping_cart</span>
+</div>
+<span class="text-label-sm text-on-surface-variant">帮我卖粮</span>
+</div>
+<div class="group flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-blue-800 text-3xl">traffic</span>
+</div>
+<span class="text-label-sm text-on-surface-variant">雇农机</span>
+</div>
+<div class="group flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-purple-800 text-3xl">payments</span>
+</div>
+<span class="text-label-sm text-on-surface-variant">惠农补贴</span>
+</div>
+<div class="group flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-red-800 text-3xl">sos</span>
+</div>
+<span class="text-label-sm text-on-surface-variant">一键呼救</span>
+</div>
+</section>
+<!-- Core Business Cards (Scenes) -->
+<section class="space-y-4">
+<div class="relative h-48 rounded-xl overflow-hidden group shadow-md">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" data-alt="A lush green rice paddy field during the golden hour with soft sunlight filtering through the mist, featuring high-end agricultural monitoring drones hovering above. The scene is shot with a professional cinematic lens, emphasizing organic growth and technological precision with a vibrant green and earthy brown palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_0cf_ww3EeFdDTTtUtNFphaaHPxXwTyUEDNacCIxCsvMEtNDfN-iPmmfsngVmI1ZQGy6IGULa4pZ8Ql2qhGl09fJOmBp8AbZF3A0vEDkoRTg5X2WFlSUpyftAhm8i-1VRSgAsqdLDfrqMh-z71ukm_8zfzOqFR7UDeYLxT6PJgiYNuqT1VNqRpUBZSwExkCqriEQAowGMpFZ4kGrivhVn9tA5_Ls38fv7nkMxiHWAvxBlxxzZGOnCVpVfW9R6XF69XAbbt4_KdSYF"/>
+<div class="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex flex-col justify-end p-5">
+<h3 class="text-white font-bold text-headline-md">种得好</h3>
+<p class="text-white/80 text-label-sm mt-1">智慧监测 · 病虫防治 · 专家巡田</p>
+</div>
+</div>
+<div class="relative h-48 rounded-xl overflow-hidden group shadow-md">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" data-alt="An aerial view of a vibrant farmers market featuring neatly organized wooden crates overflowing with fresh, colorful seasonal vegetables. The lighting is bright and natural, reflecting a pristine and professional agricultural commerce environment. The aesthetic is modern-corporate with warm golden tones and deep greens, symbolizing successful harvest and sales." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbqvYfe5fskaHqL30o_Ui1Wf4KRoCF38ehHpHjGBgnC5g6P3rpZqEjKFpYrz9DoEWj9UjpGiCmc5X-8kGIC6CCOnrIPEGwk7NKhXAfHasTwRD3XdHeY2ygUdtFKgcgSg5KxuTeHOIM3-vZrOJJcQfFREYuTop0VTXCsfb-Tp0BUlU1E8WHT2MmrTkO5oFNYRQ3KA_9TuITatMAdUQf9b2JlYUmcXqPeFtjg6lACb_OjetRD-JF2GUHcHqAJOzRPfL6g1kLi2Acj6xb"/>
+<div class="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex flex-col justify-end p-5">
+<h3 class="text-white font-bold text-headline-md">卖得好</h3>
+<p class="text-white/80 text-label-sm mt-1">价格波动 · 电商入驻 · 产地直采</p>
+</div>
+</div>
+<div class="relative h-48 rounded-xl overflow-hidden group shadow-md">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" data-alt="A collection of large, modern agricultural machinery and tractors lined up on a clean farm path during a clear sunrise. The scene emphasizes efficiency and professional service with a metallic and earthy aesthetic. The light is crisp and high-contrast, showcasing the scale and reliability of the equipment in a modern rural setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAR72d-62Kw5HN7QRvn8gAwVvnGTD644yLQ3VJgGD4uu6sFk-wmfYxYDEHF-ljDmxxEt-QU8F4vf0FRS6lNH9uAFHlm2Vi8u42Byc3aT7boPxrup5rdHeymb0izjsv28jMWcgfaHip2mnY14QGSbsW7po1VWkh36sjmS730k0vDzgySrEUFRK9hhwwgizJbqkq_iuydoC1BMM9CaPRr5E18VG1qk6S96ELouZHUWSxKF900hT5KgGRnDhSP04bG8RTPc942fhwdEtKI"/>
+<div class="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex flex-col justify-end p-5">
+<h3 class="text-white font-bold text-headline-md">省得多</h3>
+<p class="text-white/80 text-label-sm mt-1">农机租赁 · 团购农资 · 金融贷款</p>
+</div>
+</div>
+</section>
+<!-- Market Trends -->
+<section class="bg-surface-container-lowest p-5 rounded-xl shadow-sm">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-headline-sm font-bold text-on-surface">本地行情监测</h3>
+<button class="text-primary text-label-sm font-bold flex items-center gap-1">
+                    更多 <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-center pb-2 border-b border-outline-variant/30">
+<div class="flex items-center gap-3">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-body-md font-medium">中晚籼稻</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-body-md font-bold">2.85 元/斤</span>
+<span class="text-primary text-label-sm flex items-center">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span> 0.05
+                        </span>
+</div>
+</div>
+<div class="flex justify-between items-center pb-2 border-b border-outline-variant/30">
+<div class="flex items-center gap-3">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-body-md font-medium">玉米 (二等)</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-body-md font-bold">1.42 元/斤</span>
+<span class="text-error text-label-sm flex items-center">
+<span class="material-symbols-outlined text-[14px]">arrow_downward</span> 0.02
+                        </span>
+</div>
+</div>
+</div>
+</section>
+<!-- Subsidy Section -->
+<section class="bg-tertiary-fixed/20 p-5 rounded-xl border-2 border-tertiary-fixed/50">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-10 h-10 rounded-full bg-tertiary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-tertiary-container">badge</span>
+</div>
+<h3 class="text-headline-sm font-bold text-on-tertiary-fixed-variant">符合您的补贴</h3>
+</div>
+<p class="text-body-md text-on-tertiary-fixed-variant mb-4">溪河村已有 42 位村民成功申领“2024夏季种粮补贴”。</p>
+<button class="w-full bg-tertiary text-on-tertiary py-3 rounded-xl font-label-lg shadow-md active:scale-95 transition-transform">
+                点击快速申领 (预计可领 480元)
+            </button>
+</section>
+<!-- Rural Services -->
+<section>
+<h3 class="text-headline-sm font-bold text-on-surface mb-4">生活服务</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container p-4 rounded-xl flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-primary">medical_services</span>
+<div class="flex flex-col">
+<span class="text-label-lg font-bold">乡村医生</span>
+<span class="text-[10px] text-outline">24小时值班</span>
+</div>
+</div>
+<div class="bg-surface-container p-4 rounded-xl flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-secondary">package_2</span>
+<div class="flex flex-col">
+<span class="text-label-lg font-bold">快递代收</span>
+<span class="text-[10px] text-outline">村口张家店</span>
+</div>
+</div>
+<div class="bg-surface-container p-4 rounded-xl flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-orange-600">electric_bolt</span>
+<div class="flex flex-col">
+<span class="text-label-lg font-bold">生活缴费</span>
+<span class="text-[10px] text-outline">水电宽带</span>
+</div>
+</div>
+<div class="bg-surface-container p-4 rounded-xl flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-blue-600">work</span>
+<div class="flex flex-col">
+<span class="text-label-lg font-bold">家乡招工</span>
+<span class="text-[10px] text-outline">周边就业资讯</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Visual Polish: Floating Effect script -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Subtle entrance animation for sections
+            const sections = document.querySelectorAll('section');
+            sections.forEach((sec, i) => {
+                sec.style.opacity = '0';
+                sec.style.transform = 'translateY(10px)';
+                sec.style.transition = 'all 0.5s ease-out';
+                setTimeout(() => {
+                    sec.style.opacity = '1';
+                    sec.style.transform = 'translateY(0)';
+                }, 100 * i);
+            });
+        });
+    </script>
+</body></html>
