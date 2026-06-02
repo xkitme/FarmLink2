@@ -661,9 +661,9 @@ class _AiChatPageState extends State<AiChatPage> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Flexible(
-                child: Text(
+                child: _MarkdownText(
                   msg.text.isEmpty ? ' ' : msg.text,
-                  style: const TextStyle(
+                  baseStyle: const TextStyle(
                     fontSize: 14,
                     height: 1.6,
                     color: AppColors.onSurface,
@@ -946,6 +946,120 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   static String _time(DateTime value) => DateFormat('HH:mm').format(value);
+}
+
+/// 轻量 Markdown 渲染：支持 **粗体** / *斜体* / `代码` / # 标题 / - 列表 / 分隔线。
+/// 不引第三方包（避免跨 Flutter 版本的包兼容问题），覆盖 AI 回复常见格式，
+/// 修复星号原样显示（`**`/`***`）的渲染问题。
+class _MarkdownText extends StatelessWidget {
+  final String text;
+  final TextStyle baseStyle;
+  const _MarkdownText(this.text, {required this.baseStyle});
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = text.replaceAll('\r\n', '\n').split('\n');
+    final blocks = <Widget>[];
+    for (final raw in lines) {
+      final line = raw.trimRight();
+      final t = line.trimLeft();
+      if (RegExp(r'^([-*_=]\s*){3,}$').hasMatch(t)) {
+        blocks.add(const Padding(
+          padding: EdgeInsets.symmetric(vertical: 6),
+          child: Divider(
+              height: 1, thickness: 1, color: AppColors.outlineVariant),
+        ));
+        continue;
+      }
+      if (t.isEmpty) {
+        blocks.add(const SizedBox(height: 6));
+        continue;
+      }
+      final header = RegExp(r'^(#{1,6})\s+(.*)$').firstMatch(t);
+      if (header != null) {
+        blocks.add(Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 2),
+          child: RichText(
+            text: _inline(
+                header.group(2)!,
+                baseStyle.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: (baseStyle.fontSize ?? 14) + 1)),
+          ),
+        ));
+        continue;
+      }
+      final bullet = RegExp(r'^[-*•]\s+(.*)$').firstMatch(t);
+      if (bullet != null) {
+        blocks.add(Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 7, right: 8),
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                      color: baseStyle.color, shape: BoxShape.circle),
+                ),
+              ),
+              Expanded(child: RichText(text: _inline(bullet.group(1)!, baseStyle))),
+            ],
+          ),
+        ));
+        continue;
+      }
+      blocks.add(Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1.5),
+        child: RichText(text: _inline(line, baseStyle)),
+      ));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: blocks,
+    );
+  }
+
+  /// 行内解析 ***粗斜*** / **粗** / *斜* / `代码`
+  TextSpan _inline(String s, TextStyle style) {
+    final spans = <TextSpan>[];
+    final re = RegExp(r'\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`');
+    var last = 0;
+    for (final m in re.allMatches(s)) {
+      if (m.start > last) {
+        spans.add(TextSpan(text: s.substring(last, m.start), style: style));
+      }
+      if (m.group(1) != null) {
+        spans.add(TextSpan(
+            text: m.group(1),
+            style: style.copyWith(
+                fontWeight: FontWeight.w800, fontStyle: FontStyle.italic)));
+      } else if (m.group(2) != null) {
+        spans.add(TextSpan(
+            text: m.group(2),
+            style: style.copyWith(fontWeight: FontWeight.w800)));
+      } else if (m.group(3) != null) {
+        spans.add(TextSpan(
+            text: m.group(3),
+            style: style.copyWith(fontStyle: FontStyle.italic)));
+      } else if (m.group(4) != null) {
+        spans.add(TextSpan(
+            text: m.group(4),
+            style: style.copyWith(
+                fontFamily: 'monospace',
+                backgroundColor: AppColors.surfaceContainer)));
+      }
+      last = m.end;
+    }
+    if (last < s.length) {
+      spans.add(TextSpan(text: s.substring(last), style: style));
+    }
+    if (spans.isEmpty) spans.add(TextSpan(text: s, style: style));
+    return TextSpan(children: spans);
+  }
 }
 
 class _StreamingCursor extends StatefulWidget {

@@ -93,9 +93,12 @@ function sse(res, event, data) {
 }
 
 async function streamFallback(res, text) {
-  const chunks = text.match(/.{1,24}/gs) || [text]
+  // 规则兜底答案也逐块吐出 + 小间隔，模拟逐字打字的流式观感，
+  // 避免「等半天突然冒出一整段、像系统卡死」（issue #17-3）。
+  const chunks = text.match(/.{1,8}/gs) || [text]
   for (const delta of chunks) {
     sse(res, 'message', { delta })
+    await new Promise((resolve) => setTimeout(resolve, 28))
   }
 }
 
