@@ -90,7 +90,7 @@ export async function annualReport(req, res) {
   for (const r of records) byType[r.recordType] = (byType[r.recordType] || 0) + 1
   const totalArea = Number(plots.reduce((s, p) => s + p.areaMu, 0).toFixed(1))
 
-  const typeText = Object.entries(byType).map(([k, v]) => `${k} ${v} 次`).join('、') || '暂无记录'
+  const typeText = Object.entries(byType).map(([k, v]) => `${k} ${v} 次`).join('、') || '还没有记录'
   const reportContent =
     `${year} 年度农事报告\n\n` +
     `本年度共管理地块 ${plots.length} 块，合计 ${totalArea} 亩。\n` +

@@ -40,7 +40,9 @@ export async function diseaseDetect(req, res) {
     recordId: record.id,
     detectType: 'DISEASE',
     imageUrl,
+    resultLabel: disease.modelLabel || disease.diseaseName,
     confidence,
+    advice: disease.prevention,
     disease,
   }, '识别完成')
 }

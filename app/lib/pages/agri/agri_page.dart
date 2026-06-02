@@ -108,6 +108,7 @@ class _AgriPageState extends State<AgriPage> {
                         ),
                       _plotSection(),
                       _recordSection(),
+                      _photoFlowEntry(),
                       const SectionTitle('AI 田间识别'),
                       _detectGrid(),
                       const SectionTitle('智能农事建议'),
@@ -210,31 +211,130 @@ class _AgriPageState extends State<AgriPage> {
               label: const Text('记一笔'),
             )),
         if (_records.isEmpty)
-          const AppCard(child: Text('暂无农事记录'))
+          const AppCard(child: Text('还没有农事记录，点击「记一笔」开始记录'))
         else
           ..._records.take(5).map((r) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: AppCard(
-                  child: Row(
-                    children: [
-                      StatusChip('${r['recordType'] ?? '农事'}'),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text('${r['content'] ?? r['cropType'] ?? ''}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 14)),
-                      ),
-                      Text('¥${r['cost'] ?? 0}',
-                          style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.goldContainer)),
-                    ],
-                  ),
-                ),
+                child: _recordCard(r),
               )),
       ],
+    );
+  }
+
+  Widget _recordCard(Map<String, dynamic> record) {
+    final date = DateTime.tryParse('${record['recordDate'] ?? ''}')?.toLocal();
+    final today = DateUtils.dateOnly(DateTime.now());
+    final recordDay = date == null ? null : DateUtils.dateOnly(date);
+    final isFuture = recordDay != null && recordDay.isAfter(today);
+    final isToday = recordDay == today;
+    final dateLabel = date == null
+        ? ''
+        : isToday
+            ? '今日'
+            : '${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
+    return AppCard(
+      child: Row(
+        children: [
+          StatusChip(
+            '${record['recordType'] ?? '农事'}',
+            color: isFuture ? AppColors.goldContainer : AppColors.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${record['content'] ?? record['cropType'] ?? ''}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.onSurface,
+                    fontSize: 14,
+                  ),
+                ),
+                if (dateLabel.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    dateLabel,
+                    style: const TextStyle(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (isFuture) ...[
+            const SizedBox(width: 8),
+            const StatusChip('待办', color: AppColors.goldContainer),
+          ] else
+            Text(
+              '¥${record['cost'] ?? 0}',
+              style: const TextStyle(
+                color: AppColors.goldContainer,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _photoFlowEntry() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 8),
+      child: AppCard(
+        onTap: () => context.push('/agri/diagnose'),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(R.md),
+              ),
+              child: const Icon(
+                Icons.biotech_outlined,
+                color: AppColors.primary,
+                size: 27,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '智能植保 · 一拍即诊',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    '拍叶片识病，生成用药建议并排程复查',
+                    style: TextStyle(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.primary,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -535,7 +635,7 @@ class _AgriPageState extends State<AgriPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_calendar.isEmpty)
-              const Text('本月暂无农事提醒',
+              const Text('本月还没有农事提醒',
                   style: TextStyle(color: AppColors.onSurfaceVariant))
             else
               for (final c in _calendar)
