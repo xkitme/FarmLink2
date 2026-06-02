@@ -5,10 +5,10 @@ import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/notification_state.dart';
 import '../../core/offline_cache.dart';
-import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 
-/// 首页 · 气象灾害看板 — 接入服务端 /agri/weather（样式复刻设计稿 _2）
+/// 首页 — 排版参考设计稿「首页排版」，样式沿用项目 Agro-Modernist 系统。
+/// 块序：问候+天气 → 搜索 → 今日决策卡 → 核心服务宫格 → 板块大图 → 周边行情 → 惠农补贴 → 生活服务。
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -24,11 +24,10 @@ class _HomePageState extends State<HomePage> {
   String? _cacheTime;
   List<Map<String, dynamic>> _days = [];
   List<Map<String, dynamic>> _alerts = [];
-  Map<String, dynamic>? _latestNotification;
-  Map<String, dynamic>? _latestPublish;
-  int _unread = 0;
-  int _waiting = 0;
-  String? _queueHint;
+  List<Map<String, dynamic>> _todoRecords = [];
+  Map<String, dynamic>? _upcomingPolicyDeadline;
+  List<Map<String, dynamic>> _prices = [];
+  Map<String, dynamic>? _subsidy;
 
   @override
   void initState() {
@@ -40,33 +39,24 @@ class _HomePageState extends State<HomePage> {
     setState(() => _loading = true);
     final results = await Future.wait<dynamic>([
       _loadWeatherSnapshot(),
-      _loadLatestNotification(),
-      _loadLatestPublish(),
-      OfflineSyncQueue.all().catchError((_) => <SyncQueueItem>[]),
-      NotificationState.refresh().then((_) => NotificationState.unread.value),
+      _loadTodoRecords(),
+      _loadUpcomingPolicyDeadline(),
+      _loadPrices(),
+      _loadSubsidy(),
+      NotificationState.refresh().then((_) => null),
     ]);
     if (!mounted) return;
-
     final weather = results[0] as Map<String, dynamic>;
-    final notification = results[1] as Map<String, dynamic>?;
-    final publish = results[2] as Map<String, dynamic>?;
-    final queue = (results[3] as List).whereType<SyncQueueItem>().toList();
-    final waiting =
-        queue.where((item) => item.status != SyncStatus.synced).toList();
-
     setState(() {
       _days = _listOfMaps(weather['days']);
       _alerts = _listOfMaps(weather['alerts']);
       _fromCache = weather['fromCache'] == true;
       _cacheTime =
           weather['cacheTime'] == null ? null : '${weather['cacheTime']}';
-      _latestNotification = notification;
-      _latestPublish = publish;
-      _unread = results[4] is int
-          ? results[4] as int
-          : NotificationState.unread.value;
-      _waiting = waiting.length;
-      _queueHint = waiting.isEmpty ? null : _queueTitleOf(waiting.first);
+      _todoRecords = _listOfMaps(results[1]);
+      _upcomingPolicyDeadline = results[2] as Map<String, dynamic>?;
+      _prices = (results[3] as List).whereType<Map<String, dynamic>>().toList();
+      _subsidy = results[4] as Map<String, dynamic>?;
       _loading = false;
     });
   }
@@ -74,23 +64,12 @@ class _HomePageState extends State<HomePage> {
   Future<Map<String, dynamic>> _loadWeatherSnapshot() async {
     try {
       final data = await ApiClient.get('/agri/weather') as Map<String, dynamic>;
-      final days = (data['days'] as List? ?? [])
-          .whereType<Map>()
-          .map((e) => e.cast<String, dynamic>())
-          .toList();
-      final alerts = (data['alerts'] as List? ?? [])
-          .whereType<Map>()
-          .map((e) => e.cast<String, dynamic>())
-          .toList();
+      final days = _listOfMaps(data['days']);
+      final alerts = _listOfMaps(data['alerts']);
       await OfflineCache.saveList(_cacheKey, [
         {'days': days, 'alerts': alerts}
       ]);
-      return {
-        'days': days,
-        'alerts': alerts,
-        'fromCache': false,
-        'cacheTime': null,
-      };
+      return {'days': days, 'alerts': alerts, 'fromCache': false, 'cacheTime': null};
     } catch (_) {
       final cached = await OfflineCache.readList(_cacheKey);
       final cacheTime = await OfflineCache.updatedAt(_cacheKey);
@@ -111,30 +90,66 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<Map<String, dynamic>?> _loadLatestNotification() async {
+  Future<List<Map<String, dynamic>>> _loadTodoRecords() async {
     try {
-      final data = await ApiClient.get('/notification/list',
-          query: {'pageNum': 1, 'pageSize': 1});
+      final data = await ApiClient.get('/agri/record/list',
+          query: {'pageNum': 1, 'pageSize': 50});
       final records = _recordsOf(data);
-      return records.isEmpty ? null : records.first;
+      final today = _dateOnly(DateTime.now());
+      final lastDay = today.add(const Duration(days: 7));
+      final todos = records.where((record) {
+        final date = _recordDateOf(record);
+        if (date == null || date.isBefore(today) || date.isAfter(lastDay)) {
+          return false;
+        }
+        return _isTodoType(_text(record['recordType']));
+      }).toList();
+      todos.sort((a, b) => _recordDateOf(a)!.compareTo(_recordDateOf(b)!));
+      return todos;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadUpcomingPolicyDeadline() async {
+    try {
+      final data = await ApiClient.get('/data/dashboard');
+      if (data is! Map) return null;
+      final policy = data['upcomingPolicyDeadline'];
+      return policy is Map ? _mapOf(policy) : null;
     } catch (_) {
       return null;
     }
   }
 
-  Future<Map<String, dynamic>?> _loadLatestPublish() async {
+  Future<List<Map<String, dynamic>>> _loadPrices() async {
     try {
-      final data = await ApiClient.get('/life/help/list',
-          query: {'pageNum': 1, 'pageSize': 1});
+      final data = await ApiClient.get('/market/price');
+      final list = (data as List? ?? []).whereType<Map>().map(_mapOf).toList();
+      return list.take(4).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadSubsidy() async {
+    try {
+      final data = await ApiClient.get('/policy/list',
+          query: {'pageNum': 1, 'pageSize': 10});
       final records = _recordsOf(data);
-      return records.isEmpty ? null : records.first;
+      if (records.isEmpty) return null;
+      final subsidy = _firstWhere(
+          records,
+          (r) =>
+              _text(r['category']).contains('补贴') ||
+              _text(r['title']).contains('补贴'));
+      return subsidy ?? records.first;
     } catch (_) {
       return null;
     }
   }
 
   Map<String, dynamic> get _today => _days.isNotEmpty ? _days.first : const {};
-
   int _int(dynamic v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
 
   @override
@@ -143,55 +158,48 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: AppColors.background,
       appBar: const FarmAppBar(),
       body: _loading
-          ? const Loading(text: '正在获取气象数据...')
-          : Column(
-              children: [
-                if (_alerts.isNotEmpty)
-                  AlertBanner(
-                    '【${_alerts.first['alertLevel'] ?? '预警'}】${_alerts.first['title'] ?? _alerts.first['content'] ?? '请注意防范'}',
-                  )
-                else if (_fromCache)
-                  AlertBanner(
-                      '气象数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
-                      critical: false),
-                Expanded(
-                  child: RefreshIndicator(
-                    color: AppColors.primary,
-                    onRefresh: _load,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                      children: [
-                        _weatherStripCard()
-                            .animate()
-                            .fadeIn(duration: 360.ms)
-                            .slideY(begin: 0.08),
-                        const SectionTitle('核心服务'),
-                        _serviceGrid(context),
-                        const SectionTitle('我的快讯'),
-                        _quickPanel()
-                            .animate(delay: 80.ms)
-                            .fadeIn(duration: 360.ms)
-                            .slideY(begin: 0.08),
-                        const SectionTitle('未来天气趋势'),
-                        _forecastCard(),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+          ? const Loading(text: '正在加载首页...')
+          : RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                children: [
+                  if (_fromCache) ...[
+                    AlertBanner(
+                        '数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
+                        critical: false),
+                    const SizedBox(height: 12),
+                  ],
+                  _greetingWeather()
+                      .animate()
+                      .fadeIn(duration: 300.ms)
+                      .slideY(begin: 0.05),
+                  const SizedBox(height: 14),
+                  _homeSearch(),
+                  const SizedBox(height: 16),
+                  _decisionCard()
+                      .animate(delay: 60.ms)
+                      .fadeIn(duration: 340.ms)
+                      .slideY(begin: 0.06),
+                  const SectionTitle('核心服务'),
+                  _serviceGrid(context),
+                  const SizedBox(height: 22),
+                  _sectionBanners(),
+                  const SizedBox(height: 20),
+                  _priceCard(),
+                  const SizedBox(height: 16),
+                  _subsidyCard(),
+                  const SectionTitle('生活服务'),
+                  _lifeGrid(),
+                ],
+              ),
             ),
     );
   }
 
-  IconData _conditionIcon(String c) {
-    if (c.contains('雷')) return Icons.thunderstorm;
-    if (c.contains('雨')) return Icons.grain;
-    if (c.contains('雪')) return Icons.ac_unit;
-    if (c.contains('云') || c.contains('阴')) return Icons.cloud;
-    return Icons.wb_sunny;
-  }
-
-  Widget _weatherStripCard() {
+  // ── 1 · 问候 + 天气条 ─────────────────────────────────
+  Widget _greetingWeather() {
     final t = _today;
     final cond = '${t['condition'] ?? '晴'}';
     final low = _int(t['tempLow']);
@@ -199,6 +207,14 @@ class _HomePageState extends State<HomePage> {
     final humidity = _int(t['humidity']);
     final wind = _int(t['windLevel']);
     final soil = _soilStatusOf(humidity, cond);
+    final hour = DateTime.now().hour;
+    final greet = hour < 11
+        ? '早安'
+        : hour < 14
+            ? '午安'
+            : hour < 18
+                ? '下午好'
+                : '晚上好';
     return AppCard(
       onTap: () => context.push('/disaster'),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -220,18 +236,20 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _days.isEmpty ? '气象数据更新中' : '$low°~$high°  $cond',
+                  '$greet，今天也要照看好田地',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.onSurface,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 5),
                 Text(
-                  '湿度 $humidity% · 风 $wind 级 · 墒情$soil',
+                  _days.isEmpty
+                      ? '气象数据更新中'
+                      : '$low°~$high°  $cond · 湿度$humidity% · 风$wind级 · 墒情$soil',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -250,89 +268,218 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ── 2 · 搜索条（全局搜索 45d 未上线，先占位）──────────────
+  Widget _homeSearch() {
+    return GestureDetector(
+      onTap: () => toast(context, '全局搜索即将上线'),
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(R.sm),
+          border: Border.all(color: AppColors.outlineVariant, width: 1.5),
+        ),
+        padding: const EdgeInsets.only(left: 14, right: 6),
+        child: Row(
+          children: [
+            const Icon(Icons.search, color: AppColors.onSurfaceVariant, size: 21),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                '搜索农事、农资、政策、行情…',
+                style: TextStyle(fontSize: 14, color: AppColors.outline),
+              ),
+            ),
+            Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(R.sm - 2),
+              ),
+              child: const Text('搜索',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _conditionIcon(String c) {
+    if (c.contains('雷')) return Icons.thunderstorm;
+    if (c.contains('雨')) return Icons.grain;
+    if (c.contains('雪')) return Icons.ac_unit;
+    if (c.contains('云') || c.contains('阴')) return Icons.cloud;
+    return Icons.wb_sunny;
+  }
+
   String _soilStatusOf(int humidity, String cond) {
-    if (cond.contains('雨') || humidity >= 85) {
-      return '偏湿';
-    }
+    if (cond.contains('雨') || humidity >= 85) return '偏湿';
     if (humidity < 55 && humidity > 0) return '偏旱';
     return '适宜';
   }
 
-  // 未来天气趋势（服务端 7 日预报）
-  Widget _forecastCard() {
-    final days = _days.take(7).toList();
-    if (days.isEmpty) {
-      return const AppCard(
-        child: EmptyView('暂无天气趋势', icon: Icons.bar_chart_rounded),
-      );
-    }
-    final highs = days.map((d) => _int(d['tempHigh'])).toList();
-    final maxH = highs.isEmpty ? 1 : highs.reduce((a, b) => a > b ? a : b);
+  // ── 3 · 今日决策卡 ───────────────────────────────────
+  Widget _decisionCard() {
+    final decision = _computeDecision();
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: decision.tone,
         borderRadius: BorderRadius.circular(R.lg),
         boxShadow: AppColors.ambientShadow,
       ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 130,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(R.lg),
+          onTap: () => context.push(decision.route),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final d in days)
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text('${_int(d['tempHigh'])}°',
-                            style: const TextStyle(
-                                fontSize: 10,
-                                color: AppColors.onSurfaceVariant)),
-                        const SizedBox(height: 2),
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 5),
-                          height: (_int(d['tempHigh']) / maxH * 80)
-                              .clamp(8.0, 80.0),
-                          decoration: BoxDecoration(
-                            color: '${d['condition'] ?? ''}'.contains('雨')
-                                ? const Color(0xFF4A90D9)
-                                : AppColors.primaryContainer,
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(4)),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(_md('${d['date'] ?? ''}'),
-                            style: const TextStyle(
-                                fontSize: 10,
-                                color: AppColors.onSurfaceVariant)),
-                      ],
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(R.md),
+                      ),
+                      child: Icon(decision.icon, color: Colors.white, size: 26),
                     ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('今日最重要的事',
+                              style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(decision.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  height: 1.3,
+                                  fontWeight: FontWeight.w800)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(decision.subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 13, height: 1.45)),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(minHeight: 48),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(R.sm),
                   ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(decision.cta,
+                          style: TextStyle(
+                              color: decision.tone,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(width: 4),
+                      Icon(Icons.chevron_right_rounded,
+                          color: decision.tone, size: 20),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          const Center(
-            child: Text('每日最高气温 (°C)',
-                style:
-                    TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
-          ),
-        ],
+        ),
       ),
-    ).animate(delay: 240.ms).fadeIn(duration: 400.ms).slideY(begin: 0.12);
+    );
   }
 
-  String _md(String iso) {
-    if (iso.length >= 10) return iso.substring(5, 10);
-    return iso;
+  _Decision _computeDecision() {
+    if (_alerts.isNotEmpty) {
+      final alert = _alerts.first;
+      final level = _text(alert['alertLevel'], fallback: '预警');
+      return _Decision(
+        icon: Icons.warning_amber_rounded,
+        tone: _alertTone(level),
+        title:
+            '【$level】${_text(alert['title'], fallback: _text(alert['content'], fallback: '请注意防范'))}',
+        subtitle: _text(alert['content'], fallback: '请及时查看防护指引，做好田间应对准备。'),
+        cta: '查看防护',
+        route: '/disaster',
+      );
+    }
+    final recheck = _firstWhere(
+        _todoRecords, (record) => _text(record['recordType']).contains('复查'));
+    if (recheck != null) {
+      final days = _daysUntil(_recordDateOf(recheck)!);
+      return _Decision(
+        icon: Icons.fact_check_outlined,
+        tone: AppColors.primary,
+        title: '待复查：${_todoContentOf(recheck)}',
+        subtitle: days == 0 ? '复查今天到期，请及时处理。' : '距离复查还有 $days 天，建议提前安排田间检查。',
+        cta: '去复查',
+        route: '/agri',
+      );
+    }
+    final todo = _firstWhere(
+        _todoRecords, (record) => !_text(record['recordType']).contains('复查'));
+    if (todo != null) {
+      final days = _daysUntil(_recordDateOf(todo)!);
+      return _Decision(
+        icon: Icons.eco_outlined,
+        tone: AppColors.primary,
+        title: '农事待办：${_todoContentOf(todo)}',
+        subtitle: days == 0 ? '今天安排的农事，请及时查看处理。' : '$days 天后进入计划日程，可提前做好准备。',
+        cta: '查看农事',
+        route: '/agri',
+      );
+    }
+    final policy = _upcomingPolicyDeadline;
+    final deadline = _parseDate(policy?['validTo']);
+    if (policy != null && deadline != null) {
+      final days = _daysUntil(deadline);
+      return _Decision(
+        icon: Icons.account_balance_outlined,
+        tone: AppColors.primary,
+        title: '政策截止：${_text(policy['title'], fallback: '惠农政策申报')}',
+        subtitle: days == 0 ? '申报今天截止，请及时查看办理。' : '距离申报截止还有 $days 天，请及时确认办理材料。',
+        cta: '去办理',
+        route: '/policy/service',
+      );
+    }
+    final condition = _text(_today['condition'], fallback: '晴');
+    return _Decision(
+      icon: Icons.wb_sunny_outlined,
+      tone: AppColors.primary,
+      title: '今日天气$condition，适宜农事',
+      subtitle: '今天没有紧急事项，可查看农情数据安排接下来的工作。',
+      cta: '看农情',
+      route: '/data',
+    );
   }
 
-  // ── 核心服务入口 ──────────────────────────
+  // ── 4 · 核心服务宫格 ─────────────────────────────────
   Widget _serviceGrid(BuildContext context) {
     return GridView.builder(
       shrinkWrap: true,
@@ -382,151 +529,296 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _quickPanel() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  // ── 5 · 板块大图 Banner ──────────────────────────────
+  Widget _sectionBanners() {
+    return Column(
       children: [
-        Expanded(
-          child: _quickCard(
-            icon: Icons.mail_rounded,
-            color: _unread > 0 ? AppColors.error : AppColors.primary,
-            title: '未读消息',
-            badge: '$_unread',
-            subtitle: _text(_latestNotification?['title'], fallback: '暂无新消息'),
-            onTap: () => context.go('/messages'),
-          ),
+        _bannerCard(
+          image: 'assets/images/_3_1.jpg',
+          icon: Icons.eco,
+          title: '智慧种植',
+          subtitle: '病虫害识别 · 农事建档 · 专家在线',
+          route: '/agri',
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _quickCard(
-            icon: Icons.sync_alt_rounded,
-            color: _waiting > 0 ? AppColors.warning : AppColors.primary,
-            title: '待发送',
-            badge: '$_waiting',
-            subtitle: _waiting > 0 ? (_queueHint ?? '有数据等待发送') : '数据已同步',
-            onTap: () => context.push('/data/service'),
-          ),
+        const SizedBox(height: 12),
+        _bannerCard(
+          image: 'assets/images/_4_1.jpg',
+          icon: Icons.storefront,
+          title: '乡村集市',
+          subtitle: '产地直发 · 溯源好物 · 一键下单',
+          route: '/market',
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _quickCard(
-            icon: Icons.add_circle_outline_rounded,
-            color: AppColors.secondary,
-            title: '最近发布',
-            subtitle: _text(_latestPublish?['title'], fallback: '暂无发布'),
-            onTap: () => context.go('/publish'),
-          ),
+        const SizedBox(height: 12),
+        _bannerCard(
+          image: 'assets/images/_5_2.jpg',
+          icon: Icons.agriculture,
+          title: '农机共享',
+          subtitle: '就近租用 · 真实预约 · 机主直联',
+          route: '/machinery',
         ),
       ],
     );
   }
 
-  Widget _quickCard({
+  Widget _bannerCard({
+    required String image,
     required IconData icon,
-    required Color color,
     required String title,
     required String subtitle,
-    required VoidCallback onTap,
-    String? badge,
+    required String route,
   }) {
-    return SizedBox(
-      height: 96,
-      child: AppCard(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => context.push(route),
+      child: Container(
+        height: 116,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(R.md),
+          boxShadow: AppColors.ambientShadow,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 16),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.onSurfaceVariant,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                if (badge != null)
-                  Text(
-                    badge,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-              ],
+            Image.asset(
+              image,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) =>
+                  Container(color: AppColors.primaryContainer),
             ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: Text(
-                subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.onSurface,
-                  fontSize: 12,
-                  height: 1.35,
-                  fontWeight: FontWeight.w600,
+            // 仅为文字可读的黑色压暗层（非装饰渐变）
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0xB3000000), Color(0x1A000000)],
                 ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(icon, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(title,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12.5,
+                          height: 1.3)),
+                ],
               ),
             ),
           ],
         ),
       ),
+    ).animate(delay: 100.ms).fadeIn(duration: 360.ms).slideY(begin: 0.08);
+  }
+
+  // ── 6 · 周边行情速览 ─────────────────────────────────
+  Widget _priceCard() {
+    return AppCard(
+      onTap: () => context.push('/market'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Text('周边行情速览',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface)),
+              Spacer(),
+              Text('更多',
+                  style: TextStyle(fontSize: 13, color: AppColors.outline)),
+              Icon(Icons.chevron_right_rounded,
+                  size: 18, color: AppColors.outline),
+            ],
+          ),
+          const SizedBox(height: 6),
+          if (_prices.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Text('行情数据更新中',
+                  style: TextStyle(color: AppColors.outline, fontSize: 13)),
+            )
+          else
+            for (final p in _prices) _priceRow(p),
+        ],
+      ),
     );
   }
 
-  static List<Map<String, dynamic>> _recordsOf(dynamic data) {
-    if (data is Map) return _listOfMaps(data['records']);
-    return const [];
+  Widget _priceRow(Map<String, dynamic> p) {
+    final name = _text(p['productName'], fallback: '农产品');
+    final unit = _text(p['unit'], fallback: '元/公斤');
+    final price = (p['price'] as num?)?.toDouble() ?? 0;
+    final market = _text(p['marketName']);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+                color: AppColors.primaryContainer, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              market.isEmpty ? name : '$name · $market',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 14, color: AppColors.onSurface),
+            ),
+          ),
+          Text('￥${price.toStringAsFixed(2)}',
+              style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary)),
+          Text(' / $unit',
+              style: const TextStyle(
+                  fontSize: 11, color: AppColors.onSurfaceVariant)),
+        ],
+      ),
+    );
   }
 
-  static List<Map<String, dynamic>> _listOfMaps(dynamic value) {
-    if (value is List) {
-      return value.whereType<Map>().map(_mapOf).toList();
-    }
-    return const [];
+  // ── 7 · 惠农补贴卡（AI/Premium 金描边卡）────────────────
+  Widget _subsidyCard() {
+    final s = _subsidy;
+    final title = s == null
+        ? '惠农补贴 · 持续更新'
+        : _text(s['title'], fallback: '惠农补贴申报');
+    final summary = s == null
+        ? '查看你可申领的补贴与惠农政策'
+        : _text(s['summary'],
+            fallback: _text(s['publishOrg'], fallback: '点击查看申报条件与办理材料'));
+    return AppCard(
+      ai: true,
+      onTap: () => context.push('/policy/service'),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(R.md),
+            ),
+            child: const Icon(Icons.workspace_premium_outlined,
+                color: AppColors.goldContainer, size: 26),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('符合你的补贴',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.goldContainer)),
+                const SizedBox(height: 3),
+                Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.onSurface)),
+                const SizedBox(height: 2),
+                Text(summary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.goldContainer,
+              borderRadius: BorderRadius.circular(R.sm),
+            ),
+            child: const Text('去申领',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
-  static Map<String, dynamic> _mapOf(Map value) =>
-      value.map((key, value) => MapEntry('$key', value));
-
-  static String _text(dynamic value, {String fallback = ''}) {
-    final text = '${value ?? ''}'.trim();
-    return text.isEmpty || text == 'null' ? fallback : text;
-  }
-
-  static String _queueTitleOf(SyncQueueItem item) {
-    final error = _text(item.lastError);
-    if (error.isNotEmpty) return error;
-    return '${_tableLabel(item.tableName)}等待发送';
-  }
-
-  static String _tableLabel(String tableName) {
-    switch (tableName) {
-      case 'farm_record':
-        return '农事记录';
-      case 'land_plot':
-        return '地块数据';
-      case 'disaster_report':
-        return '灾情上报';
-      case 'subsidy_application':
-        return '补贴申请';
-      case 'machinery_booking':
-        return '农机预约';
-      case 'help_request':
-        return '互助信息';
-      default:
-        return '业务数据';
-    }
+  // ── 8 · 生活服务网格 ─────────────────────────────────
+  Widget _lifeGrid() {
+    const items = [
+      (icon: Icons.medical_services_outlined, label: '乡村医生'),
+      (icon: Icons.local_shipping_outlined, label: '快递代收'),
+      (icon: Icons.receipt_long_outlined, label: '生活缴费'),
+      (icon: Icons.grid_view_rounded, label: '更多生活'),
+    ];
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.95,
+      ),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return AppCard(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+          onTap: () => context.push('/life'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(R.md),
+                ),
+                child: Icon(item.icon, color: AppColors.secondary, size: 22),
+              ),
+              const SizedBox(height: 8),
+              Text(item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.onSurface,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  )),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _openSection(BuildContext context, String key) {
@@ -552,4 +844,74 @@ class _HomePageState extends State<HomePage> {
         toast(context, '该服务暂时不可用，请稍后重试');
     }
   }
+
+  // ── 数据工具 ─────────────────────────────────────────
+  static List<Map<String, dynamic>> _recordsOf(dynamic data) {
+    if (data is Map) return _listOfMaps(data['records']);
+    return const [];
+  }
+
+  static List<Map<String, dynamic>> _listOfMaps(dynamic value) {
+    if (value is List) return value.whereType<Map>().map(_mapOf).toList();
+    return const [];
+  }
+
+  static Map<String, dynamic> _mapOf(Map value) =>
+      value.map((key, value) => MapEntry('$key', value));
+
+  static String _text(dynamic value, {String fallback = ''}) {
+    final text = '${value ?? ''}'.trim();
+    return text.isEmpty || text == 'null' ? fallback : text;
+  }
+
+  static T? _firstWhere<T>(Iterable<T> values, bool Function(T) test) {
+    for (final value in values) {
+      if (test(value)) return value;
+    }
+    return null;
+  }
+
+  static DateTime _dateOnly(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
+
+  static DateTime? _parseDate(dynamic value) {
+    final parsed = DateTime.tryParse(_text(value));
+    return parsed == null ? null : _dateOnly(parsed.toLocal());
+  }
+
+  static DateTime? _recordDateOf(Map<String, dynamic> record) =>
+      _parseDate(record['recordDate']);
+
+  static bool _isTodoType(String type) {
+    const keywords = ['复查', '打药', '施肥', '灌溉', '采收', '收获', '播种', '巡田'];
+    return keywords.any(type.contains);
+  }
+
+  static int _daysUntil(DateTime date) =>
+      _dateOnly(date).difference(_dateOnly(DateTime.now())).inDays;
+
+  static String _todoContentOf(Map<String, dynamic> record) =>
+      _text(record['content'],
+          fallback: _text(record['recordType'], fallback: '农事安排'));
+
+  static Color _alertTone(String level) =>
+      level.contains('红') ? AppColors.error : AppColors.warning;
+}
+
+class _Decision {
+  final IconData icon;
+  final Color tone;
+  final String title;
+  final String subtitle;
+  final String cta;
+  final String route;
+
+  const _Decision({
+    required this.icon,
+    required this.tone,
+    required this.title,
+    required this.subtitle,
+    required this.cta,
+    required this.route,
+  });
 }
