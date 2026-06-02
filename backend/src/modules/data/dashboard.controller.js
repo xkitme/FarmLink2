@@ -68,6 +68,7 @@ export async function dashboard(req, res) {
     syncLogs,
     aiQaCount,
     aiDetectCount,
+    upcomingPolicyDeadline,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.landPlot.count({ where: plotWhere }),
@@ -88,6 +89,15 @@ export async function dashboard(req, res) {
     prisma.syncLog.findMany({ where: req.user.role === 'ADMIN' ? {} : { userId: req.user.id }, orderBy: { syncedAt: 'desc' }, take: 8 }),
     prisma.aiQaRecord.count({ where: req.user.role === 'ADMIN' ? {} : { userId: req.user.id } }),
     prisma.aiDetectRecord.count({ where: req.user.role === 'ADMIN' ? {} : { userId: req.user.id } }),
+    prisma.policy.findFirst({
+      where: {
+        status: 1,
+        validTo: { gte: new Date() },
+        OR: [{ validFrom: null }, { validFrom: { lte: new Date() } }],
+      },
+      orderBy: { validTo: 'asc' },
+      select: { id: true, title: true, category: true, validTo: true },
+    }),
   ])
 
   const totalAreaMu = Number(plots.reduce((sum, p) => sum + (p.areaMu || 0), 0).toFixed(2))
@@ -140,6 +150,7 @@ export async function dashboard(req, res) {
     disasterStats: [...disasterMap.values()].sort((a, b) => b.loss - a.loss),
     latestStatReports: statReports.map(normalizeStatReport),
     latestSyncLogs: syncLogs,
+    upcomingPolicyDeadline,
     serviceStatus: {
       dataSource: '平台业务数据',
       mode: '运行中',
@@ -221,7 +232,7 @@ export async function generateAnnualReport(req, res) {
   const summary = `${year} 年共管理 ${plots.length} 块地，面积 ${totalArea} 亩，记录农事 ${records.length} 次，投入成本 ${totalCost} 元。`
   const reportContent = [
     summary,
-    `农事类型分布：${Object.entries(typeCount).map(([k, v]) => `${k}${v}次`).join('、') || '暂无记录'}。`,
+    `农事类型分布：${Object.entries(typeCount).map(([k, v]) => `${k}${v}次`).join('、') || '还没有记录'}。`,
     '建议继续完善播种、施肥、打药、灌溉和采收记录，便于后续成本核算、补贴申请和质量溯源。',
   ].join('\n')
 
