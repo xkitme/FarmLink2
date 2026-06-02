@@ -13,7 +13,9 @@ export const config = {
 
   ollama: {
     baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-    primaryModel: process.env.OLLAMA_PRIMARY_MODEL || 'qwen2.5:1.5b-instruct-q4_K_M',
+    // 默认换成更聪明的 7B（q4 约 4.7GB，RTX 5060 Laptop 8GB 可跑），
+    // 1.5B 太小常复读/答非所问。显存吃紧可用环境变量降到 qwen2.5:3b-instruct-q4_K_M。
+    primaryModel: process.env.OLLAMA_PRIMARY_MODEL || 'qwen2.5:7b-instruct-q4_K_M',
     visionModel: process.env.OLLAMA_VISION_MODEL || 'minicpm-v:8b-2.6-q4_K_M',
     embedModel: process.env.OLLAMA_EMBED_MODEL || 'bge-m3',
   },

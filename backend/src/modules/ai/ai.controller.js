@@ -185,8 +185,9 @@ export async function modelVersion(req, res) {
       embedModel: config.ollama.embedModel,
     },
     recommendedForRtx5060Laptop: [
-      { name: 'qwen2.5:1.5b-instruct-q4_K_M', use: '政策/农技/法律问答，速度优先' },
-      { name: 'qwen2.5:3b-instruct-q4_K_M', use: '问答质量更好，8GB 显存可尝试' },
+      { name: 'qwen2.5:7b-instruct-q4_K_M', use: '政策/农技/法律问答，默认推荐（约4.7GB，8GB可跑，答得更准）' },
+      { name: 'qwen2.5:3b-instruct-q4_K_M', use: '显存紧张时的折中选择' },
+      { name: 'qwen2.5:1.5b-instruct-q4_K_M', use: '极限速度优先，质量较弱不推荐' },
       { name: 'minicpm-v:8b-2.6-q4_K_M', use: '图像理解，显存紧张时使用规则引擎' },
       { name: 'bge-m3', use: '向量检索，可后续用于更精细 RAG' },
     ],
