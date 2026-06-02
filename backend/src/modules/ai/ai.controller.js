@@ -474,7 +474,9 @@ export async function imageAnalyze(req, res) {
       model: config.ollama.visionModel,
       images: [bytes.toString('base64')],
       temperature: 0.1,
-      timeoutMs: 90000,
+      // 8GB 显存跑 8B 视觉模型很慢；超过 15s 不返回就退回规则引擎给即时结果，
+      // 不让用户干等（原 90s 会"问一年都不回"）。
+      timeoutMs: 15000,
     })
     const text = generated.answer.replace(/^```json|```$/g, '').trim()
     try {
