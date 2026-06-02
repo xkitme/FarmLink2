@@ -1055,7 +1055,31 @@ class _MarkdownText extends StatelessWidget {
       last = m.end;
     }
     if (last < s.length) {
-      spans.add(TextSpan(text: s.substring(last), style: style));
+      // 流式生成中：尾部可能有尚未闭合的标记（如刚打出 **加粗）。
+      // 把标记后的文本直接按对应样式渲染，避免中途闪出原始 ** / * / `（边生成边渲染）。
+      final tail = s.substring(last);
+      final open = RegExp(r'(\*\*\*|\*\*|\*|`)').firstMatch(tail);
+      if (open == null) {
+        spans.add(TextSpan(text: tail, style: style));
+      } else {
+        final before = tail.substring(0, open.start);
+        final after = tail.substring(open.end);
+        if (before.isNotEmpty) {
+          spans.add(TextSpan(text: before, style: style));
+        }
+        final marker = open.group(0)!;
+        final styled = marker == '`'
+            ? style.copyWith(
+                fontFamily: 'monospace',
+                backgroundColor: AppColors.surfaceContainer)
+            : marker == '*'
+                ? style.copyWith(fontStyle: FontStyle.italic)
+                : style.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontStyle:
+                        marker == '***' ? FontStyle.italic : FontStyle.normal);
+        if (after.isNotEmpty) spans.add(TextSpan(text: after, style: styled));
+      }
     }
     if (spans.isEmpty) spans.add(TextSpan(text: s, style: style));
     return TextSpan(children: spans);
