@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -497,20 +499,137 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
             style: TextStyle(color: AppColors.onSurfaceVariant)),
       );
     }
-    final maxArea = items
-        .map((item) => _double(item['areaMu']))
-        .fold<double>(0, (max, v) => v > max ? v : max);
-    return AppCard(
-      child: Column(
-        children: [
-          for (final item in items.take(5))
-            _barRow(
-              label: _text(item['cropType'], fallback: '未填写'),
-              value: '${_num(item['areaMu'])} 亩',
-              ratio: maxArea == 0 ? 0 : _double(item['areaMu']) / maxArea,
-              color: _cropColor(_text(item['cropType'])),
+    final cropRows = [
+      for (final item in items)
+        (
+          crop: _text(item['cropType'], fallback: '未填写'),
+          area: math.max(0.0, _double(item['areaMu'])),
+        ),
+    ];
+    final displayRows = cropRows.length > 6
+        ? [
+            ...cropRows.take(5),
+            (
+              crop: '其他',
+              area: cropRows
+                  .skip(5)
+                  .fold<double>(0.0, (total, item) => total + item.area),
             ),
-        ],
+          ]
+        : cropRows;
+    final totalArea =
+        cropRows.fold<double>(0.0, (total, item) => total + item.area);
+    final slices = [
+      for (final item in displayRows)
+        (
+          value: item.area,
+          color: _cropColor(item.crop),
+        ),
+    ];
+
+    Widget legendRow(({String crop, double area}) item) {
+      final pct = totalArea == 0 ? 0 : (item.area / totalArea * 100).round();
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: _cropColor(item.crop),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                item.crop,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '${_num(item.area)}亩 · $pct%',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AppCard(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 360;
+          final chartSize = math.min(compact ? 128.0 : 136.0,
+              constraints.maxWidth.isFinite ? constraints.maxWidth : 136.0);
+          final chart = SizedBox(
+            width: chartSize,
+            height: chartSize,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: Size.square(chartSize),
+                  painter: _DonutPainter(slices: slices, strokeWidth: 18),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _num(totalArea),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.primaryContainer,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Text(
+                      '亩',
+                      style: TextStyle(
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+          final legend = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [for (final item in displayRows) legendRow(item)],
+          );
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(child: chart),
+                const SizedBox(height: 16),
+                legend,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              chart,
+              const SizedBox(width: 18),
+              Expanded(child: legend),
+            ],
+          );
+        },
       ),
     );
   }
@@ -722,45 +841,6 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
     );
   }
 
-  Widget _barRow({
-    required String label,
-    required String value,
-    required double ratio,
-    required Color color,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-              ),
-              Text(value,
-                  style: const TextStyle(
-                      color: AppColors.onSurfaceVariant, fontSize: 12)),
-            ],
-          ),
-          const SizedBox(height: 7),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: ratio.clamp(0.04, 1),
-              minHeight: 9,
-              backgroundColor: AppColors.surfaceHigh,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _compactLine(String label, String value,
       {Color color = AppColors.primary}) {
     return Padding(
@@ -898,5 +978,71 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
     final parsed = DateTime.tryParse(raw);
     if (parsed == null) return raw.isEmpty ? '-' : raw;
     return DateFormat('MM-dd HH:mm').format(parsed.toLocal());
+  }
+}
+
+class _DonutPainter extends CustomPainter {
+  const _DonutPainter({
+    required this.slices,
+    this.strokeWidth = 18,
+  });
+
+  final List<({double value, Color color})> slices;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = slices.fold<double>(
+      0.0,
+      (sum, slice) => sum + math.max(0.0, slice.value),
+    );
+    if (total <= 0) return;
+
+    final activeCount = slices.where((slice) => slice.value > 0).length;
+    final radius = (math.min(size.width, size.height) - strokeWidth) / 2;
+    final rect = Rect.fromCircle(
+      center: Offset(size.width / 2, size.height / 2),
+      radius: radius,
+    );
+    final paint = Paint()
+      ..isAntiAlias = true
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    var startAngle = -math.pi / 2;
+    for (final slice in slices) {
+      final value = math.max(0.0, slice.value);
+      if (value == 0) continue;
+
+      final sweepAngle = value / total * math.pi * 2;
+      final gap =
+          activeCount > 1 ? math.min(math.pi / 90, sweepAngle / 3) : 0.0;
+      paint.color = slice.color;
+      canvas.drawArc(
+        rect,
+        startAngle + gap / 2,
+        math.max(0.0, sweepAngle - gap),
+        false,
+        paint,
+      );
+      startAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutPainter oldDelegate) {
+    if (oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.slices.length != slices.length) {
+      return true;
+    }
+    for (var i = 0; i < slices.length; i++) {
+      final oldSlice = oldDelegate.slices[i];
+      final slice = slices[i];
+      if (oldSlice.value != slice.value || oldSlice.color != slice.color) {
+        return true;
+      }
+    }
+    return false;
   }
 }
