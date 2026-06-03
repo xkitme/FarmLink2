@@ -23,6 +23,7 @@ import '../pages/messages/messages_page.dart';
 import '../pages/policy/policy_page.dart';
 import '../pages/data/data_dashboard_page.dart';
 import '../pages/data/data_service_page.dart';
+import '../pages/screen/village_screen_page.dart';
 import '../pages/profile/profile_page.dart';
 import '../pages/profile/settings/about_page.dart';
 import '../pages/profile/settings/account_page.dart';
@@ -59,6 +60,7 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
             GoRoute(path: 'register', builder: (_, __) => const RegisterPage()),
           ],
         ),
+        GoRoute(path: '/screen', builder: (_, __) => const VillageScreenPage()),
         ShellRoute(
           navigatorKey: _shellKey,
           builder: (ctx, state, child) =>

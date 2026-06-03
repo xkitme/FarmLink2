@@ -95,6 +95,12 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
         showBack: true,
         actions: [
           IconButton(
+            tooltip: '全屏大屏',
+            onPressed: () => context.go('/screen'),
+            icon:
+                const Icon(Icons.fullscreen, color: AppColors.onSurfaceVariant),
+          ),
+          IconButton(
             tooltip: '数据管理服务',
             onPressed: () => context.push('/data/service'),
             icon: const Icon(Icons.tune, color: AppColors.onSurfaceVariant),
