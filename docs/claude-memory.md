@@ -5,6 +5,39 @@
 
 ---
 
+## 2026-06-03 · Codex 批量派单 session（招牌场景代码侧收尾）
+
+### 状态：全部已 commit + push 到 origin/main，工作树干净
+本会话用 `codex exec` 流水线派单，11 个提交全部落地 main（HEAD `85c757ba`）：
+- **#59** 数据库知识补全（病害54/农药32/农事36/行情18品/政策18，亲跑 db:seed 验过）
+- **ollama** 文本生成超时 90s→180s
+- **45c** 村级数字驾驶舱大屏（/screen，village 账号入口在数据看板）
+- **45d** 全局搜索 + 新建 `app/lib/core/feature_catalog.dart`（71 条功能清单，B/C 多处复用）
+- **45e** 全部服务工具墙（/all）
+- **45i** 可讲数字：`/data/dashboard` 加全平台口径 `platformStats` + 首页徽章带
+- **45f** 板块头部工具 chip（新建 `widgets/section_tool_chips.dart`，铺 7 个板块主页）
+- **45j** 数据看板「种植结构」柱图→手绘环形图（`_DonutPainter`，无图表依赖，删了 unused `_barRow`）
+- 另把 **45b/45k** 进度总览订正为 ✅（实现早随 home 重写/cfc4f396/a2afab8c 落地，之前漏翻）
+
+每个都自跑 `flutter analyze lib`（全绿）+ 后端项跑了 node --check / db:seed。**但全程没做浏览器实测**（用户要求 push 后叫别人在真机/浏览器查）。
+
+### ⚠️ 待别人验（重点）
+- **45j 环形图**：纯手绘视觉，analyze 绿≠画对。盯占比/百分比加总/单作物/空数据/窄屏图例溢出。
+- **45c 大屏 / 45i 徽章 / 45f chip**：真机/浏览器看观感与不溢出。
+- **比赛机 Flutter 3.44**：本地 3.32.1 analyze 过≠比赛机能编，让查的人留意编译。
+
+### 招牌场景代码侧基本铺完，剩下的都不是 Codex 活
+- **45h(C2)** AI 案例库 —— plan 标「缓冲项不做」
+- **45l(D3)** 签名交互、**45m/45n/45o** 口号/技术话术/demo 脚本 —— 文档+产品判断，得人一起写
+- **45j 后续刀**：月报/大屏环形图、行情趋势折线（要另开工作单）
+- **GitHub issue #16**（动画不流畅 / 卡片改独立详情页）—— 前端视觉，建议 Claude 自己改+浏览器实测，别甩自主 Codex
+- **issue #17** AI 问题：①识图超时兜底 ②markdown*** 渲染（68d45de4 早修）③数据(#59)+流式 —— 代码侧都做了，待真机确认后可关
+
+### Codex 派单踩的坑（下次直接照做）
+`codex exec` 传 prompt：**别用 PowerShell 管道**（中文 stdin 变 `???`）、**别让 stdin 开着**（卡等输入）。正解：纯 ASCII 引导 prompt 作参数 + 让 Codex 自己读磁盘上的 UTF-8 任务文件（`.codex-task-*.txt`）+ Bash `< /dev/null` 关 stdin + 后台跑 + Monitor 轮询 git log 等提交。
+
+---
+
 ## 2026-06-01 · 农机页重构 session
 
 ### ⚠️ 最重要:一堆改动还没 commit
