@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/feature_catalog.dart';
 import '../../core/notification_state.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
@@ -182,7 +183,13 @@ class _HomePageState extends State<HomePage> {
                       .animate(delay: 60.ms)
                       .fadeIn(duration: 340.ms)
                       .slideY(begin: 0.06),
-                  const SectionTitle('核心服务'),
+                  SectionTitle(
+                    '核心服务',
+                    trailing: TextButton(
+                      onPressed: () => context.go('/all'),
+                      child: Text('全部 ${kFeatureCatalog.length} 项 →'),
+                    ),
+                  ),
                   _serviceGrid(context),
                   const SizedBox(height: 22),
                   _sectionBanners(),

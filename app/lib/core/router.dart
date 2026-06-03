@@ -6,6 +6,7 @@ import '../pages/auth/login_page.dart';
 import '../pages/auth/register_page.dart';
 import '../pages/home/shell_page.dart';
 import '../pages/home/home_page.dart';
+import '../pages/all/all_features_page.dart';
 import '../pages/ai/ai_chat_page.dart';
 import '../pages/ai/ai_threads_page.dart';
 import '../pages/market/market_page.dart';
@@ -68,6 +69,7 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
               ShellPage(location: state.uri.path, child: child),
           routes: [
             GoRoute(path: '/home', builder: (_, __) => const HomePage()),
+            GoRoute(path: '/all', builder: (_, __) => const AllFeaturesPage()),
             GoRoute(path: '/search', builder: (_, __) => const SearchPage()),
             GoRoute(path: '/ai', builder: (_, __) => const AiThreadsPage()),
             GoRoute(
