@@ -17,6 +17,7 @@ class _ShellPageState extends State<ShellPage> {
 
   static const _tabPaths = {
     '/home',
+    '/search',
     '/ai',
     '/publish',
     '/messages',

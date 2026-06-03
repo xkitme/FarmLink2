@@ -34,6 +34,7 @@ import '../pages/profile/settings/push_settings_page.dart';
 import '../pages/profile/settings/settings_home_page.dart';
 import '../pages/profile/settings/storage_page.dart';
 import '../pages/profile/settings/weather_alert_page.dart';
+import '../pages/search/search_page.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
@@ -67,6 +68,7 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
               ShellPage(location: state.uri.path, child: child),
           routes: [
             GoRoute(path: '/home', builder: (_, __) => const HomePage()),
+            GoRoute(path: '/search', builder: (_, __) => const SearchPage()),
             GoRoute(path: '/ai', builder: (_, __) => const AiThreadsPage()),
             GoRoute(
               // C4：保留 ?scene= 查询参数，未来主页招牌场景入口（如 scene=DISEASE/POLICY）会传

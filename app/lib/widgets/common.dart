@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 
-/// 品牌顶栏：白底 h64，左农机图标（或返回箭头）、居中「FarmLink 田园通」粗体绿、右铃铛
+/// 品牌顶栏：白底 h64，左农机图标（或返回箭头）、居中「FarmLink 田园通」粗体绿、右搜索/铃铛
 ///
 /// 一级 tab 页：直接 `FarmAppBar()`，左侧是品牌叶 icon。
 /// 详情页：`FarmAppBar(showBack: true, backFallback: '/home')`，左侧变返回箭头。
@@ -12,12 +12,14 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final VoidCallback? onBell;
   final bool showBack;
+  final bool showSearch;
   final String backFallback;
   const FarmAppBar({
     super.key,
     this.actions,
     this.onBell,
     this.showBack = false,
+    this.showSearch = true,
     this.backFallback = '/home',
   });
 
@@ -49,20 +51,30 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
                   Icon(Icons.agriculture, color: AppColors.primary, size: 26),
             ),
       title: const Text('FarmLink 田园通',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
               color: AppColors.primary,
               fontSize: 22,
               fontWeight: FontWeight.w700,
               letterSpacing: 0)),
-      actions: actions ??
-          [
-            IconButton(
-              onPressed: onBell ?? () => GoRouter.of(context).go('/messages'),
-              icon: const Icon(Icons.notifications_none,
-                  color: AppColors.onSurfaceVariant),
-              tooltip: '消息通知',
-            ),
-          ],
+      actions: [
+        if (showSearch)
+          IconButton(
+            onPressed: () => GoRouter.of(context).go('/search'),
+            icon: const Icon(Icons.search, color: AppColors.onSurfaceVariant),
+            tooltip: '全局搜索',
+          ),
+        ...(actions ??
+            [
+              IconButton(
+                onPressed: onBell ?? () => GoRouter.of(context).go('/messages'),
+                icon: const Icon(Icons.notifications_none,
+                    color: AppColors.onSurfaceVariant),
+                tooltip: '消息通知',
+              ),
+            ]),
+      ],
     );
   }
 }

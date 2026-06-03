@@ -1,0 +1,436 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/api_client.dart';
+import '../../core/constants.dart';
+import '../../core/feature_catalog.dart';
+import '../../widgets/common.dart';
+
+class SearchPage extends StatefulWidget {
+  const SearchPage({super.key});
+
+  @override
+  State<SearchPage> createState() => _SearchPageState();
+}
+
+class _SearchPageState extends State<SearchPage> {
+  static const _hotWords = ['补贴', '行情', '病虫害', '农机', '天气'];
+
+  final _ctrl = TextEditingController();
+  final _focus = FocusNode();
+  String _query = '';
+  bool _loading = false;
+  Map<String, dynamic> _content = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focus.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  List<FeatureItem> get _featureHits {
+    if (_query.isEmpty) return const [];
+    final q = _query.toLowerCase();
+    return kFeatureCatalog
+        .where((feature) {
+          final name = feature.name.toLowerCase();
+          return name.contains(q) ||
+              feature.keywords.any((keyword) {
+                final key = keyword.toLowerCase();
+                return key.contains(q) || q.contains(key);
+              });
+        })
+        .take(8)
+        .toList();
+  }
+
+  bool get _contentEmpty {
+    const keys = ['policy', 'disease', 'product', 'job', 'course'];
+    return keys.every((key) => _list(_content[key]).isEmpty);
+  }
+
+  Future<void> _searchContent() async {
+    final q = _ctrl.text.trim();
+    if (q.isEmpty) return;
+    setState(() {
+      _query = q;
+      _content = {};
+      _loading = true;
+    });
+    try {
+      final data = await ApiClient.get('/search', query: {'keyword': q});
+      if (!mounted) return;
+      setState(() {
+        _content = data is Map
+            ? data.map((key, value) => MapEntry('$key', value))
+            : <String, dynamic>{};
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _content = {};
+        _loading = false;
+      });
+    }
+  }
+
+  void _clear() {
+    _ctrl.clear();
+    setState(() {
+      _query = '';
+      _content = {};
+      _loading = false;
+    });
+  }
+
+  void _useHotWord(String word) {
+    _ctrl.text = word;
+    setState(() => _query = word);
+    _searchContent();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final featureHits = _featureHits;
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          tooltip: '返回',
+          icon: const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/home'),
+        ),
+        titleSpacing: 0,
+        title: Container(
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceLow,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.search, size: 20, color: AppColors.outline),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _ctrl,
+                  focusNode: _focus,
+                  textInputAction: TextInputAction.search,
+                  decoration: const InputDecoration(
+                    hintText: '搜索功能、政策、农技、商品...',
+                    border: InputBorder.none,
+                    isDense: true,
+                  ),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: AppColors.onSurface,
+                  ),
+                  onChanged: (value) => setState(() {
+                    _query = value.trim();
+                    if (_query.isEmpty) _content = {};
+                  }),
+                  onSubmitted: (_) => _searchContent(),
+                ),
+              ),
+              if (_query.isNotEmpty)
+                GestureDetector(
+                  onTap: _clear,
+                  child: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: AppColors.outline,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: '搜索',
+            onPressed: _searchContent,
+            icon: const Icon(Icons.search, color: AppColors.onSurfaceVariant),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        children: [
+          if (_query.isEmpty) _hotKeywords(),
+          if (featureHits.isNotEmpty) ...[
+            const SectionTitle('功能'),
+            _featureGrid(featureHits),
+          ],
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Loading(text: '搜索中'),
+            ),
+          if (!_loading && _content.isNotEmpty) ..._contentSections(),
+          if (!_loading &&
+              _query.isNotEmpty &&
+              featureHits.isEmpty &&
+              _contentEmpty)
+            const Padding(
+              padding: EdgeInsets.all(40),
+              child: EmptyView('没有找到相关结果'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _hotKeywords() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle('热门搜索'),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final word in _hotWords)
+              ActionChip(
+                avatar: const Icon(Icons.search, size: 17),
+                label: Text(word),
+                onPressed: () => _useHotWord(word),
+                backgroundColor: AppColors.surface,
+                side: const BorderSide(color: AppColors.outlineVariant),
+                labelStyle: const TextStyle(
+                  color: AppColors.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _featureGrid(List<FeatureItem> items) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 2.35,
+      ),
+      itemBuilder: (context, index) {
+        final feature = items[index];
+        final color = _sectionColor(feature.section);
+        return AppCard(
+          padding: const EdgeInsets.all(12),
+          onTap: () => context.go(feature.route),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(R.md),
+                ),
+                child: Icon(feature.icon, color: color, size: 21),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      feature.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      kFeatureSections[feature.section] ?? feature.section,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _contentSections() {
+    final sections = <Widget>[];
+    _addContentSection(
+      sections,
+      title: '政策',
+      icon: Icons.account_balance_outlined,
+      route: '/policy',
+      items: _list(_content['policy']),
+      subtitle: (item) => _join([
+        _text(item['level']),
+        _text(item['category']),
+        _text(item['summary']),
+      ]),
+    );
+    _addContentSection(
+      sections,
+      title: '农技',
+      icon: Icons.biotech_outlined,
+      route: '/agri',
+      items: _list(_content['disease']),
+      titleOf: (item) => _text(item['diseaseName'], fallback: '农技结果'),
+      subtitle: (item) => _join([
+        _text(item['cropType']),
+        _text(item['category']),
+      ]),
+    );
+    _addContentSection(
+      sections,
+      title: '商品',
+      icon: Icons.storefront_outlined,
+      route: '/market',
+      items: _list(_content['product']),
+      subtitle: (item) => _join([
+        _price(item),
+        _text(item['category']),
+      ]),
+    );
+    _addContentSection(
+      sections,
+      title: '招工',
+      icon: Icons.work_outline,
+      route: '/life',
+      items: _list(_content['job']),
+      subtitle: (item) => _join([
+        _text(item['company']),
+        _text(item['salary']),
+        _text(item['jobType']),
+      ]),
+    );
+    _addContentSection(
+      sections,
+      title: '课程',
+      icon: Icons.school_outlined,
+      route: '/policy/service',
+      items: _list(_content['course']),
+      subtitle: (item) => _join([
+        _text(item['category']),
+        _text(item['instructor']),
+      ]),
+    );
+    return sections;
+  }
+
+  void _addContentSection(
+    List<Widget> sections, {
+    required String title,
+    required IconData icon,
+    required String route,
+    required List<Map<String, dynamic>> items,
+    required String Function(Map<String, dynamic>) subtitle,
+    String Function(Map<String, dynamic>)? titleOf,
+  }) {
+    if (items.isEmpty) return;
+    sections.add(SectionTitle(title));
+    sections.addAll([
+      for (final item in items)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: AppCard(
+            padding: EdgeInsets.zero,
+            onTap: () => context.go(route),
+            child: ListTile(
+              leading: _contentIcon(icon),
+              title: Text(
+                titleOf?.call(item) ?? _text(item['title'], fallback: title),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                subtitle(item).isEmpty ? '点击查看对应板块' : subtitle(item),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 15,
+                color: AppColors.outline,
+              ),
+            ),
+          ),
+        ),
+    ]);
+  }
+
+  Widget _contentIcon(IconData icon) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: AppColors.primaryContainer.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(R.md),
+      ),
+      child: Icon(icon, color: AppColors.primary, size: 21),
+    );
+  }
+
+  Color _sectionColor(String key) {
+    for (final section in kSections) {
+      if (section['key'] == key) return section['color'] as Color;
+    }
+    return AppColors.primary;
+  }
+
+  static List<Map<String, dynamic>> _list(dynamic value) {
+    if (value is List) {
+      return value.whereType<Map>().map((item) {
+        return item.map((key, value) => MapEntry('$key', value));
+      }).toList();
+    }
+    return const [];
+  }
+
+  static String _text(dynamic value, {String fallback = ''}) {
+    final text = '${value ?? ''}'.trim();
+    return text.isEmpty || text == 'null' ? fallback : text;
+  }
+
+  static String _price(Map<String, dynamic> item) {
+    final price = item['price'];
+    if (price == null) return '';
+    final unit = _text(item['unit']);
+    return '￥$price${unit.isEmpty ? '' : '/$unit'}';
+  }
+
+  static String _join(List<String> parts) {
+    return parts.where((part) => part.trim().isNotEmpty).join(' · ');
+  }
+}
