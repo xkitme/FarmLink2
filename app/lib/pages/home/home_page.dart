@@ -27,6 +27,7 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> _alerts = [];
   List<Map<String, dynamic>> _todoRecords = [];
   Map<String, dynamic>? _upcomingPolicyDeadline;
+  Map<String, dynamic>? _platformStats;
   List<Map<String, dynamic>> _prices = [];
   Map<String, dynamic>? _subsidy;
 
@@ -41,7 +42,7 @@ class _HomePageState extends State<HomePage> {
     final results = await Future.wait<dynamic>([
       _loadWeatherSnapshot(),
       _loadTodoRecords(),
-      _loadUpcomingPolicyDeadline(),
+      _loadDashboardExtras(),
       _loadPrices(),
       _loadSubsidy(),
       NotificationState.refresh().then((_) => null),
@@ -55,7 +56,10 @@ class _HomePageState extends State<HomePage> {
       _cacheTime =
           weather['cacheTime'] == null ? null : '${weather['cacheTime']}';
       _todoRecords = _listOfMaps(results[1]);
-      _upcomingPolicyDeadline = results[2] as Map<String, dynamic>?;
+      final dashboardExtras = results[2] as Map<String, dynamic>;
+      _upcomingPolicyDeadline =
+          dashboardExtras['policy'] as Map<String, dynamic>?;
+      _platformStats = dashboardExtras['stats'] as Map<String, dynamic>?;
       _prices = (results[3] as List).whereType<Map<String, dynamic>>().toList();
       _subsidy = results[4] as Map<String, dynamic>?;
       _loading = false;
@@ -70,7 +74,12 @@ class _HomePageState extends State<HomePage> {
       await OfflineCache.saveList(_cacheKey, [
         {'days': days, 'alerts': alerts}
       ]);
-      return {'days': days, 'alerts': alerts, 'fromCache': false, 'cacheTime': null};
+      return {
+        'days': days,
+        'alerts': alerts,
+        'fromCache': false,
+        'cacheTime': null
+      };
     } catch (_) {
       final cached = await OfflineCache.readList(_cacheKey);
       final cacheTime = await OfflineCache.updatedAt(_cacheKey);
@@ -112,14 +121,18 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<Map<String, dynamic>?> _loadUpcomingPolicyDeadline() async {
+  Future<Map<String, dynamic>> _loadDashboardExtras() async {
     try {
       final data = await ApiClient.get('/data/dashboard');
-      if (data is! Map) return null;
+      if (data is! Map) return {'policy': null, 'stats': null};
       final policy = data['upcomingPolicyDeadline'];
-      return policy is Map ? _mapOf(policy) : null;
+      final stats = data['platformStats'];
+      return {
+        'policy': policy is Map ? _mapOf(policy) : null,
+        'stats': stats is Map ? _mapOf(stats) : null,
+      };
     } catch (_) {
-      return null;
+      return {'policy': null, 'stats': null};
     }
   }
 
@@ -152,6 +165,23 @@ class _HomePageState extends State<HomePage> {
 
   Map<String, dynamic> get _today => _days.isNotEmpty ? _days.first : const {};
   int _int(dynamic v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
+  double _double(dynamic v) =>
+      v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
+  String _num(dynamic v) {
+    final n = _double(v);
+    if (n == n.roundToDouble()) return n.toStringAsFixed(0);
+    return n.toStringAsFixed(2);
+  }
+
+  bool get _hasPlatformStats {
+    final stats = _platformStats;
+    if (stats == null) return false;
+    return _double(stats['farmerCount']) > 0 ||
+        _double(stats['totalAreaMu']) > 0 ||
+        _double(stats['cropTypeCount']) > 0 ||
+        _double(stats['aiServiceCount']) > 0 ||
+        _double(stats['orderCount']) > 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,6 +213,13 @@ class _HomePageState extends State<HomePage> {
                       .animate(delay: 60.ms)
                       .fadeIn(duration: 340.ms)
                       .slideY(begin: 0.06),
+                  if (_hasPlatformStats) ...[
+                    const SizedBox(height: 14),
+                    _platformStatsStrip()
+                        .animate(delay: 90.ms)
+                        .fadeIn(duration: 320.ms)
+                        .slideY(begin: 0.04),
+                  ],
                   SectionTitle(
                     '核心服务',
                     trailing: TextButton(
@@ -289,7 +326,8 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.only(left: 14, right: 6),
         child: Row(
           children: [
-            const Icon(Icons.search, color: AppColors.onSurfaceVariant, size: 21),
+            const Icon(Icons.search,
+                color: AppColors.onSurfaceVariant, size: 21),
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
@@ -486,6 +524,134 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ── 3.5 · 平台服务规模徽章带 ───────────────────────────
+  Widget _platformStatsStrip() {
+    final stats = _platformStats ?? const <String, dynamic>{};
+    final items = [
+      (
+        icon: Icons.groups_2_outlined,
+        label: '服务农户',
+        value: '${_int(stats['farmerCount'])}',
+        unit: '户',
+        color: AppColors.primary,
+      ),
+      (
+        icon: Icons.landscape_outlined,
+        label: '覆盖耕地',
+        value: _num(stats['totalAreaMu']),
+        unit: '亩',
+        color: AppColors.goldContainer,
+      ),
+      (
+        icon: Icons.grass_outlined,
+        label: '服务作物',
+        value: '${_int(stats['cropTypeCount'])}',
+        unit: '类',
+        color: AppColors.primary,
+      ),
+      (
+        icon: Icons.biotech_outlined,
+        label: 'AI 诊断',
+        value: '${_int(stats['aiServiceCount'])}',
+        unit: '条',
+        color: AppColors.goldContainer,
+      ),
+      (
+        icon: Icons.shopping_bag_outlined,
+        label: '累计交易',
+        value: '${_int(stats['orderCount'])}',
+        unit: '单',
+        color: AppColors.primary,
+      ),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            _platformStatBadge(
+              icon: items[i].icon,
+              label: items[i].label,
+              value: items[i].value,
+              unit: items[i].unit,
+              color: items[i].color,
+            ),
+            if (i != items.length - 1) const SizedBox(width: 10),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _platformStatBadge({
+    required IconData icon,
+    required String label,
+    required String value,
+    required String unit,
+    required Color color,
+  }) {
+    return Container(
+      width: 128,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.md),
+        border: Border.all(color: AppColors.outlineVariant),
+        boxShadow: AppColors.ambientShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const Spacer(),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.onSurfaceVariant,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: value,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  TextSpan(
+                    text: unit,
+                    style: const TextStyle(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              maxLines: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── 4 · 核心服务宫格 ─────────────────────────────────
   Widget _serviceGrid(BuildContext context) {
     return GridView.builder(
@@ -622,9 +788,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 6),
                   Text(subtitle,
                       style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12.5,
-                          height: 1.3)),
+                          color: Colors.white70, fontSize: 12.5, height: 1.3)),
                 ],
               ),
             ),
@@ -690,8 +854,7 @@ class _HomePageState extends State<HomePage> {
               market.isEmpty ? name : '$name · $market',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 14, color: AppColors.onSurface),
+              style: const TextStyle(fontSize: 14, color: AppColors.onSurface),
             ),
           ),
           Text('￥${price.toStringAsFixed(2)}',
@@ -710,9 +873,8 @@ class _HomePageState extends State<HomePage> {
   // ── 7 · 惠农补贴卡（AI/Premium 金描边卡）────────────────
   Widget _subsidyCard() {
     final s = _subsidy;
-    final title = s == null
-        ? '惠农补贴 · 持续更新'
-        : _text(s['title'], fallback: '惠农补贴申报');
+    final title =
+        s == null ? '惠农补贴 · 持续更新' : _text(s['title'], fallback: '惠农补贴申报');
     final summary = s == null
         ? '查看你可申领的补贴与惠农政策'
         : _text(s['summary'],

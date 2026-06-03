@@ -68,6 +68,9 @@ export async function dashboard(req, res) {
     syncLogs,
     aiQaCount,
     aiDetectCount,
+    allPlatformPlots,
+    platformAiQaCount,
+    platformAiDetectCount,
     upcomingPolicyDeadline,
   ] = await Promise.all([
     prisma.user.count(),
@@ -89,6 +92,9 @@ export async function dashboard(req, res) {
     prisma.syncLog.findMany({ where: req.user.role === 'ADMIN' ? {} : { userId: req.user.id }, orderBy: { syncedAt: 'desc' }, take: 8 }),
     prisma.aiQaRecord.count({ where: req.user.role === 'ADMIN' ? {} : { userId: req.user.id } }),
     prisma.aiDetectRecord.count({ where: req.user.role === 'ADMIN' ? {} : { userId: req.user.id } }),
+    prisma.landPlot.findMany({ select: { areaMu: true, cropType: true } }),
+    prisma.aiQaRecord.count(),
+    prisma.aiDetectRecord.count(),
     prisma.policy.findFirst({
       where: {
         status: 1,
@@ -104,6 +110,12 @@ export async function dashboard(req, res) {
   const totalCost = Number(records.reduce((sum, r) => sum + (r.cost || 0), 0).toFixed(2))
   const orderAmount = Number(orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0).toFixed(2))
   const disasterLoss = Number(disasters.reduce((sum, d) => sum + (d.estimatedLoss || 0), 0).toFixed(2))
+  const platformTotalAreaMu = Number(allPlatformPlots.reduce((sum, p) => sum + (p.areaMu || 0), 0).toFixed(2))
+  const platformCropTypeCount = new Set(
+    allPlatformPlots
+      .map((p) => (p.cropType || '').trim())
+      .filter(Boolean),
+  ).size
 
   const cropMap = new Map()
   for (const p of plots) {
@@ -144,6 +156,13 @@ export async function dashboard(req, res) {
       disasterLoss,
       policyCount,
       aiCallCount: aiQaCount + aiDetectCount,
+    },
+    platformStats: {
+      farmerCount: userCount,
+      totalAreaMu: platformTotalAreaMu,
+      cropTypeCount: platformCropTypeCount,
+      aiServiceCount: platformAiQaCount + platformAiDetectCount,
+      orderCount,
     },
     cropArea: [...cropMap.values()].sort((a, b) => b.areaMu - a.areaMu),
     farmRecordTypes: [...recordTypeMap.entries()].map(([type, count]) => ({ type, count })),
