@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
+import '../../widgets/section_tool_chips.dart';
 
 /// 气象灾害板块 —— 天气预报式界面。
 /// 顶部「天气态势」hero 随当前最高灾情自动变色（暴雨 / 干旱 / 冻害 /
@@ -120,6 +121,8 @@ class _DisasterPageState extends State<DisasterPage>
                   child: ListView(
                     padding: EdgeInsets.zero,
                     children: [
+                      const SectionToolChips(section: 'disaster'),
+                      const SizedBox(height: 8),
                       if (_fromCache)
                         const AlertBanner('数据更新中，下拉刷新可重试', critical: false),
                       _hero(wx),

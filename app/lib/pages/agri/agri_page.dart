@@ -7,6 +7,7 @@ import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
+import '../../widgets/section_tool_chips.dart';
 
 /// 农业生产板块 —— 地块/农事记录 + 作物长势/杂草/种子识别 +
 /// 施肥/灌溉/产量预测 + 农事日历/农药查询/碳汇计算（全部接服务端）
@@ -101,6 +102,8 @@ class _AgriPageState extends State<AgriPage> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                     children: [
+                      const SectionToolChips(section: 'agri'),
+                      const SizedBox(height: 8),
                       if (_fromCache)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),

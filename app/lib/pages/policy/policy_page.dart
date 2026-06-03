@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
+import '../../widgets/section_tool_chips.dart';
 
 /// 惠农政策 · 党建学习 · 文明乡风 —— 三个 tab 全部接入服务端
 class PolicyPage extends StatefulWidget {
@@ -194,6 +195,8 @@ class _PolicyPageState extends State<PolicyPage> {
       ]),
       body: Column(
         children: [
+          const SectionToolChips(section: 'policy'),
+          const SizedBox(height: 8),
           _tabsBar(),
           if (_fromCache[_active])
             const AlertBanner('数据更新中，下拉刷新可重试', critical: false),
