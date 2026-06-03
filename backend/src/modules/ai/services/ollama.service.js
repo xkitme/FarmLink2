@@ -54,7 +54,7 @@ export async function getOllamaStatus(timeoutMs = 1500) {
 }
 
 /** 非流式大模型生成。 */
-export async function generateText({ prompt, system, model, images, temperature = 0.2, timeoutMs = 90000 }) {
+export async function generateText({ prompt, system, model, images, temperature = 0.2, timeoutMs = 180000 }) {
   const started = Date.now()
   const res = await postJson('/api/generate', {
     model: model || config.ollama.primaryModel,
@@ -78,7 +78,7 @@ export async function generateText({ prompt, system, model, images, temperature 
 }
 
 /** 流式生成，按 Ollama JSONL 响应逐段吐出 delta。 */
-export async function streamText({ prompt, system, model, onDelta, images, temperature = 0.2, timeoutMs = 90000 }) {
+export async function streamText({ prompt, system, model, onDelta, images, temperature = 0.2, timeoutMs = 180000 }) {
   const res = await postJson('/api/generate', {
     model: model || config.ollama.primaryModel,
     prompt,
