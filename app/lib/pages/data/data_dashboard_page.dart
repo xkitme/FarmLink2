@@ -98,7 +98,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
         showBack: true,
         actions: [
           IconButton(
-            tooltip: '全屏大屏',
+            tooltip: '驾驶舱视图',
             onPressed: () => context.go('/screen'),
             icon:
                 const Icon(Icons.fullscreen, color: AppColors.onSurfaceVariant),

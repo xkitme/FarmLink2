@@ -216,62 +216,61 @@ class _VillageScreenPageState extends State<VillageScreenPage> {
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 900;
-        final statColumns = isWide ? 4 : 2;
-        final panelColumns = constraints.maxWidth > 680 ? 2 : 1;
-        final statRows = (stats.length / statColumns).ceil();
-        final statHeight = statRows * 118.0 + (statRows - 1) * 12.0;
-        return Column(
-          children: [
-            SizedBox(
-              height: statHeight,
-              child: GridView.count(
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: statColumns,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: isWide ? 2.15 : 2.0,
-                children: [
-                  for (final stat in stats) _bigStatCard(stat),
-                ],
-              ),
+    // 移动端固定布局：指标卡 2 列、面板单列纵向滚动。
+    // 用 mainAxisExtent 固定卡片高度（而非 childAspectRatio），避免窄屏下
+    // 卡片被算矮、副标题被裁切。
+    const statColumns = 2;
+    const statCardHeight = 122.0;
+    final statRows = (stats.length / statColumns).ceil();
+    final statHeight = statRows * statCardHeight + (statRows - 1) * 12.0;
+    return Column(
+      children: [
+        SizedBox(
+          height: statHeight,
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: statColumns,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              mainAxisExtent: statCardHeight,
             ),
-            const SizedBox(height: 14),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: panelColumns,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: isWide ? 1.78 : 1.42,
-                children: [
-                  _panelCard(
-                    title: '种植结构',
-                    icon: Icons.bar_chart_rounded,
-                    child: _cropPanel(),
-                  ),
-                  _panelCard(
-                    title: '灾情滚动列表',
-                    icon: Icons.crisis_alert_rounded,
-                    child: _disasterPanel(),
-                  ),
-                  _panelCard(
-                    title: '集市成交',
-                    icon: Icons.storefront_outlined,
-                    child: _marketPanel(cards),
-                  ),
-                  _panelCard(
-                    title: 'AI 服务在线状态',
-                    icon: Icons.online_prediction_rounded,
-                    child: _aiStatusPanel(cards),
-                  ),
-                ],
+            itemCount: stats.length,
+            itemBuilder: (_, i) => _bigStatCard(stats[i]),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Expanded(
+          child: GridView.count(
+            crossAxisCount: 1,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: 1.42,
+            children: [
+              _panelCard(
+                title: '种植结构',
+                icon: Icons.bar_chart_rounded,
+                child: _cropPanel(),
               ),
-            ),
-          ],
-        );
-      },
+              _panelCard(
+                title: '灾情滚动列表',
+                icon: Icons.crisis_alert_rounded,
+                child: _disasterPanel(),
+              ),
+              _panelCard(
+                title: '集市成交',
+                icon: Icons.storefront_outlined,
+                child: _marketPanel(cards),
+              ),
+              _panelCard(
+                title: 'AI 服务在线状态',
+                icon: Icons.online_prediction_rounded,
+                child: _aiStatusPanel(cards),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
