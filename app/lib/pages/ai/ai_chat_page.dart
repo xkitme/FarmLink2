@@ -189,14 +189,13 @@ class _AiChatPageState extends State<AiChatPage> {
       setState(() {
         _messages[_messages.length - 1] =
             _messages.last.copyWith(streaming: false);
+        // 首次发送后服务端返回 threadId：仅在内部记录，供后续消息复用。
+        // 不调 context.go('/ai/chat/:id') 重新导航——那会重建本页、重放
+        // 进入转场并重新拉取历史（表现为「第一次发消息后页面又滑入一次」）。
+        if (_threadId == null && newThreadId != null && newThreadId > 0) {
+          _threadId = newThreadId;
+        }
       });
-      if (_threadId == null &&
-          newThreadId != null &&
-          newThreadId > 0 &&
-          mounted) {
-        _threadId = newThreadId;
-        context.go('/ai/chat/$newThreadId');
-      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -216,7 +215,9 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   Future<void> _deleteCurrentThread() async {
-    final id = widget.threadId;
+    // 用 _threadId 而非 widget.threadId：新建会话首次发送后线程在本页内
+    // 建立（不再重新导航），此时 widget.threadId 仍为 null。
+    final id = _threadId;
     if (id == null) return;
     final ok = await showDialog<bool>(
       context: context,
@@ -463,7 +464,7 @@ class _AiChatPageState extends State<AiChatPage> {
                 color: AppColors.onSurfaceVariant),
             onPressed: () => toast(context, 'AI 服务偏好已采用默认配置'),
           ),
-          if (widget.threadId != null)
+          if (_threadId != null)
             IconButton(
               tooltip: '删除此对话',
               icon: const Icon(Icons.delete_outline, color: AppColors.error),
