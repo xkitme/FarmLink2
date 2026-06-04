@@ -354,12 +354,13 @@ class _AiChatPageState extends State<AiChatPage> {
           scene: _scene,
           detect: result,
         );
+        // 同 _send：首次识别后服务端返回 threadId 仅在页内记录、不再导航，
+        // 避免重建本页、重放进入转场并重新拉取历史。
+        if (_threadId == null && savedThreadId > 0) {
+          _threadId = savedThreadId;
+        }
       });
       _scrollToBottom(animate: animateScroll);
-      if (_threadId == null && savedThreadId > 0 && mounted) {
-        _threadId = savedThreadId;
-        context.go('/ai/chat/$savedThreadId');
-      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
