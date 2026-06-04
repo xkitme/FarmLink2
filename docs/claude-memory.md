@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-06-04 · 浏览器实测 + AI 聊天/45c 修复 session
+
+### 状态：全部已 commit + push 到 origin/main（HEAD `0a2753e8`），工作树干净（仅 .playwright-mcp/、design_assets/ 未跟踪）
+
+本会话先实测 06-03 批次，再修两块 bug，逐个浏览器实测过：
+
+- **45i/45j/45f 实测通过**：首页规模徽章带横滑不溢出；数据看板环形图（水稻48·74%/番茄12·18%/柑橘5·8%，48+12+5=65、加总100%、图例对）；板块头部 chip（/data /agri 通用）。
+- **45c 村委数据驾驶舱页收尾**（commit `6d071b96`）：用户拍板「留作手机内页」（不是投屏大屏，是 App 内村委角色总览页，入口在数据看板）。① 指标卡改 `mainAxisExtent:122` 固定卡高，修「5块地/全年农事档案」副标题被裁切；② 删 `isWide>900` 宽屏响应式死代码（移动 App 跑不到）；③ data_dashboard 入口 tooltip「全屏大屏」→「驾驶舱视图」去"大屏"字样。
+- **AI 历史聊天「进入动画重复」修复**（commit `0a2753e8`，issue#16 那条）：根因=新建会话**首次发送成功后** `context.go('/ai/chat/:id')` 把 URL 从 `/ai/chat/new` 切走 → GoRouter 默认 builder 重建整页 → 重放 Material 进入转场 + 重拉历史。实测复现（URL new→93）。修法：首发拿到 threadId 只在页内记 `_threadId` **不再导航**；删除按钮可见性+删除逻辑改用 `_threadId`。实测：发消息后 URL 停 `/ai/chat/new`、无重拉、删除按钮正常、markdown 加粗正常。
+
+### 实测手法（重要，已存记忆 reference-flutter-web-sharedprefs-token-inject）
+Flutter web 注入 token：SP 字符串值是 **JSON 编码**，`flutter.token`=`JSON.stringify(token)`、`flutter.user`=双重编码，裸串会全 401 走缓存。Canvas 文本输入用 `browser_run_code_unsafe` 调 `page.mouse.click`聚焦→`keyboard.type`→`press('Enter')`。注入后必须 about:blank 整页重载。
+
+### issue#17 AI 三条仍 OPEN（待真机最终确认后关）
+①识图 ②markdown*** ③数据+流式——代码侧早做了，本会话顺带看到 markdown 加粗渲染正常、流式正常（7b 冷启动慢，超时已设 180s）。识图未单独测（需相册/拍照）。
+
+---
+
 ## 2026-06-03 · Codex 批量派单 session（招牌场景代码侧收尾）
 
 ### 状态：全部已 commit + push 到 origin/main，工作树干净
