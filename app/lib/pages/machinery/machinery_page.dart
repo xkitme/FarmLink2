@@ -56,6 +56,32 @@ class _Machine {
       fromApi: true,
     );
   }
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'image': image,
+        'name': name,
+        'type': type,
+        'price': price,
+        'deposit': deposit,
+        'rating': rating,
+        'owner': owner,
+        'distance': distance,
+        'fromApi': fromApi,
+      };
+
+  factory _Machine.fromMap(Map<String, dynamic> map) => _Machine(
+        id: map['id'] as int?,
+        image: map['image'] as String? ?? '',
+        name: map['name'] as String? ?? '',
+        type: map['type'] as String? ?? '',
+        price: (map['price'] as num?)?.toDouble() ?? 0,
+        deposit: (map['deposit'] as num?)?.toDouble() ?? 0,
+        rating: (map['rating'] as num?)?.toDouble() ?? 0,
+        owner: map['owner'] as String? ?? '',
+        distance: map['distance'] as String? ?? '',
+        fromApi: map['fromApi'] as bool? ?? false,
+      );
 }
 
 // ── 页面状态 ────────────────────────────────────────────
@@ -291,7 +317,7 @@ class _MachineryPageState extends State<MachineryPage> {
                   itemCount: _machines.length,
                   itemBuilder: (ctx, i) => _MachineListCard(
                     machine: _machines[i],
-                    onTap: () => _openBookingSheet(ctx, _machines[i]),
+                    onTap: () => _openMachineDetail(_machines[i]),
                   ),
                 ),
               ),
@@ -432,17 +458,8 @@ class _MachineryPageState extends State<MachineryPage> {
 
   // ── L3 预约 sheet ────────────────────────────────────
 
-  void _openBookingSheet(BuildContext context, _Machine machine) {
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (sheetCtx) => _BookingSheet(machine: machine),
-    );
+  void _openMachineDetail(_Machine machine) {
+    context.push('/machinery/detail', extra: machine.toMap());
   }
 
   // ── M1 发布农机 sheet ─────────────────────────────────
@@ -1070,6 +1087,192 @@ class _ChipsField extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 农机详情页（独立页面，由列表卡点击进入）
+// ═══════════════════════════════════════════════════════
+
+class MachineDetailPage extends StatelessWidget {
+  final Map<String, dynamic> data;
+  const MachineDetailPage({super.key, required this.data});
+
+  void _showBookingSheet(BuildContext context, _Machine machine) {
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+      ),
+      builder: (sheetCtx) => _BookingSheet(machine: machine),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final machine = _Machine.fromMap(data);
+    final canBook = machine.id != null;
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: const FarmAppBar(showBack: true),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 图片区
+            ClipRRect(
+              child: Image.asset(
+                machine.image,
+                width: double.infinity,
+                height: 240,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 240,
+                  color: AppColors.surfaceContainer,
+                  child: const Icon(Icons.agriculture,
+                      color: AppColors.primary, size: 64),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 名称 + 状态
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          machine.name,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                      ),
+                      if (!canBook)
+                        const StatusChip('更新中', color: AppColors.outline),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // 类型
+                  Text(
+                    machine.type,
+                    style: const TextStyle(
+                        fontSize: 14, color: AppColors.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 20),
+                  // 价格大卡
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(R.md),
+                      border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '￥${machine.price.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const Text('/天',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.onSurfaceVariant)),
+                          ],
+                        ),
+                        const Spacer(),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '押金 ￥${machine.deposit.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.onSurface),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.star,
+                                    color: AppColors.gold, size: 16),
+                                const SizedBox(width: 4),
+                                Text(machine.rating.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        color: AppColors.onSurfaceVariant)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // 机主 + 距离
+                  _infoRow(
+                      Icons.person_outline, '机主', machine.owner),
+                  const SizedBox(height: 12),
+                  _infoRow(Icons.location_on_outlined, '距离',
+                      machine.distance),
+                  const SizedBox(height: 28),
+                  // 预约按钮
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: canBook
+                          ? () => _showBookingSheet(context, machine)
+                          : null,
+                      icon: const Icon(Icons.calendar_today, size: 20),
+                      label:
+                          Text(canBook ? '预约农机' : '暂不可预约'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _infoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.primary),
+        const SizedBox(width: 10),
+        Text('$label  ',
+            style: const TextStyle(
+                fontSize: 14, color: AppColors.onSurfaceVariant)),
+        Expanded(
+          child: Text(value,
+              style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.onSurface)),
+        ),
+      ],
     );
   }
 }

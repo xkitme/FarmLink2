@@ -323,16 +323,9 @@ class _PublishPageState extends State<PublishPage> {
   }
 
   Future<void> _openDetail(Map<String, dynamic> post) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (ctx) => _PostDetailSheet(post: post, onAfter: _load),
-    );
+    if (!mounted) return;
+    final result = await context.push('/publish/detail', extra: post);
+    if (result == true && mounted) _load();
   }
 
   // 发布动态
@@ -559,17 +552,19 @@ class _PublishPageState extends State<PublishPage> {
   }
 }
 
-class _PostDetailSheet extends StatefulWidget {
-  final Map<String, dynamic> post;
-  final Future<void> Function() onAfter;
+// ═══════════════════════════════════════════════════════
+// 动态详情页（独立页面，由动态卡点击进入）
+// ═══════════════════════════════════════════════════════
 
-  const _PostDetailSheet({required this.post, required this.onAfter});
+class PostDetailPage extends StatefulWidget {
+  final Map<String, dynamic> post;
+  const PostDetailPage({super.key, required this.post});
 
   @override
-  State<_PostDetailSheet> createState() => _PostDetailSheetState();
+  State<PostDetailPage> createState() => _PostDetailPageState();
 }
 
-class _PostDetailSheetState extends State<_PostDetailSheet> {
+class _PostDetailPageState extends State<PostDetailPage> {
   bool _accepting = false;
 
   Future<void> _accept() async {
@@ -598,8 +593,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
       await ApiClient.post('/life/help/$id/accept');
       if (!mounted) return;
       toast(context, '已响应，感谢您的帮助');
-      Navigator.pop(context);
-      await widget.onAfter();
+      context.pop(true);
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('响应', e), error: true);
     } finally {
@@ -622,26 +616,12 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
     final author = '${post['publisherName'] ?? post['userName'] ?? '乡村用户'}';
     final time = _friendlyTimeOf(post['createdAt']);
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.62,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      builder: (ctx, scrollCtrl) => ListView(
-        controller: scrollCtrl,
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: const FarmAppBar(showBack: true),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
         children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
           Row(
             children: [
               StatusChip(type, color: _typeColorOf(type)),

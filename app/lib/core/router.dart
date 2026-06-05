@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'auth_state.dart';
+import 'constants.dart';
 import '../pages/splash/splash_page.dart';
 import '../pages/auth/login_page.dart';
 import '../pages/auth/register_page.dart';
@@ -114,6 +115,21 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
             GoRoute(
                 path: '/machinery/service',
                 builder: (_, __) => const MachineryServicePage()),
+            GoRoute(
+              path: '/machinery/detail',
+              builder: (_, state) {
+                final extra = state.extra;
+                if (extra is Map<String, dynamic>) {
+                  return MachineDetailPage(data: extra);
+                }
+                return const Scaffold(
+                  body: Center(
+                    child: Text('农机数据不可用，请返回重试',
+                        style: TextStyle(color: AppColors.onSurfaceVariant)),
+                  ),
+                );
+              },
+            ),
             GoRoute(path: '/policy', builder: (_, __) => const PolicyPage()),
             GoRoute(
                 path: '/policy/service',
@@ -134,6 +150,21 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
                 path: '/data/service',
                 builder: (_, __) => const DataServicePage()),
             GoRoute(path: '/publish', builder: (_, __) => const PublishPage()),
+            GoRoute(
+              path: '/publish/detail',
+              builder: (_, state) {
+                final extra = state.extra;
+                if (extra is Map<String, dynamic>) {
+                  return PostDetailPage(post: extra);
+                }
+                return const Scaffold(
+                  body: Center(
+                    child: Text('动态数据不可用，请返回重试',
+                        style: TextStyle(color: AppColors.onSurfaceVariant)),
+                  ),
+                );
+              },
+            ),
             GoRoute(
                 path: '/messages', builder: (_, __) => const MessagesPage()),
             GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
