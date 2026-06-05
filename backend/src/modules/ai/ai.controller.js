@@ -32,25 +32,20 @@ function dateOf(value) {
 }
 
 function qaBaseWhere(req) {
-  return req.user.role === 'ADMIN' ? {} : { userId: req.user.id }
+  // App 端接口只看当前用户自己的数据（含 ADMIN），全平台记录由管理台 /admin/resource/aiQaRecord/list 提供
+  return { userId: req.user.id }
 }
 
 function qaRawWhere(req) {
-  const clauses = []
-  const params = []
-  if (req.user.role !== 'ADMIN') {
-    clauses.push('userId = ?')
-    params.push(Number(req.user.id))
-  } else if (req.query.userId) {
-    clauses.push('userId = ?')
-    params.push(Number(req.query.userId))
-  }
+  // App 端接口只看当前用户自己的数据（含 ADMIN），全平台记录由管理台 /admin/resource/aiQaRecord/list 提供
+  const clauses = ['userId = ?']
+  const params = [Number(req.user.id)]
   if (req.query.scene) {
     clauses.push('scene = ?')
     params.push(String(req.query.scene).toUpperCase())
   }
   return {
-    whereSql: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '',
+    whereSql: `WHERE ${clauses.join(' AND ')}`,
     params,
   }
 }
@@ -58,10 +53,11 @@ function qaRawWhere(req) {
 async function resolveThreadId(req) {
   const threadId = threadIdOf(req.body.threadId ?? req.query.threadId)
   if (!threadId) return null
+  // App 端续写只能续自己创建的会话
   const exist = await prisma.aiQaRecord.findFirst({
     where: {
       threadId,
-      ...(req.user.role === 'ADMIN' ? {} : { userId: req.user.id }),
+      userId: req.user.id,
     },
     select: { id: true },
   })

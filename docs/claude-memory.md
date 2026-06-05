@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-06-05 · Codex 接手核查 session
+
+### 状态：本地 main / origin/main 均在 HEAD `5b7779de`，工作树仅剩 `.playwright-mcp/`、`design_assets/` 未跟踪
+
+本会话按用户要求先问 `claude` 当前模型；`claude -p` 回答为 **DeepSeek V4 Pro**。因此没有让它直接改代码，只把它当低信任辅助。
+
+- 已重点审查最新提交 `5b7779de`：`app/lib/pages/ai/ai_chat_page.dart` 的图片识别 `_pickAndDetect` 首次保存后不再 `context.go('/ai/chat/:id')`，只在页内记录 `_threadId`，与文本 `_send` 的修法一致。
+- 契约核对：后端 `qaDetectRecord` 返回 `{ recordId, threadId, record }`；前端记录 `_threadId` 后，删除按钮可显示，后续文字追问会带同一 `threadId`，逻辑闭环。
+- 验证：`cd app && C:\dev\flutter\bin\flutter.bat analyze lib` 通过，输出 `No issues found! (ran in 2.6s)`。
+- GitHub API 临时不可用：`gh issue list` / `gh pr list` 均超时，未能实时核对远端 open issue 状态。当前只能按本地 docs 与本地 `origin/main` 判断。
+- 用户随后要求“让 Claude 写代码，Codex 审查”。已让 Claude（DeepSeek V4 Pro）实现 58-4 G5：`backend/src/modules/ai/ai.controller.js` 收紧 App 端 AI 会话范围，ADMIN 也只能通过 `/ai/qa/*` 访问自己的会话；管理台全平台记录仍由 `/admin/resource/aiQaRecord/list` 提供。Codex 已审 diff，并跑 `node --check backend/src/modules/ai/ai.controller.js` + 临时 HTTP smoke（admin/farmer 各造 1 条记录，确认 admin App 只见自己、读/续写/删 farmer thread 均 404、admin resource 仍能见两条），临时记录已清零。
+
+### 下一步建议
+
+1. issue #17 代码侧基本已落：markdown 加粗、数据/RAG、流式、图片识别首发不重导航都已处理；剩下是真机/浏览器最终确认后关 issue。
+2. `45h/45l~45o` 仍属于故事化、视觉展示、话术/demo 脚本文档项；需要 Claude/用户拍版工作单后，Codex 再按工作单实施。
+3. 若 GitHub 恢复，先查 open issue/PR，再决定是否需要补评论或 close。
+
+---
+
 ## 2026-06-04 · 浏览器实测 + AI 聊天/45c 修复 session
 
 ### 状态：全部已 commit + push 到 origin/main（HEAD `0a2753e8`），工作树干净（仅 .playwright-mcp/、design_assets/ 未跟踪）
