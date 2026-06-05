@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/notification_state.dart';
 import '../../widgets/common.dart';
+import '../common/info_detail_page.dart';
 
 class _MessageFilter {
   final String key;
@@ -115,57 +117,19 @@ class _MessagesPageState extends State<MessagesPage> {
       } catch (_) {}
     }
     if (!mounted) return;
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      showDragHandle: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(_iconOf(type), color: _colorOf(type)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _text(item['title'], fallback: '消息详情'),
-                    style: const TextStyle(
-                      color: AppColors.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _date(item['createdAt']),
-              style: const TextStyle(
-                color: AppColors.onSurfaceVariant,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              _text(item['content'], fallback: '暂无详细内容'),
-              style: const TextStyle(
-                color: AppColors.onSurface,
-                height: 1.6,
-                fontSize: 15,
-              ),
-            ),
+    context.push('/detail/info', extra: InfoDetailData(
+      title: _text(item['title'], fallback: '消息详情'),
+      body: _text(item['content'], fallback: '暂无详细内容'),
+      sections: [
+        InfoSection(
+          subtitle: '消息信息',
+          items: [
+            '消息类型：${_labelOf(type)}',
+            '创建时间：${_date(item['createdAt'])}',
           ],
         ),
-      ),
-    );
+      ],
+    ));
   }
 
   @override

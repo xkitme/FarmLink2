@@ -8,6 +8,7 @@ import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
+import '../common/info_detail_page.dart';
 
 /// 数据管理 · 服务页
 ///
@@ -200,59 +201,22 @@ class _DataServicePageState extends State<DataServicePage> {
     final content = _text(report['reportContent'], fallback: '本年度暂无足够农事记录');
     final cost = _num(report['totalCost']);
     final year = _int(report['year']);
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.md)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.event_note_rounded,
-                      color: AppColors.primary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text('$year 年度农事报告',
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w700)),
-                  ),
-                  StatusChip('成本 ￥$cost', color: AppColors.primary),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceLow,
-                  borderRadius: BorderRadius.circular(R.sm),
-                ),
-                child: Text(summary,
-                    style: const TextStyle(
-                        color: AppColors.onSurface, height: 1.5)),
-              ),
-              const SizedBox(height: 12),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 260),
-                child: SingleChildScrollView(
-                  child: Text(content,
-                      style: const TextStyle(
-                          color: AppColors.onSurfaceVariant, height: 1.6)),
-                ),
-              ),
-            ],
-          ),
+    context.push('/detail/info', extra: InfoDetailData(
+      title: '$year 年度农事报告',
+      body: content,
+      sections: [
+        InfoSection(
+          subtitle: '报告摘要',
+          body: summary,
         ),
-      ),
-    );
+        InfoSection(
+          items: [
+            '年度：$year',
+            '成本：￥$cost',
+          ],
+        ),
+      ],
+    ));
   }
 
   // ────────────────────────────────────────────────

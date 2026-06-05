@@ -18,10 +18,11 @@
 - 用户随后要求“让 Claude 写代码，Codex 审查”。已让 Claude（DeepSeek V4 Pro）实现 58-4 G5：`backend/src/modules/ai/ai.controller.js` 收紧 App 端 AI 会话范围，ADMIN 也只能通过 `/ai/qa/*` 访问自己的会话；管理台全平台记录仍由 `/admin/resource/aiQaRecord/list` 提供。Codex 已审 diff，并跑 `node --check backend/src/modules/ai/ai.controller.js` + 临时 HTTP smoke（admin/farmer 各造 1 条记录，确认 admin App 只见自己、读/续写/删 farmer thread 均 404、admin resource 仍能见两条），临时记录已清零。该修复已 commit + push：`6f2d8eed fix: 收紧 ADMIN App 端 AI 会话范围`。
 - 之后继续把 issue #16 第一批交给 DeepSeek：新增通用纯展示详情页 `/detail/info`，并把 agri/disaster/market_service/policy_service/life 中纯展示型 `_infoSheet`/`_sheet` 迁移为页面。Codex 审查后删掉 DeepSeek 越界生成的 `docs/60-国风UI大重构计划.md`，补了 `state.extra` 缺失时的路由兜底和详情页返回 fallback。验证：`flutter analyze lib` 通过、`flutter build web --debug` 通过、静态服务下 `/detail/info`/`main.dart.js`/`manifest.json` 均返回 200。工作单为 `docs/60-全局卡片详情页第一批.md`。
 - 按用户“继续给 DeepSeek 排任务”要求，又把 issue #16 第二批交给 DeepSeek：农机列表卡进入 `/machinery/detail`，发布动态卡进入 `/publish/detail`，保留农机预约 sheet 与动态响应/拨号逻辑。Codex 审查后修了 DeepSeek 留下的 `AppColors` 路由导入缺失、农机页 unused `_openBookingSheet`、发布页旧 `_PostDetailSheet` 死代码；验证：`flutter analyze lib` 通过、`flutter build web --debug` 通过、静态服务下 `/machinery/detail`/`/publish/detail`/`main.dart.js`/`manifest.json` 均返回 200。工作单为 `docs/61-实体卡片详情页第二批.md`。
+- 继续把 issue #16 第三批交给 DeepSeek：消息详情、政策详情、年度农事报告详情迁移到已有 `/detail/info`。DeepSeek 没有实际跑 analyzer；Codex 审查后确认未触碰年份选择、统计上报、同步日志、确认弹窗等操作型弹层，并补跑 `flutter analyze lib`、`flutter build web --debug`、静态服务 `/detail/info`/`main.dart.js`/`manifest.json` 200。工作单为 `docs/62-展示型详情页第三批.md`。
 
 ### 下一步建议
 
-1. issue #16 尚未关闭。第一批覆盖纯展示详情页，第二批已覆盖农机卡详情、发布详情；下一批可继续拆消息详情、订单/购物相关卡片或其它高频卡片。
+1. issue #16 尚未关闭。第一批覆盖纯展示详情页，第二批覆盖农机卡详情、发布详情，第三批覆盖消息、政策、年度报告详情；下一批可继续拆订单/购物相关卡片或其它高频卡片，但要先区分展示型与操作型。
 2. issue #17 代码侧基本已落：markdown 加粗、数据/RAG、流式、图片识别首发不重导航都已处理；剩下是真机/浏览器最终确认后关 issue。
 3. `45h/45l~45o` 仍属于故事化、视觉展示、话术/demo 脚本文档项；需要 Claude/用户拍版工作单后，Codex 再按工作单实施。
 

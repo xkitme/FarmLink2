@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 import '../../widgets/section_tool_chips.dart';
+import '../common/info_detail_page.dart';
 
 /// 惠农政策 · 党建学习 · 文明乡风 —— 三个 tab 全部接入服务端
 class PolicyPage extends StatefulWidget {
@@ -368,53 +369,21 @@ class _PolicyPageState extends State<PolicyPage> {
     }
     if (!context.mounted) return;
 
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          children: [
-            _tag(category, item.tagColor),
-            const SizedBox(height: 12),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 22,
-                    height: 1.25,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface)),
-            const SizedBox(height: 12),
-            Text(body.isEmpty ? '暂无更多内容' : body,
-                style: const TextStyle(
-                    fontSize: 15, height: 1.7, color: AppColors.onSurface)),
-            if (guide != null && guide.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text('申请指引',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary)),
-              const SizedBox(height: 6),
-              Text(guide,
-                  style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.6,
-                      color: AppColors.onSurfaceVariant)),
-            ],
-          ],
-        ),
-      ),
-    );
+    final sections = <InfoSection>[
+      InfoSection(items: ['分类：$category']),
+    ];
+    if (guide != null && guide.isNotEmpty) {
+      sections.add(InfoSection(
+        subtitle: '申请指引',
+        body: guide,
+      ));
+    }
+
+    context.push('/detail/info', extra: InfoDetailData(
+      title: title,
+      body: body.isEmpty ? '暂无更多内容' : body,
+      sections: sections,
+    ));
   }
 
   Widget _tag(String text, Color color) => Container(
