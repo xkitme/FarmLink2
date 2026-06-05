@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
+import '../common/info_detail_page.dart';
 import '../../widgets/section_tool_chips.dart';
 
 /// 气象灾害板块 —— 天气预报式界面。
@@ -307,27 +308,37 @@ class _DisasterPageState extends State<DisasterPage>
               icon: Icons.local_fire_department,
               big: fireLv > 0 ? '$fireLv 级' : '—',
               label: '火险等级',
-              onTap: () => _infoSheet('火险预警',
-                  '${_fire['advice'] ?? '暂无火险建议'}\n${_fire['hotline'] ?? ''}'),
+              onTap: () => context.push('/detail/info',
+                  extra: InfoDetailData(
+                    title: '火险预警',
+                    body:
+                        '${_fire['advice'] ?? '暂无火险建议'}\n${_fire['hotline'] ?? ''}',
+                  )),
             ),
             _cellDivider(),
             _indexCell(
               icon: Icons.water_drop_outlined,
               big: '$droughtIdx',
               label: '干旱指数',
-              onTap: () => _infoSheet('干旱监测指数',
-                  '${_drought['advice'] ?? '暂无干旱建议'}\n${_drought['note'] ?? ''}'),
+              onTap: () => context.push('/detail/info',
+                  extra: InfoDetailData(
+                    title: '干旱监测指数',
+                    body:
+                        '${_drought['advice'] ?? '暂无干旱建议'}\n${_drought['note'] ?? ''}',
+                  )),
             ),
             _cellDivider(),
             _indexCell(
               icon: Icons.ac_unit,
               big: frostAlert ? '预警' : '正常',
               label: '冻害风险',
-              onTap: () => _infoSheet(
-                  '冻害防护',
-                  measures.isEmpty
-                      ? '当前暂无低温冻害预警。'
-                      : measures.map((m) => '· $m').join('\n')),
+              onTap: () => context.push('/detail/info',
+                  extra: InfoDetailData(
+                    title: '冻害防护',
+                    body: measures.isEmpty
+                        ? '当前暂无低温冻害预警。'
+                        : measures.map((m) => '· $m').join('\n'),
+                  )),
             ),
           ],
         ),
@@ -528,48 +539,21 @@ class _DisasterPageState extends State<DisasterPage>
     }
     if (!mounted) return;
     final steps = (detail['steps'] as List? ?? []).cast<dynamic>();
-    _sheet(
-      '${detail['title'] ?? '应急预案'}',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if ('${detail['content'] ?? ''}'.isNotEmpty)
-            Text('${detail['content']}',
-                style: const TextStyle(
-                    fontSize: 14, height: 1.6, color: AppColors.onSurface)),
-          const SizedBox(height: 12),
-          for (var i = 0; i < steps.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                        color: AppColors.primary, shape: BoxShape.circle),
-                    alignment: Alignment.center,
-                    child: Text('${i + 1}',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700)),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text('${steps[i]}',
-                        style: const TextStyle(
-                            fontSize: 14,
-                            height: 1.5,
-                            color: AppColors.onSurface)),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
+    context.push('/detail/info',
+        extra: InfoDetailData(
+          title: '${detail['title'] ?? '应急预案'}',
+          body: '${detail['content'] ?? ''}'.isNotEmpty
+              ? '${detail['content']}'
+              : null,
+          sections: steps.isNotEmpty
+              ? [
+                  InfoSection(items: [
+                    for (var i = 0; i < steps.length; i++)
+                      '${i + 1}. ${steps[i]}',
+                  ]),
+                ]
+              : null,
+        ));
   }
 
   // ── 上报 / 理赔 / 求助 入口 ────────────────
@@ -647,8 +631,15 @@ class _DisasterPageState extends State<DisasterPage>
         'estimatedAmount': double.tryParse(amount.text) ?? 0,
       }));
       if (!mounted) return;
-      _infoSheet('理赔评估结果',
-          '受灾等级：${r['aiAssessLevel'] ?? '—'}\n建议理赔：约 ${r['suggestedPayout'] ?? 0} 元\n\n${r['assessDetail'] ?? ''}\n\n${r['insurerContact'] ?? ''}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '理赔评估结果',
+            body: '受灾等级：${r['aiAssessLevel'] ?? '—'}\n'
+                '建议理赔：约 ${r['suggestedPayout'] ?? 0} 元\n\n'
+                '${r['assessDetail'] ?? ''}\n\n'
+                '${r['insurerContact'] ?? ''}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('理赔评估', e), error: true);
     }
@@ -675,8 +666,13 @@ class _DisasterPageState extends State<DisasterPage>
       }));
       if (!mounted) return;
       final contacts = (r['contacts'] as List? ?? []).cast<dynamic>();
-      _infoSheet('求助已发出',
-          '请同时电话联系紧急联系人：\n\n${contacts.map((c) => '${(c as Map)['name']}：${c['phone']}').join('\n')}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '求助已发出',
+            body: '请同时电话联系紧急联系人：\n\n'
+                '${contacts.map((c) => '${(c as Map)['name']}：${c['phone']}').join('\n')}',
+          ));
     } catch (_) {
       await OfflineSyncQueue.enqueue(
         tableName: 'sos_record',
@@ -692,39 +688,29 @@ class _DisasterPageState extends State<DisasterPage>
       final reports = _list(await ApiClient.get('/disaster/report/list'));
       final claims = _list(await ApiClient.get('/disaster/claim/list'));
       if (!mounted) return;
-      _sheet('我的灾情与理赔',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('灾情上报',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700, color: AppColors.primary)),
-              const SizedBox(height: 6),
-              if (reports.isEmpty)
-                const Text('暂无记录',
-                    style: TextStyle(color: AppColors.onSurfaceVariant))
-              else
-                ...reports.map((r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                          '· ${r['disasterType']} · 受灾${r['affectedArea']}亩 · ${_reportStatusLabel('${r['status'] ?? ''}')}',
-                          style: const TextStyle(fontSize: 13)),
-                    )),
-              const SizedBox(height: 14),
-              const Text('保险理赔',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700, color: AppColors.primary)),
-              const SizedBox(height: 6),
-              if (claims.isEmpty)
-                const Text('暂无记录',
-                    style: TextStyle(color: AppColors.onSurfaceVariant))
-              else
-                ...claims.map((c) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                          '· ${c['claimType']} · 等级${c['aiAssessLevel']} · ${_claimStatusLabel('${c['status'] ?? ''}')}',
-                          style: const TextStyle(fontSize: 13)),
-                    )),
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '我的灾情与理赔',
+            sections: [
+              InfoSection(
+                subtitle: '灾情上报',
+                items: reports.isEmpty
+                    ? ['暂无记录']
+                    : [
+                        for (final r in reports)
+                          '${r['disasterType']} · 受灾${r['affectedArea']}亩 · ${_reportStatusLabel('${r['status'] ?? ''}')}',
+                      ],
+              ),
+              InfoSection(
+                subtitle: '保险理赔',
+                items: claims.isEmpty
+                    ? ['暂无记录']
+                    : [
+                        for (final c in claims)
+                          '${c['claimType']} · 等级${c['aiAssessLevel']} · ${_claimStatusLabel('${c['status'] ?? ''}')}',
+                      ],
+              ),
             ],
           ));
     } catch (e) {
@@ -747,42 +733,6 @@ class _DisasterPageState extends State<DisasterPage>
   }
 
   // ── 通用弹层 ──────────────────────────────
-  void _infoSheet(String title, String body) => _sheet(title,
-      child: Text(body,
-          style: const TextStyle(
-              fontSize: 14, height: 1.7, color: AppColors.onSurface)));
-
-  void _sheet(String title, {required Widget child}) {
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.55,
-        maxChildSize: 0.9,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface)),
-            const SizedBox(height: 14),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<bool?> _formSheet({
     required String title,
     required List<Widget> Function(void Function(void Function())) builder,

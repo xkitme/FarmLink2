@@ -7,6 +7,7 @@ import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
+import '../common/info_detail_page.dart';
 import '../../widgets/section_tool_chips.dart';
 
 /// 农业生产板块 —— 地块/农事记录 + 作物长势/杂草/种子识别 +
@@ -435,26 +436,15 @@ class _AgriPageState extends State<AgriPage> {
     if (r['confidence'] != null) {
       lines.add('可信度：${((r['confidence'] as num) * 100).round()}%');
     }
-    _sheet(name,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(R.md),
-              child: Image.memory(img,
-                  height: 160, width: double.infinity, fit: BoxFit.cover),
-            ),
-            const SizedBox(height: 12),
-            ...lines.map((l) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(l,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600)),
-                )),
-            const SizedBox(height: 6),
-            Text('${r['advice'] ?? r['adviceText'] ?? '已生成识别结果'}',
-                style: const TextStyle(
-                    fontSize: 14, height: 1.6, color: AppColors.onSurface)),
+    if (!mounted) return;
+    context.push('/detail/info',
+        extra: InfoDetailData(
+          title: name,
+          imageBytes: img,
+          sections: [
+            InfoSection(items: lines),
+            InfoSection(
+                body: '${r['advice'] ?? r['adviceText'] ?? '已生成识别结果'}'),
           ],
         ));
   }
@@ -533,21 +523,16 @@ class _AgriPageState extends State<AgriPage> {
       }));
       final plan = (r['fertilizerPlan'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
-      _sheet('施肥配方建议',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final p in plan)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                      '${(p as Map)['name']}：每亩 ${p['amountPerMu']} kg，合计 ${p['totalAmount']} kg',
-                      style: const TextStyle(fontSize: 14)),
-                ),
-              const SizedBox(height: 8),
-              Text('${r['advice'] ?? ''}',
-                  style: const TextStyle(
-                      fontSize: 14, height: 1.6, color: AppColors.onSurface)),
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '施肥配方建议',
+            sections: [
+              InfoSection(items: [
+                for (final p in plan)
+                  '${(p as Map)['name']}：每亩 ${p['amountPerMu']} kg，合计 ${p['totalAmount']} kg',
+              ]),
+              InfoSection(body: '${r['advice'] ?? ''}'),
             ],
           ));
     } catch (e) {
@@ -570,8 +555,12 @@ class _AgriPageState extends State<AgriPage> {
       }));
       final plan = _m(r['plan']);
       if (!mounted) return;
-      _infoSheet('灌溉计划',
-          '${plan['advice'] ?? ''}\n${r['note'] ?? ''}\n\n${r['tip'] ?? ''}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '灌溉计划',
+            body: '${plan['advice'] ?? ''}\n${r['note'] ?? ''}\n\n${r['tip'] ?? ''}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('生成', e), error: true);
     }
@@ -596,8 +585,15 @@ class _AgriPageState extends State<AgriPage> {
           body: {'plotId': int.tryParse(plot.value)}));
       final range = (r['confidenceRange'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
-      _infoSheet('产量预测结果',
-          '预测产量：${r['predictedYield'] ?? 0} 公斤\n亩产：${r['perMuYield'] ?? 0} 公斤/亩\n置信区间：${range.isNotEmpty ? '${range[0]} ~ ${range[1]} 公斤' : '—'}\n\n${r['advice'] ?? ''}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '产量预测结果',
+            body: '预测产量：${r['predictedYield'] ?? 0} 公斤\n'
+                '亩产：${r['perMuYield'] ?? 0} 公斤/亩\n'
+                '置信区间：${range.isNotEmpty ? '${range[0]} ~ ${range[1]} 公斤' : '—'}\n\n'
+                '${r['advice'] ?? ''}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('预测', e), error: true);
     }
@@ -633,40 +629,19 @@ class _AgriPageState extends State<AgriPage> {
   }
 
   void _calendarSheet() {
-    _sheet('农事日历 · ${DateTime.now().month} 月',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    if (!mounted) return;
+    context.push('/detail/info',
+        extra: InfoDetailData(
+          title: '农事日历 · ${DateTime.now().month} 月',
+          sections: [
             if (_calendar.isEmpty)
-              const Text('本月还没有农事提醒',
-                  style: TextStyle(color: AppColors.onSurfaceVariant))
+              const InfoSection(body: '本月还没有农事提醒')
             else
-              for (final c in _calendar)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      StatusChip('${c['solarTerm'] ?? c['cropType'] ?? '农事'}'),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('${c['activity'] ?? ''}',
-                                style: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w600)),
-                            if ('${c['description'] ?? ''}'.isNotEmpty)
-                              Text('${c['description']}',
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.onSurfaceVariant)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              InfoSection(items: [
+                for (final c in _calendar)
+                  '【${c['solarTerm'] ?? c['cropType'] ?? '农事'}】${c['activity'] ?? ''}'
+                      '${'${c['description'] ?? ''}'.isNotEmpty ? ' — ${c['description']}' : ''}',
+              ]),
           ],
         ));
   }
@@ -675,35 +650,17 @@ class _AgriPageState extends State<AgriPage> {
     try {
       final list = _list(await ApiClient.get('/agri/pesticide/list'));
       if (!mounted) return;
-      _sheet('农药安全查询',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final p in list)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Text('${p['name']}',
-                            style: const TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w700)),
-                        const SizedBox(width: 8),
-                        StatusChip('${p['type'] ?? '农药'}',
-                            color: AppColors.goldContainer),
-                      ]),
-                      Text(
-                          '防治对象：${p['targetPest'] ?? '—'} · 毒性 ${p['toxicity'] ?? '—'}',
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.onSurfaceVariant)),
-                      Text(
-                          '安全用量：${p['safeDosage'] ?? '见标签'} · 间隔期 ${p['safeInterval'] ?? '—'}',
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.onSurfaceVariant)),
-                    ],
-                  ),
-                ),
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '农药安全查询',
+            sections: [
+              InfoSection(items: [
+                for (final p in list)
+                  '${p['name']}【${p['type'] ?? '农药'}】'
+                      ' — 防治：${p['targetPest'] ?? '—'}，毒性：${p['toxicity'] ?? '—'}，'
+                      '用量：${p['safeDosage'] ?? '见标签'}，间隔：${p['safeInterval'] ?? '—'}',
+              ]),
             ],
           ));
     } catch (e) {
@@ -725,8 +682,14 @@ class _AgriPageState extends State<AgriPage> {
         'areaMu': double.tryParse(area.text) ?? 1,
       }));
       if (!mounted) return;
-      _infoSheet('碳汇计算结果',
-          '估算固碳量：${r['carbonAmount'] ?? 0} 吨 CO₂\n\n${r['tradeRef'] ?? ''}\n\n${r['tip'] ?? ''}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '碳汇计算结果',
+            body: '估算固碳量：${r['carbonAmount'] ?? 0} 吨 CO₂\n\n'
+                '${r['tradeRef'] ?? ''}\n\n'
+                '${r['tip'] ?? ''}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('计算', e), error: true);
     }
@@ -748,42 +711,6 @@ class _AgriPageState extends State<AgriPage> {
   }
 
   // ── 通用弹层 ──────────────────────────────
-  void _infoSheet(String title, String body) => _sheet(title,
-      child: Text(body,
-          style: const TextStyle(
-              fontSize: 14, height: 1.7, color: AppColors.onSurface)));
-
-  void _sheet(String title, {required Widget child}) {
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.55,
-        maxChildSize: 0.9,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface)),
-            const SizedBox(height: 14),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<bool?> _formSheet(
       {required String title, required List<Widget> fields}) {
     return showModalBottomSheet<bool>(

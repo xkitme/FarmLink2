@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../common/info_detail_page.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
@@ -735,20 +737,18 @@ class _LifePageState extends State<LifePage> {
           await ApiClient.get('/life/express/query', query: {'no': no.text}));
       final traces = (r['traces'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
-      _sheet('快递状态 · ${r['status'] ?? ''}',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final t in traces)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text('· ${(t as Map)['desc']}',
-                      style: const TextStyle(fontSize: 14)),
-                ),
-              const SizedBox(height: 6),
-              Text('${r['tip'] ?? ''}',
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.onSurfaceVariant)),
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '快递状态 · ${r['status'] ?? ''}',
+            sections: [
+              InfoSection(
+                items: [
+                  for (final t in traces) '${(t as Map)['desc']}',
+                ],
+              ),
+              if ('${r['tip'] ?? ''}'.isNotEmpty)
+                InfoSection(body: '${r['tip']}'),
             ],
           ));
     } catch (e) {
@@ -806,7 +806,11 @@ class _LifePageState extends State<LifePage> {
       final r = _m(await ApiClient.post('/life/utility/pay',
           body: {'type': type, 'amount': amount}));
       if (!mounted) return;
-      _infoSheet('缴费成功', '订单号：${r['orderNo'] ?? ''}\n金额：¥${r['amount'] ?? 0}');
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '缴费成功',
+            body: '订单号：${r['orderNo'] ?? ''}\n金额：¥${r['amount'] ?? 0}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('缴费', e), error: true);
     }
@@ -844,22 +848,19 @@ class _LifePageState extends State<LifePage> {
           body: {'skills': skills.text.trim()}));
       final matched = _list(r['matched']);
       if (!mounted) return;
-      _sheet('岗位匹配结果',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${r['tip'] ?? ''}',
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.onSurfaceVariant)),
-              const SizedBox(height: 12),
-              for (final j in matched)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                      '· ${j['title'] ?? '岗位'} · ${j['salary'] ?? '面议'}',
-                      style: const TextStyle(fontSize: 14)),
-                ),
-            ],
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '岗位匹配结果',
+            body: '${r['tip'] ?? ''}'.isNotEmpty ? '${r['tip']}' : null,
+            sections: matched.isNotEmpty
+                ? [
+                    InfoSection(items: [
+                      for (final j in matched)
+                        '${j['title'] ?? '岗位'} · ${j['salary'] ?? '面议'}',
+                    ]),
+                  ]
+                : null,
           ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('匹配', e), error: true);
@@ -891,8 +892,14 @@ class _LifePageState extends State<LifePage> {
         'purpose': purpose.text.trim(),
       }));
       if (!mounted) return;
-      _infoSheet('贷款预评估',
-          '信用评分：${r['aiCreditScore'] ?? '—'}\n评估结果：${r['aiAssessResult'] ?? ''}\n\n${r['tip'] ?? ''}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '贷款预评估',
+            body: '信用评分：${r['aiCreditScore'] ?? '—'}\n'
+                '评估结果：${r['aiAssessResult'] ?? ''}\n\n'
+                '${r['tip'] ?? ''}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('评估', e), error: true);
     }
@@ -915,7 +922,12 @@ class _LifePageState extends State<LifePage> {
         'question': question.text.trim(),
       }));
       if (!mounted) return;
-      _infoSheet('教育答疑', '${r['answer'] ?? ''}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '教育答疑',
+            body: '${r['answer'] ?? ''}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('答疑', e), error: true);
     }
@@ -939,8 +951,13 @@ class _LifePageState extends State<LifePage> {
             .toList(),
       }));
       if (!mounted) return;
-      _infoSheet('旅游推广文案',
-          '${r['promoText'] ?? ''}\n\n标签：${(r['tags'] as List? ?? []).join(' · ')}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '旅游推广文案',
+            body: '${r['promoText'] ?? ''}\n\n'
+                '标签：${(r['tags'] as List? ?? []).join(' · ')}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('生成', e), error: true);
     }
@@ -1085,8 +1102,15 @@ class _LifePageState extends State<LifePage> {
   }
 
   void _tourismDetail(Map<String, dynamic> t) {
-    _infoSheet('${t['name'] ?? '乡村旅游'}',
-        '类型：${t['spotType'] ?? '乡村游'}\n地址：${t['address'] ?? ''}\n价格：¥${t['price'] ?? 0}\n电话：${t['phone'] ?? ''}\n\n${t['description'] ?? ''}');
+    context.push('/detail/info',
+        extra: InfoDetailData(
+          title: '${t['name'] ?? '乡村旅游'}',
+          body: '类型：${t['spotType'] ?? '乡村游'}\n'
+              '地址：${t['address'] ?? ''}\n'
+              '价格：¥${t['price'] ?? 0}\n'
+              '电话：${t['phone'] ?? ''}\n\n'
+              '${t['description'] ?? ''}',
+        ));
   }
 
   void _helpDetail(Map<String, dynamic> h) {
@@ -1240,11 +1264,6 @@ class _LifePageState extends State<LifePage> {
       ),
     );
   }
-
-  void _infoSheet(String title, String body) => _sheet(title,
-      child: Text(body,
-          style: const TextStyle(
-              fontSize: 14, height: 1.7, color: AppColors.onSurface)));
 
   void _sheet(String title, {required Widget child}) {
     showModalBottomSheet(

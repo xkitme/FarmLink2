@@ -35,6 +35,7 @@ import '../pages/profile/settings/push_settings_page.dart';
 import '../pages/profile/settings/settings_home_page.dart';
 import '../pages/profile/settings/storage_page.dart';
 import '../pages/profile/settings/weather_alert_page.dart';
+import '../pages/common/info_detail_page.dart';
 import '../pages/search/search_page.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
@@ -71,6 +72,20 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
             GoRoute(path: '/home', builder: (_, __) => const HomePage()),
             GoRoute(path: '/all', builder: (_, __) => const AllFeaturesPage()),
             GoRoute(path: '/search', builder: (_, __) => const SearchPage()),
+            GoRoute(
+              path: '/detail/info',
+              builder: (_, state) {
+                final extra = state.extra;
+                return InfoDetailPage(
+                  data: extra is InfoDetailData
+                      ? extra
+                      : const InfoDetailData(
+                          title: '详情',
+                          body: '内容暂时不可用，请返回后重新进入。',
+                        ),
+                );
+              },
+            ),
             GoRoute(path: '/ai', builder: (_, __) => const AiThreadsPage()),
             GoRoute(
               // C4：保留 ?scene= 查询参数，未来主页招牌场景入口（如 scene=DISEASE/POLICY）会传

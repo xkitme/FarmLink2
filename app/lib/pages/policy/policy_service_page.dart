@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
+import '../common/info_detail_page.dart';
 import '../../widgets/common.dart';
 
 /// 惠农政策服务 —— 补贴申请/政策问答/法律咨询/积分兑换/
@@ -278,8 +279,11 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: AppCard(
-              onTap: () => _infoSheet(
-                  '${a['title'] ?? '村务公开'}', '${a['content'] ?? '暂无详情'}'),
+              onTap: () => context.push('/detail/info',
+                  extra: InfoDetailData(
+                    title: '${a['title'] ?? '村务公开'}',
+                    body: '${a['content'] ?? '暂无详情'}',
+                  )),
               child: Row(
                 children: [
                   const Icon(Icons.campaign, color: AppColors.secondary),
@@ -469,25 +473,22 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
       }));
       if (!mounted) return;
       final refs = _list(r['references']);
-      _sheet(title,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${r['answer'] ?? ''}',
-                  style: const TextStyle(
-                      fontSize: 14, height: 1.7, color: AppColors.onSurface)),
-              if (refs.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                const Text('参考来源',
-                    style:
-                        TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 6),
-                for (final ref in refs.take(3))
-                  Text('· ${ref['title'] ?? ref['policyTitle'] ?? '政策知识库'}',
-                      style: const TextStyle(
-                          fontSize: 12, color: AppColors.onSurfaceVariant)),
-              ],
-            ],
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: title,
+            body: '${r['answer'] ?? ''}',
+            sections: refs.isNotEmpty
+                ? [
+                    InfoSection(
+                      subtitle: '参考来源',
+                      items: [
+                        for (final ref in refs.take(3))
+                          '${ref['title'] ?? ref['policyTitle'] ?? '政策知识库'}',
+                      ],
+                    ),
+                  ]
+                : null,
           ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('问答', e), error: true);
@@ -549,8 +550,13 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
     try {
       final r = _m(await ApiClient.get('/training/course/${course['id']}'));
       if (!mounted) return;
-      _infoSheet('${r['title'] ?? '培训课程'}',
-          '${r['content'] ?? '暂无课程介绍'}\n\n证书：${r['certName'] ?? '结业证书'}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '${r['title'] ?? '培训课程'}',
+            body: '${r['content'] ?? '暂无课程介绍'}\n\n'
+                '证书：${r['certName'] ?? '结业证书'}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('读取', e), error: true);
     }
@@ -628,11 +634,6 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
       if (mounted) toast(context, '已加入待发送队列，将自动重传');
     }
   }
-
-  void _infoSheet(String title, String body) => _sheet(title,
-      child: Text(body,
-          style: const TextStyle(
-              fontSize: 14, height: 1.7, color: AppColors.onSurface)));
 
   void _sheet(String title, {required Widget child}) {
     showModalBottomSheet(

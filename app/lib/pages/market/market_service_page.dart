@@ -5,6 +5,7 @@ import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
+import '../common/info_detail_page.dart';
 import '../../widgets/common.dart';
 
 /// 流通销售服务 —— 行情/价格预测/期货/出口合规/收购站/团购/
@@ -331,21 +332,20 @@ class _MarketServicePageState extends State<MarketServicePage> {
     try {
       final list = _list(await ApiClient.get('/market/price/predict'));
       if (!mounted) return;
-      _sheet('价格趋势预测',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (list.isEmpty)
-                const Text('暂无预测数据',
-                    style: TextStyle(color: AppColors.onSurfaceVariant))
-              else
-                for (final p in list)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                        '· ${p['productName']}：预测 ¥${p['predictedPrice'] ?? p['price'] ?? '—'}（${'${p['predictDate'] ?? ''}'.split('T').first}）',
-                        style: const TextStyle(fontSize: 14)),
-                  ),
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '价格趋势预测',
+            sections: [
+              InfoSection(
+                body: list.isEmpty ? '暂无预测数据' : null,
+                items: list.isEmpty
+                    ? null
+                    : [
+                        for (final p in list)
+                          '${p['productName']}：预测 ¥${p['predictedPrice'] ?? p['price'] ?? '—'}（${'${p['predictDate'] ?? ''}'.split('T').first}）',
+                      ],
+              ),
             ],
           ));
     } catch (e) {
@@ -358,36 +358,17 @@ class _MarketServicePageState extends State<MarketServicePage> {
       final r = _m(await ApiClient.get('/market/futures'));
       final list = (r['list'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
-      _sheet('期货行情参考',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final f in list)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          child: Text('${(f as Map)['contract']}',
-                              style: const TextStyle(fontSize: 14))),
-                      Text('${f['price']} ${f['unit'] ?? ''}',
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 8),
-                      Text(
-                          '${(f['change'] as num? ?? 0) >= 0 ? '+' : ''}${f['changePct']}%',
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: (f['change'] as num? ?? 0) >= 0
-                                  ? AppColors.error
-                                  : AppColors.primary)),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 6),
-              Text('${r['tip'] ?? ''}',
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.onSurfaceVariant)),
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '期货行情参考',
+            sections: [
+              InfoSection(items: [
+                for (final f in list)
+                  '${(f as Map)['contract']}：${f['price']} ${f['unit'] ?? ''}'
+                      '（${(f['change'] as num? ?? 0) >= 0 ? '+' : ''}${f['changePct']}%）',
+              ]),
+              InfoSection(body: '${r['tip'] ?? ''}'),
             ],
           ));
     } catch (e) {
@@ -405,8 +386,15 @@ class _MarketServicePageState extends State<MarketServicePage> {
           query: {'product': product.text.trim()}));
       final docs = (r['docs'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
-      _infoSheet('${r['product']} 出口合规',
-          '执行标准：${r['standard'] ?? ''}\n\n检疫要求：${r['quarantine'] ?? ''}\n\n所需单证：${docs.join('、')}\n\n${r['tip'] ?? ''}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '${r['product']} 出口合规',
+            body: '执行标准：${r['standard'] ?? ''}\n\n'
+                '检疫要求：${r['quarantine'] ?? ''}\n\n'
+                '所需单证：${docs.join('、')}\n\n'
+                '${r['tip'] ?? ''}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('查询', e), error: true);
     }
@@ -432,8 +420,14 @@ class _MarketServicePageState extends State<MarketServicePage> {
           fields: const {'productName': '农产品'}));
       if (!mounted) return;
       Navigator.pop(context);
-      _infoSheet('AI 质量分级',
-          '分级结果：${r['grade'] ?? '—'}\n综合评分：${r['overallScore'] ?? '—'}\n\n${r['advice'] ?? ''}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: 'AI 质量分级',
+            body: '分级结果：${r['grade'] ?? '—'}\n'
+                '综合评分：${r['overallScore'] ?? '—'}\n\n'
+                '${r['advice'] ?? ''}',
+          ));
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
@@ -456,16 +450,14 @@ class _MarketServicePageState extends State<MarketServicePage> {
       }));
       final script = (r['script'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
-      _sheet('直播话术 · ${name.text.trim()}',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final s in script)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text('$s',
-                      style: const TextStyle(fontSize: 14, height: 1.6)),
-                ),
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '直播话术 · ${name.text.trim()}',
+            sections: [
+              InfoSection(items: [
+                for (final s in script) '$s',
+              ]),
             ],
           ));
     } catch (e) {
@@ -488,8 +480,15 @@ class _MarketServicePageState extends State<MarketServicePage> {
       }));
       final tags = (r['tags'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
-      _infoSheet('包装文案 · ${name.text.trim()}',
-          '【标语】${r['slogan'] ?? ''}\n\n【文案】${r['description'] ?? ''}\n\n【标签】${tags.join(' · ')}\n\n【设计建议】${r['designTip'] ?? ''}');
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '包装文案 · ${name.text.trim()}',
+            body: '【标语】${r['slogan'] ?? ''}\n\n'
+                '【文案】${r['description'] ?? ''}\n\n'
+                '【标签】${tags.join(' · ')}\n\n'
+                '【设计建议】${r['designTip'] ?? ''}',
+          ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('生成', e), error: true);
     }
@@ -505,21 +504,18 @@ class _MarketServicePageState extends State<MarketServicePage> {
       final records = (r['records'] as List? ?? []).cast<dynamic>();
       final product = _m(r['product']);
       if (!mounted) return;
-      _sheet('溯源信息',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${product['title'] ?? '农产品'}',
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 10),
-              for (final rec in records)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                      '· ${(rec as Map)['stage']}：${rec['description'] ?? ''}',
-                      style: const TextStyle(fontSize: 14)),
-                ),
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '溯源信息',
+            sections: [
+              InfoSection(
+                subtitle: '${product['title'] ?? '农产品'}',
+                items: [
+                  for (final rec in records)
+                    '${(rec as Map)['stage']}：${rec['description'] ?? ''}',
+                ],
+              ),
             ],
           ));
     } catch (e) {
@@ -535,20 +531,18 @@ class _MarketServicePageState extends State<MarketServicePage> {
       final r = _m(await ApiClient.get('/market/logistics/${no.text.trim()}'));
       final traces = (r['traces'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
-      _sheet('物流追踪 · ${r['company'] ?? ''}',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('状态：${_logisticsStatusLabel('${r['status'] ?? ''}')}',
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 10),
-              for (final t in traces)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text('· ${(t as Map)['desc']}',
-                      style: const TextStyle(fontSize: 14)),
-                ),
-            ],
+      if (!mounted) return;
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '物流追踪 · ${r['company'] ?? ''}',
+            body: '状态：${_logisticsStatusLabel('${r['status'] ?? ''}')}',
+            sections: traces.isNotEmpty
+                ? [
+                    InfoSection(items: [
+                      for (final t in traces) '${(t as Map)['desc']}',
+                    ]),
+                  ]
+                : null,
           ));
     } catch (e) {
       if (mounted) toast(context, '未查询到物流信息', error: true);
@@ -617,42 +611,6 @@ class _MarketServicePageState extends State<MarketServicePage> {
               title: const Text('从相册选择'),
               onTap: () => Navigator.pop(c, ImageSource.gallery),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _infoSheet(String title, String body) => _sheet(title,
-      child: Text(body,
-          style: const TextStyle(
-              fontSize: 14, height: 1.7, color: AppColors.onSurface)));
-
-  void _sheet(String title, {required Widget child}) {
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.55,
-        maxChildSize: 0.9,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface)),
-            const SizedBox(height: 14),
-            child,
           ],
         ),
       ),

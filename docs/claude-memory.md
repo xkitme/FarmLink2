@@ -15,13 +15,14 @@
 - 契约核对：后端 `qaDetectRecord` 返回 `{ recordId, threadId, record }`；前端记录 `_threadId` 后，删除按钮可显示，后续文字追问会带同一 `threadId`，逻辑闭环。
 - 验证：`cd app && C:\dev\flutter\bin\flutter.bat analyze lib` 通过，输出 `No issues found! (ran in 2.6s)`。
 - GitHub API 临时不可用：`gh issue list` / `gh pr list` 均超时，未能实时核对远端 open issue 状态。当前只能按本地 docs 与本地 `origin/main` 判断。
-- 用户随后要求“让 Claude 写代码，Codex 审查”。已让 Claude（DeepSeek V4 Pro）实现 58-4 G5：`backend/src/modules/ai/ai.controller.js` 收紧 App 端 AI 会话范围，ADMIN 也只能通过 `/ai/qa/*` 访问自己的会话；管理台全平台记录仍由 `/admin/resource/aiQaRecord/list` 提供。Codex 已审 diff，并跑 `node --check backend/src/modules/ai/ai.controller.js` + 临时 HTTP smoke（admin/farmer 各造 1 条记录，确认 admin App 只见自己、读/续写/删 farmer thread 均 404、admin resource 仍能见两条），临时记录已清零。
+- 用户随后要求“让 Claude 写代码，Codex 审查”。已让 Claude（DeepSeek V4 Pro）实现 58-4 G5：`backend/src/modules/ai/ai.controller.js` 收紧 App 端 AI 会话范围，ADMIN 也只能通过 `/ai/qa/*` 访问自己的会话；管理台全平台记录仍由 `/admin/resource/aiQaRecord/list` 提供。Codex 已审 diff，并跑 `node --check backend/src/modules/ai/ai.controller.js` + 临时 HTTP smoke（admin/farmer 各造 1 条记录，确认 admin App 只见自己、读/续写/删 farmer thread 均 404、admin resource 仍能见两条），临时记录已清零。该修复已 commit + push：`6f2d8eed fix: 收紧 ADMIN App 端 AI 会话范围`。
+- 之后继续把 issue #16 第一批交给 DeepSeek：新增通用纯展示详情页 `/detail/info`，并把 agri/disaster/market_service/policy_service/life 中纯展示型 `_infoSheet`/`_sheet` 迁移为页面。Codex 审查后删掉 DeepSeek 越界生成的 `docs/60-国风UI大重构计划.md`，补了 `state.extra` 缺失时的路由兜底和详情页返回 fallback。验证：`flutter analyze lib` 通过、`flutter build web --debug` 通过、静态服务下 `/detail/info`/`main.dart.js`/`manifest.json` 均返回 200。工作单为 `docs/60-全局卡片详情页第一批.md`。
 
 ### 下一步建议
 
-1. issue #17 代码侧基本已落：markdown 加粗、数据/RAG、流式、图片识别首发不重导航都已处理；剩下是真机/浏览器最终确认后关 issue。
-2. `45h/45l~45o` 仍属于故事化、视觉展示、话术/demo 脚本文档项；需要 Claude/用户拍版工作单后，Codex 再按工作单实施。
-3. 若 GitHub 恢复，先查 open issue/PR，再决定是否需要补评论或 close。
+1. issue #16 尚未关闭。第一批只覆盖纯展示详情页；下一批可继续拆农机卡详情、发布详情、消息详情等实体卡片。
+2. issue #17 代码侧基本已落：markdown 加粗、数据/RAG、流式、图片识别首发不重导航都已处理；剩下是真机/浏览器最终确认后关 issue。
+3. `45h/45l~45o` 仍属于故事化、视觉展示、话术/demo 脚本文档项；需要 Claude/用户拍版工作单后，Codex 再按工作单实施。
 
 ---
 
