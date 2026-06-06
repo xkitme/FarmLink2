@@ -9,12 +9,16 @@ class InfoDetailData {
   final String? body;
   final List<InfoSection>? sections;
   final Uint8List? imageBytes;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   const InfoDetailData({
     required this.title,
     this.body,
     this.sections,
     this.imageBytes,
+    this.actionLabel,
+    this.onAction,
   });
 }
 
@@ -51,7 +55,8 @@ class InfoDetailPage extends StatelessWidget {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-          onPressed: () => context.canPop() ? context.pop() : context.go('/home'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/home'),
         ),
         backgroundColor: AppColors.surface,
       ),
@@ -116,6 +121,19 @@ class InfoDetailPage extends StatelessWidget {
                     ),
                   ),
             ],
+          if (data.actionLabel != null && data.onAction != null) ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (context.canPop()) context.pop();
+                  data.onAction!.call();
+                },
+                child: Text(data.actionLabel!),
+              ),
+            ),
+          ],
         ],
       ),
     );

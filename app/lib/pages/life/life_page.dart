@@ -767,34 +767,14 @@ class _LifePageState extends State<LifePage> {
       final bill = _m(await ApiClient.get('/life/utility/bill',
           query: {'type': type.value}));
       if (!mounted) return;
-      _sheet('${bill['typeName'] ?? labels[type.value]}账单',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('账期：${bill['period'] ?? ''}',
-                  style: const TextStyle(fontSize: 14)),
-              const SizedBox(height: 8),
-              Text('应缴金额：¥${bill['amount'] ?? 0}',
-                  style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.error)),
-              const SizedBox(height: 8),
-              Text('截止日期：${bill['dueDate'] ?? ''}',
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.onSurfaceVariant)),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _payUtility(type.value, bill['amount']);
-                  },
-                  child: const Text('确认缴费'),
-                ),
-              ),
-            ],
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '${bill['typeName'] ?? labels[type.value]}账单',
+            body: '账期：${bill['period'] ?? ''}\n'
+                '应缴金额：¥${bill['amount'] ?? 0}\n'
+                '截止日期：${bill['dueDate'] ?? ''}',
+            actionLabel: '确认缴费',
+            onAction: () => _payUtility(type.value, bill['amount']),
           ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('账单读取', e), error: true);
@@ -1114,30 +1094,19 @@ class _LifePageState extends State<LifePage> {
   }
 
   void _helpDetail(Map<String, dynamic> h) {
-    _sheet('${h['title'] ?? '邻里互助'}',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${h['content'] ?? ''}',
-                style: const TextStyle(fontSize: 14, height: 1.7)),
-            const SizedBox(height: 12),
-            if ('${h['contactPhone'] ?? ''}'.isNotEmpty)
-              Text('联系电话：${h['contactPhone']}',
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.onSurfaceVariant)),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _acceptHelp(h);
-                },
-                icon: const Icon(Icons.volunteer_activism, size: 18),
-                label: const Text('响应互助'),
-              ),
-            ),
-          ],
+    final content = '${h['content'] ?? ''}';
+    final contactPhone = '${h['contactPhone'] ?? ''}';
+    final body = [
+      if (content.isNotEmpty) content,
+      if (contactPhone.isNotEmpty) '联系电话：$contactPhone',
+    ].join('\n\n');
+
+    context.push('/detail/info',
+        extra: InfoDetailData(
+          title: '${h['title'] ?? '邻里互助'}',
+          body: body,
+          actionLabel: '响应互助',
+          onAction: () => _acceptHelp(h),
         ));
   }
 
@@ -1259,37 +1228,6 @@ class _LifePageState extends State<LifePage> {
                 selected: sel.value == o,
                 onSelected: (_) => setS(() => sel.value = o),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _sheet(String title, {required Widget child}) {
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.56,
-        maxChildSize: 0.9,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface)),
-            const SizedBox(height: 14),
-            child,
           ],
         ),
       ),

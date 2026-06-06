@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../common/info_detail_page.dart';
 import '../../../core/constants.dart';
 import '../../../widgets/common.dart';
 import 'settings_widgets.dart';
@@ -68,13 +70,13 @@ class AboutPage extends StatelessWidget {
                 SettingTile(
                   icon: Icons.description_outlined,
                   label: '服务协议',
-                  onTap: () => _showTextSheet(context, '服务协议'),
+                  onTap: () => _openTextDetail(context, '服务协议'),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
                   icon: Icons.privacy_tip_outlined,
                   label: '隐私政策',
-                  onTap: () => _showTextSheet(context, '隐私政策'),
+                  onTap: () => _openTextDetail(context, '隐私政策'),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
@@ -122,59 +124,14 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  void _showTextSheet(BuildContext context, String title) {
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        minChildSize: 0.35,
-        maxChildSize: 0.9,
-        builder: (context, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppColors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 14),
-            for (final text in _sheetParagraphs)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    height: 1.65,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                ),
-              ),
+  void _openTextDetail(BuildContext context, String title) {
+    context.push('/detail/info',
+        extra: InfoDetailData(
+          title: title,
+          sections: [
+            for (final text in _sheetParagraphs) InfoSection(body: text),
           ],
-        ),
-      ),
-    );
+        ));
   }
 
   static const _sheetParagraphs = [
