@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-06-07 · Claude+Codex 并行 session（批4迁移 + 动画诊断 + #17 实测）→ 用户睡前自主收尾后关机
+
+### 状态：本地 main / origin/main 均在 HEAD `b9afcf1b`（批4），工作树仅剩未跟踪临时文件（已清）。本会话结束后按用户指令 `shutdown /s` 关机。
+
+用户要求「自己和 Codex 同时并行、都能召唤 subagent」，随后「执行完再做两个任务，完了关机去睡觉」。分工：Claude 做 #16.1 动画（前端视觉，浏览器实测）+ Codex 做 #16.2 批4 卡片迁移（零文件重叠：Codex 只碰 info_detail_page/about_page/life_page，复用现有 `/detail/info` 路由不碰 router.dart）。
+
+- **#16.2 批4 卡片迁移（已 commit+push `b9afcf1b`，docs/63）**：Codex 实施——`InfoDetailPage` 加可选底部主操作按钮（`actionLabel`/`onAction`，先 pop 再执行）；about_page 服务协议/隐私政策、life 邻里互助详情、life 水电气账单 由底部弹层迁为 `/detail/info` 独立页；删 life 内 `_sheet`。Codex 因 `-s workspace-write` 沙箱写不了 flutter 缓存，卡在跑 analyze，**代码已改好，analyze 由 Claude 自己跑（无沙箱）通过 No issues**。浏览器实测（release）：about→详情页 push + sections 渲染正常 ✓。⚠️ life 动作按钮分支（响应互助/确认缴费）因表单 sheet 交互摩擦**未点测**，代码 analyze-clean 且沿用已验证 push 模式。
+- **#16.2 收尾判断**：全局扫描确认**已无剩余展示型卡片可迁**（home/profile/messages 无弹层；service 页展示卡 60-63 批已迁；剩 `showModalBottomSheet` 全是操作型——表单/图片源/购物车/年份选择/同步日志/积分兑换，按约定保留）。**批5 实际为空，#16 第2条「卡片改独立页」可视为基本完成。**
+- **#16.1 动画不流畅（已诊断，结论：无需改代码）**：用 rAF 采样 + Playwright 实测。**关键坑：之前一直在跑 HTTP 缓存里的旧 debug bundle**（清 SW+CacheStorage 不够，main.dart.js 同名被缓存复用；必须 CDP `Network.clearBrowserCache`+`setCacheDisabled`，见新记忆）。修正后真 release（main.dart.js 3.8MB）实测：
+  - 转场（自定义右进左出滑动，theme.dart `_SlidePageTransitionsBuilder`）重复进出 **0 掉帧**、滚动 **0 严重掉帧** → 转场/滚动本身丝滑。
+  - 首访：数据管理/流通销售等多数页 max 6-7ms 顺滑；**仅气象灾害这类「数据回来后一次性堆渐变头+GridView+多区块」重页有 ~85ms 一次性顿挫**（debug 下放大到 290ms）。
+  - **结论：reporter 的「不流畅」主要是 debug build 产物（Dart 执行慢 ~10×），release 基本顺滑。预览/比赛务必用 release（start-local.ps1 本就是 release，但批次验证用过 --debug）。转场代码不动。** 残留：灾害页等重页首访 85ms 可后续优化（拆分首帧构建），优先级低。
+- **#17 AI 三条（实测：②③已修验证，①未测）**：发现 ollama 没在跑→Claude `ollama list` 把它起来了（已装 qwen2.5:7b/minicpm-v:8b/bge-m3）。**坑：后端必须在 ollama 起来后才启动**才会识别大模型，否则只走 knowledge-rule 兜底——本会话重启了后端（`✓ Ollama 在线`）。浏览器实测（farmer 账号，真 LLM）：
+  - **#17.2 markdown***：✓ 已修复**——问稻瘟病防治，回 5 个 `**加粗**` 编号点全部渲染成真加粗，**无一个字面 `**`/`***`**（`_MarkdownText` 自定义解析生效）。
+  - **#17.3 流式：✓** 逐 token 流式 + `_StreamingCursor` 光标正常（7b 冷启动首 token ~30-60s）。
+  - **#17.1 识图：未测**——需相册/拍照文件上传，Playwright 难驱动；代码在（minicpm-v 视觉 + `_pickAndDetect`）。待真机。
+
+### 下一步建议
+1. **#16 可考虑关闭**：动画=debug 产物（建议用户在 release 包再感受一次）、卡片迁移已基本完成。关前最好让用户在 release 真机点一遍 + 确认灾害页 85ms 顿挫可接受。
+2. **#17 关前只差 #17.1 识图真机测**（②③已验证）。
+3. 灾害页等重页首访顿挫如需优化：把数据回来后的整树构建拆分（骨架先出/分帧构建），但优先级低。
+4. 派 Codex 跑 flutter 时别用 `-s workspace-write`（写不了 flutter 缓存会卡 analyze）；让 Codex 只改代码、analyze 交给无沙箱的 Claude，或给 Codex `danger-full-access`/把缓存目录加 `--add-dir`。
+
+---
+
 ## 2026-06-05 · Codex 接手核查 session
 
 ### 状态：本地 main / origin/main 均在 HEAD `5b7779de`，工作树仅剩 `.playwright-mcp/`、`design_assets/` 未跟踪
