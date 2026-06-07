@@ -202,12 +202,12 @@ class _HomePageState extends State<HomePage> {
                         critical: false),
                     const SizedBox(height: 12),
                   ],
+                  _homeSearch(),
+                  const SizedBox(height: 14),
                   _greetingWeather()
                       .animate()
                       .fadeIn(duration: 300.ms)
                       .slideY(begin: 0.05),
-                  const SizedBox(height: 14),
-                  _homeSearch(),
                   const SizedBox(height: 16),
                   _decisionCard()
                       .animate(delay: 60.ms)
