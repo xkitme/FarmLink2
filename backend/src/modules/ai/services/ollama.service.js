@@ -53,10 +53,13 @@ export async function getOllamaStatus(timeoutMs = 1500) {
   }
 }
 
-/** 非流式大模型生成。 */
-export async function generateText({ prompt, system, model, images, temperature = 0.2, timeoutMs = 180000 }) {
+/** 非流式大模型生成。
+ *  format='json' 时走 Ollama 内置的 JSON 强制模式（仅服务端约束，模型仍可能出 schema 之外字段，
+ *  但能挡住「输出英文段落 + 编号列表」这种完全跑题的情况——小视觉模型对 prompt 遵守度差，必须叠加用）。
+ */
+export async function generateText({ prompt, system, model, images, temperature = 0.2, timeoutMs = 180000, format }) {
   const started = Date.now()
-  const res = await postJson('/api/generate', {
+  const body = {
     model: model || config.ollama.primaryModel,
     prompt,
     system,
@@ -67,13 +70,36 @@ export async function generateText({ prompt, system, model, images, temperature 
       num_ctx: 4096,
       num_predict: 700,
     },
-  }, timeoutMs)
+  }
+  if (format) body.format = format
+  const res = await postJson('/api/generate', body, timeoutMs)
   const data = await res.json()
   return {
     answer: String(data.response || '').trim(),
     model: data.model || model || config.ollama.primaryModel,
     totalDurationMs: Date.now() - started,
     raw: data,
+  }
+}
+
+/** 视觉模型预热：启动时调一次（不传图片，只让 ollama 把模型权重加载进显存），
+ *  避免第一个真实用户请求承担 30–60s 冷启动。
+ *  失败不抛——预热失败不应阻塞服务启动；用户后续请求自然会经历冷启动。 */
+export async function warmupVisionModel(timeoutMs = 120000) {
+  const model = config.ollama.visionModel
+  if (!model) return { ok: false, reason: 'no-vision-model-configured' }
+  const started = Date.now()
+  try {
+    // 用极短的 prompt + num_predict=1 触发权重加载，最大限度减小推理耗时。
+    await postJson('/api/generate', {
+      model,
+      prompt: 'warmup',
+      stream: false,
+      options: { num_predict: 1, temperature: 0 },
+    }, timeoutMs)
+    return { ok: true, model, elapsedMs: Date.now() - started }
+  } catch (err) {
+    return { ok: false, model, reason: err.message, elapsedMs: Date.now() - started }
   }
 }
 

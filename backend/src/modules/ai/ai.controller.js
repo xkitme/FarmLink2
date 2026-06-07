@@ -448,22 +448,38 @@ export async function imageAnalyze(req, res) {
   try {
     const bytes = await fs.readFile(req.file.path)
     const prompt = [
-      '你是农业图像视觉识别助手。请仔细观察图片，并严格按以下 JSON 输出：',
-      '{"resultLabel":"中文识别标签","confidence":0.0,"adviceText":"处理建议","detail":"简要依据"}',
-      '要求：',
-      '1. resultLabel 必须使用中文病害/作物名称（如「番茄缺镁症」「苹果黑星病」），禁止输出英文标签或下划线 ID。',
-      '2. 如果图片不是农作物 / 叶片 / 果实 / 农产品（例如风景、人物、其他动植物），或无法判定具体病害，必须返回 {"resultLabel":"无法识别","confidence":0,"adviceText":"图片中未发现农作物病害特征，建议重新拍摄叶片正反面或茎秆果实清晰照片。"}。',
-      '3. confidence 必须如实反映把握程度，不确定时给低值或 0；不要为了显得自信就编高数。',
-      `识别类型：${detectType}；作物/产品：${cropType || productName || '未指定'}。`,
+      '你是中文农业图像视觉识别助手。请仔细观察图片，按下面给出的 JSON schema 输出。',
+      '',
+      'JSON schema:',
+      '{"resultLabel": <中文病害名或"无法识别">, "confidence": <0.0~1.0 的小数>, "adviceText": <中文处理建议>, "detail": <简要中文依据>}',
+      '',
+      '关键约束（请严格遵守）：',
+      '1) resultLabel 只能用中文（如「番茄缺镁症」「苹果黑星病」「水稻稻瘟病」），禁止输出英文标签、拼音或下划线 ID。',
+      '2) 如果图片是水果摆拍、风景、人物、动物、其他非农业病害场景，或叶片正常无病害，必须返回 resultLabel="无法识别"，confidence=0。',
+      '3) confidence 必须诚实反映把握程度。模糊/把握不大时给 ≤0.3；非常确定才给 >0.8。',
+      '4) adviceText 限 60 字内中文，给出可执行的建议。',
+      '',
+      '示例 1（输入：番茄叶片黄化无脉间绿色）→ 输出：',
+      '{"resultLabel":"番茄缺镁症","confidence":0.78,"adviceText":"补充含镁肥料，配合土壤酸碱度检测，避免偏施钾肥。","detail":"下部老叶脉间黄化、叶脉保持绿色，符合缺镁特征"}',
+      '',
+      '示例 2（输入：黄色背景的一串香蕉摆拍）→ 输出：',
+      '{"resultLabel":"无法识别","confidence":0,"adviceText":"图片为水果摆拍，未发现农作物病害；请拍摄叶片正反面或茎秆果实病斑特写。","detail":"非田间病害场景"}',
+      '',
+      '示例 3（输入：风景照）→ 输出：',
+      '{"resultLabel":"无法识别","confidence":0,"adviceText":"图片中未识别到农作物，建议重新拍摄病害部位特写。","detail":"非农业图像"}',
+      '',
+      `本次识别类型：${detectType}；作物/产品提示：${cropType || productName || '未指定'}。`,
     ].join('\n')
     const generated = await generateText({
       prompt,
-      system: '只输出严格 JSON，不要输出 Markdown 或前后缀文本。',
+      system: '只输出严格 JSON，不要 Markdown / 前后缀 / 编号列表 / 英文叙述。',
       model: config.ollama.visionModel,
       images: [bytes.toString('base64')],
       temperature: 0.1,
-      // 8GB 显存跑 8B 视觉模型很慢；超过 15s 不返回就走兜底给即时结果，不让用户干等。
-      timeoutMs: 15000,
+      format: 'json',
+      // 视觉模型推理慢；warmup 后正常推理 5–20s，留 60s 给 8GB 显存的余量。
+      // 启动时已预热（server.js warmupVisionModel），首请求不再承担冷启动 30–60s。
+      timeoutMs: 60000,
     })
     const text = generated.answer.replace(/^```json|```$/g, '').trim()
     let parsed = null
