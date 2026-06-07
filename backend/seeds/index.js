@@ -253,6 +253,18 @@ async function main() {
       { solarTerm: '大雪', month: 12, cropType: '小麦', activity: '防冻保苗', description: '寒潮前关注墒情，避免田间积水，冻后按苗情分类采取恢复措施。' },
       { solarTerm: '冬至', month: 12, cropType: '果树', activity: '冬季修剪', description: '落叶果树适度修剪，清理病枝落叶，工具消毒后再转株操作。' },
       { solarTerm: '冬至', month: 12, cropType: '通用', activity: '农资盘点与储藏', description: '检查种子、肥料和农药储藏条件，分类存放并核对标签和有效期。' },
+      { solarTerm: '雨水', month: 2, cropType: '茶叶', activity: '早春催芽追肥', description: '春梢萌动前结合墒情追施速效肥，浅施覆土并清沟排湿，促进春茶芽头整齐萌发。' },
+      { solarTerm: '清明', month: 4, cropType: '茶叶', activity: '春茶开采', description: '按一芽一叶或适制标准分批采摘，避开雨水和露水重时段，采后及时摊青保鲜。' },
+      { solarTerm: '立夏', month: 5, cropType: '茶叶', activity: '春茶后修剪', description: '春茶采摘结束后轻修剪蓬面，剪除弱枝和病虫枝，配合补肥恢复树势。' },
+      { solarTerm: '大暑', month: 7, cropType: '茶叶', activity: '夏秋茶病虫管理', description: '高温多雨期加强茶小绿叶蝉、茶炭疽病等巡查，达到防治指标后按标签和农技指导用药。' },
+      { solarTerm: '寒露', month: 10, cropType: '茶叶', activity: '秋季施基肥', description: '结合开沟深施有机肥和配方肥，施后覆土保墒，为越冬和来年春茶积累养分。' },
+      { solarTerm: '大雪', month: 12, cropType: '茶叶', activity: '冬季封园清园', description: '清除病叶枯枝和园内杂草，修整排水沟，低温来临前做好覆盖、防冻和封园管理。' },
+      { solarTerm: '惊蛰', month: 3, cropType: '猕猴桃', activity: '萌芽肥与清园', description: '萌芽前清除病残枝叶并保护剪口，结合树势追施萌芽肥，保持架面通风和土壤墒情。' },
+      { solarTerm: '谷雨', month: 4, cropType: '猕猴桃', activity: '疏蕾与花前管理', description: '按结果枝强弱疏除过密花蕾，整理绑蔓，花前保持水分稳定并预防低温阴雨影响开花。' },
+      { solarTerm: '小满', month: 5, cropType: '猕猴桃', activity: '花期授粉与疏果', description: '盛花期抢晴人工辅助授粉，坐果后按负载量疏除畸形果和过密果，保证果个均匀。' },
+      { solarTerm: '夏至', month: 6, cropType: '猕猴桃', activity: '膨大期追肥控梢', description: '幼果膨大期追施钾钙等配方肥，及时摘心控旺和绑蔓，减少枝叶郁闭与落果。' },
+      { solarTerm: '白露', month: 9, cropType: '猕猴桃', activity: '成熟采收', description: '根据干物质、可溶性固形物和果面状态分批采收，轻拿轻放，采后及时预冷分级。' },
+      { solarTerm: '立冬', month: 11, cropType: '猕猴桃', activity: '采后基肥与冬剪准备', description: '采后尽早施足有机基肥并补充中微量元素，落叶后规划冬剪，清理病残体降低越冬病源。' },
     ],
   })
 
