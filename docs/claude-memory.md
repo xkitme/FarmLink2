@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-06-07（下午）· Claude+Codex 并行：补 KB + 识图 release 真机实测 + 截图幻觉发现
+
+### 状态：本地/origin/main 同步在 `5bc20932`。本会话 2 个 commit 全 push。工作树仅剩未跟踪 `.playwright-mcp/` `design_assets/` `.runtime/`。后端/ollama/web(5000 release) 全程在跑（demo 可直接用）。
+
+分工：Codex 补病害 KB（后台自跑+自验），Claude 起全栈做 release 浏览器真机实测。两轨零文件重叠。
+
+**Codex（commit `aef5b598`）补病害 KB 14 条**：`backend/seeds/index.js` 加苹果黑星/白粉/褐斑、香蕉黑斑/炭疽/叶斑、番茄灰霉/叶霉、黄瓜炭疽/细菌性角斑、草莓灰霉/白粉、马铃薯晚疫/早疫，全是 minicpm-v 实测会吐但旧库没有的中文病名。`resolveDiseaseLabel` 精确匹配 `diseaseName`/`modelLabel`，补后命中。
+
+**Claude commit `5bc20932`**：首页搜索栏上移到天气问候卡之前（用户原有未提交改动，release 浏览器验过）。
+
+### ✅ issue #17.1 识图 release 真机实测全过（farmer 账号，真 minicpm-v:8b 视觉）
+- **苹果黑星病图**（PlantVillage 真病害样本）→ `苹果黑星病` recognized=true、conf **0.85（API）/95%（浏览器卡）**、`knownDisease.modelLabel=apple_scab id=363`（**正是今天新补的 KB 条目，旧库这里必是 null**）。浏览器卡片：`VERIFIED` 徽章 + 反馈三按钮「准/不准/?不确定」+ knownDisease 命中才出的「生成定制化施药建议」CTA + 用户气泡缩略图 + 删除按钮，全部正常。
+- **反馈按钮**：点「准」→ `POST /ai/detect-feedback` 200，按钮变绿选中态；后端 `/ai/status` 的 `detect24h.feedbackCorrect` +1、`detectFeedbackTotal` 同步。
+- **status 监控**：`ollama.visionWarm=true`（minicpm-v 4.9GB 在显存）、`detect24h{total,recognized,recognizeRate}` 全部真值刷新。
+
+### ⚠️ 重要新发现：小视觉模型对「非植物垃圾输入」会**自信地幻觉一个病**（精度/召回硬跷跷板，本会话未改 prompt）
+- 上传一张**纯 App UI 截图**（农户个人页，根本不是植物）→ minicpm-v 返回 **「水稻稻瘟病 95% VERIFIED」**。这正是批 64 想根治的「确信地说错」。诚实兜底只在 ① ollama 离线 ② 模型**自己**说无法识别 时生效；模型对垃圾输入不自报无法识别时，两道后端护栏（conf<0.4 降级、纯英文 label 不在 KB 降级）都绕过（它给的是 0.95 + 中文病名且在 KB）。
+- **试过 prompt 加固**（扩约束#2 非农业枚举 + 加「示例4 截图→无法识别」few-shot）：截图能稳定修成「无法识别」3/3，**但同一改动把真苹果黑星病也压到 conf 0.3 → 被 <0.4 护栏砍成无法识别**（召回崩）。隔离验证：**原版 prompt 苹果 4/4 = 0.85 稳，任何截图加固都拖垮真植物召回**。→ **结论：已 `git stash drop` 丢弃 prompt 改动，保留原版**。原版对 demo 招牌路径（真叶片→95%）调得好，截图幻觉是窄边际风险（demo 输入受控，演示者拍真叶片）。
+- **下一步若要根治截图幻觉**（不伤召回）：不能靠 prompt 单调，需要 ① 加一个独立「这是不是植物照片」前置判别（轻分类器/单独问模型 yes-no 再决定走不走识别）② 或 demo 用更大视觉模型（minicpm-v:8b 已是单机 8GB 极限）。优先级看用户对「演示中有人上传非植物图」的容忍度。
+
+### 实测手法备忘
+- 测试图用 PlantVillage 数据集（GitHub raw，URL 要 `urllib.parse.quote` 编码空格/三下划线），下到 `.runtime/apple-scab.jpg` 等。
+- Playwright 驱动 Flutter 识图：`+` 是 canvas 用 `page.mouse.click(255,829)` → 弹 action sheet → 点「从相册上传」`(375,755)` → 触发 filechooser → `browser_file_upload` 传绝对路径。token 注入后 about:blank 整页重载（见 reference 记忆）。
+- ollama 模型在 **E: 盘**（`OLLAMA_MODELS=E:\Ollama\models`），E: 是可移动盘，**拔了 ollama 全挂**（server 反复 exit）。demo 前确认 E: 在位。
+
+---
+
 ## 2026-06-07 · Claude+Codex 并行 AI 识图链路全面收紧（已合并 6 条 commit）
 
 ### 状态：本地/origin/main 同步在 `c6ef1c6e` 之后（Codex 任务 3 在跑中可能再 +1 commit）。工作树只剩用户原有 `home_page.dart` 搜索栏排版改动 + 未跟踪 `.playwright-mcp/` `.runtime/codex-task-*.md`。
