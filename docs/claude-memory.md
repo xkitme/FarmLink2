@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-06-07（深夜·自主）· Claude+Codex 并行：通宵 QA 扫描 + KB 广度扩充（用户睡前交代，明早 review）
+
+### 状态：本地/origin/main 同步在 `bd8f36be` 之后（本条目对应的 docs commit 再 +1）。后端/ollama/web(5000 release) 全程在跑。工作树仅未跟踪 `.playwright-mcp/` `design_assets/`（QA 截图已清）。
+
+用户睡前要求「继续派任务，你和 Codex 一起做，明早再 review」。分工零文件重叠：
+
+**Codex（commit `bd8f36be`）KB 广度扩充 26 条**：`backend/seeds/index.js` 加茶叶4/猕猴桃3/梨3/茄子3/菜豆3/西瓜3/生姜2/大蒜葱3/莲藕2，覆盖**蒲江本地特产**（茶、猕猴桃）+ 常见菜果。`diseaseKnowledge` 总数 54→**94**。Codex 用自己 subagent 拆活、自验 seed+query、自己 commit+push。Claude 复核 DB：总数 94，茶炭疽病/西瓜枯萎病等新条目在。
+
+**Claude · release 浏览器全流程 QA（docs/65-通宵QA报告.md）**：Playwright 真机走查全部核心页（home/ai文字问答/识图/data/agri/machinery/market/policy/life/disaster/publish/messages/profile/all + 5 tab）。**结论：app 很稳，无需改代码的客观 bug，无控制台报错**。
+- ✅ AI 文字问答 release 确认：流式逐字 + **markdown 干净无 `**`/`***`**（#17.2/#17.3 再确认）。
+- ✅ AI 识图两分支 release 确认：真识别（苹果黑星病95% VERIFIED+反馈+建档CTA）/ 截图→诚实「未能识别」卡（植物前置门生效）。
+- ⚠️ **3 个观察项没擅改**（主观/数据，等用户拍板，详见 docs/65）：
+  1. **运维（重要）**：qwen2.5:7b 文本模型也从 E: 冷加载 ~160s（首问流式光标转 ~80s 才出字）。demo 前两个模型都要预热。
+  2. 集市 `/market` 商品图疑似种子占位复用：「张大叔…柑橘」等显示农户肖像不是产品图。
+  3. 灾害 `/disaster` 预警卡【橙】【黄】【蓝】都红底，没按等级配色。
+
+### 给用户的 review 清单（明早）
+1. docs/65 里 3 个观察项拍板（要不要改商品图/预警配色；demo 预热是操作不是代码）。
+2. **issue #16/#17 可以关了**：#16 动画=debug 产物、卡片迁移4批完；#17 识图（真识别+诚实兜底+植物门+反馈+监控）、markdown、流式、数据全部 release 实测过。建议你 close。
+3. 本夜共 4 commit（Claude 3 + Codex 1）全在 origin/main，可拉下来在比赛机复验。
+
+---
+
 ## 2026-06-07（下午）· Claude+Codex 并行：补 KB + 识图 release 真机实测 + 截图幻觉发现
 
 ### 状态：本地/origin/main 同步在 `5bc20932`。本会话 2 个 commit 全 push。工作树仅剩未跟踪 `.playwright-mcp/` `design_assets/` `.runtime/`。后端/ollama/web(5000 release) 全程在跑（demo 可直接用）。
