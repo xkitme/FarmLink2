@@ -64,6 +64,17 @@ GET  /api/v1/ai/status
 
 ---
 
+## 2026-06-07 · Codex 收尾 AI 运维页识别率 / 反馈 / 暖机状态 / 最近识别
+
+### 状态：只改 admin 页面与交接簿，未触碰 backend/src / Flutter / prisma
+
+用户指定本批只改 `backend/admin/src/pages/AiOpsPage.jsx`，并要求 admin build 后 commit + push：
+- **K · 指标卡补齐**：AI 运维中心顶部统计从 4 个扩到 6 个，`Row` 改为 `xs={24} sm={12} lg={4}`；新增「24h 识别率」（`detect24h.recognizeRate` 百分比，副标题 `24h 共 N 条`）和「反馈准确率」（24h correct / incorrect 计算，无反馈时 `-`，副标题使用 `detectFeedbackTotal`）。
+- **L · 模型暖机 Tag**：模型配置表在 `type` 列 render 内追加暖机 Tag；问答模型读取 `status.ollama.primaryWarm`，视觉模型读取 `status.ollama.visionWarm`，检索模型 bge-m3 不展示 warm 状态；`modelRows.type` 仍保持普通字符串。
+- **M · 最近识别记录**：`load()` 增加 `/admin/resource/aiDetectRecord/list?pageNum=1&pageSize=6`，新增「最近识别记录」Card；表格展示图片、结果标签、置信度、反馈与时间。图片 URL 使用 admin request 的 `API_BASE` 解析服务端 origin 后拼 `/uploads/...`，不硬编码 `localhost:8000`，缺图或加载失败显示「无图」占位。
+- **验证**：`cd backend/admin && npm run build` 通过，退出码 0；Vite 仅提示 chunk 大于 500 kB 的体积 warning，非本批新增阻断。
+---
+
 ## 2026-06-07 · Codex 收尾 AI 识图历史缩略图 + 反馈按钮
 
 ### 状态：窄范围前端收尾，未改 backend / prisma

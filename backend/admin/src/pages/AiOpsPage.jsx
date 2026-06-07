@@ -24,7 +24,7 @@ import {
   message,
 } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
-import { api } from '../api/request.js'
+import { API_BASE, api } from '../api/request.js'
 
 const sceneOptions = [
   { label: '综合知识', value: 'GENERAL' },
@@ -45,11 +45,61 @@ function compactText(value, limit = 64) {
   return text.length > limit ? `${text.slice(0, limit)}...` : text
 }
 
+function formatDateTime(value) {
+  return value ? String(value).slice(0, 19).replace('T', ' ') : '-'
+}
+
+function formatPercent(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return '-'
+  return `${(number * 100).toFixed(1)}%`
+}
+
+function formatConfidence(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return '-'
+  const percent = number <= 1 ? number * 100 : number
+  return `${percent.toFixed(0)}%`
+}
+
+function buildUploadUrl(imageUrl) {
+  if (!imageUrl) return ''
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl
+  const apiOrigin = new URL(API_BASE, window.location.origin).origin
+  const path = String(imageUrl).startsWith('/') ? imageUrl : `/${imageUrl}`
+  return `${apiOrigin}${path}`
+}
+
+const detectImageStyle = {
+  width: 48,
+  height: 48,
+  borderRadius: 4,
+  objectFit: 'cover',
+}
+
+const detectImageFallbackStyle = {
+  ...detectImageStyle,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: '#f5f5f5',
+  color: '#999',
+  fontSize: 12,
+}
+
+function DetectImage({ imageUrl }) {
+  const [failed, setFailed] = useState(false)
+  const src = buildUploadUrl(imageUrl)
+  if (!src || failed) return <span style={detectImageFallbackStyle}>无图</span>
+  return <img src={src} style={detectImageStyle} alt="识别图片" onError={() => setFailed(true)} />
+}
+
 export default function AiOpsPage() {
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState(null)
   const [version, setVersion] = useState(null)
   const [qaRows, setQaRows] = useState([])
+  const [detectRows, setDetectRows] = useState([])
   const [switches, setSwitches] = useState([])
   const [keyword, setKeyword] = useState('水稻补贴')
   const [scene, setScene] = useState('POLICY')
@@ -59,15 +109,17 @@ export default function AiOpsPage() {
   async function load() {
     setLoading(true)
     try {
-      const [aiStatus, modelVersion, qa, sw] = await Promise.all([
+      const [aiStatus, modelVersion, qa, sw, detect] = await Promise.all([
         api.get('/ai/status'),
         api.get('/ai/model/version'),
         api.get('/admin/resource/aiQaRecord/list', { pageNum: 1, pageSize: 6 }),
         api.get('/admin/api-switch/list', { category: 'AI功能', pageNum: 1, pageSize: 20 }),
+        api.get('/admin/resource/aiDetectRecord/list', { pageNum: 1, pageSize: 6 }),
       ])
       setStatus(aiStatus)
       setVersion(modelVersion)
       setQaRows(qa.records || [])
+      setDetectRows(detect.records || [])
       setSwitches(sw.records || [])
     } finally {
       setLoading(false)
@@ -108,29 +160,70 @@ export default function AiOpsPage() {
 
   const modelRows = useMemo(() => {
     const current = version?.current || {}
+    const ollama = status?.ollama || {}
     return [
-      { key: 'primaryModel', type: '问答模型', model: current.primaryModel },
-      { key: 'visionModel', type: '视觉模型', model: current.visionModel },
+      { key: 'primaryModel', type: '问答模型', model: current.primaryModel, warm: Boolean(ollama.primaryWarm) },
+      { key: 'visionModel', type: '视觉模型', model: current.visionModel, warm: Boolean(ollama.visionWarm) },
       { key: 'embedModel', type: '检索模型', model: current.embedModel },
     ].filter((item) => item.model)
-  }, [version])
+  }, [status, version])
 
   const modelColumns = [
-    { title: '用途', dataIndex: 'type', width: 120 },
+    {
+      title: '用途',
+      dataIndex: 'type',
+      width: 170,
+      render: (value, row) => (
+        <Space size={6}>
+          <span>{value}</span>
+          {row.warm !== undefined && <Tag color={row.warm ? 'green' : 'default'}>{row.warm ? '已暖机' : '未暖机'}</Tag>}
+        </Space>
+      ),
+    },
     { title: '模型', dataIndex: 'model', render: (value) => <Tag color="blue">{value}</Tag> },
   ]
 
   const installedColumns = [
     { title: '模型名称', dataIndex: 'name', render: (value) => <Typography.Text code>{value}</Typography.Text> },
     { title: '大小', dataIndex: 'size', width: 120, render: formatBytes },
-    { title: '更新时间', dataIndex: 'modifiedAt', width: 180, render: (value) => value ? String(value).slice(0, 19).replace('T', ' ') : '-' },
+    { title: '更新时间', dataIndex: 'modifiedAt', width: 180, render: formatDateTime },
   ]
 
   const qaColumns = [
     { title: '场景', dataIndex: 'scene', width: 100, render: (value) => <Tag>{value}</Tag> },
     { title: '问题', dataIndex: 'question', ellipsis: true, render: (value) => compactText(value, 42) },
     { title: '模型', dataIndex: 'modelUsed', width: 180, ellipsis: true },
-    { title: '时间', dataIndex: 'createdAt', width: 170, render: (value) => value ? String(value).slice(0, 19).replace('T', ' ') : '-' },
+    { title: '时间', dataIndex: 'createdAt', width: 170, render: formatDateTime },
+  ]
+
+  const detectColumns = [
+    {
+      title: '图片',
+      dataIndex: 'imageUrl',
+      width: 70,
+      render: (value) => <DetectImage imageUrl={value} />,
+    },
+    {
+      title: '识别结果',
+      dataIndex: 'resultLabel',
+      ellipsis: true,
+      render: (value) => <Tag color={value === '无法识别' ? 'red' : 'green'}>{value || '未知'}</Tag>,
+    },
+    { title: '置信度', dataIndex: 'confidence', width: 90, render: formatConfidence },
+    {
+      title: '反馈',
+      dataIndex: 'feedback',
+      width: 80,
+      render: (value) => {
+        if (value === null || value === undefined) return '-'
+        const feedback = Number(value)
+        if (feedback === 1) return <Tag color="green">准</Tag>
+        if (feedback === 0) return <Tag color="red">不准</Tag>
+        if (feedback === 2) return <Tag color="gold">不确定</Tag>
+        return '-'
+      },
+    },
+    { title: '时间', dataIndex: 'createdAt', width: 170, render: formatDateTime },
   ]
 
   const referenceColumns = [
@@ -143,7 +236,12 @@ export default function AiOpsPage() {
   if (loading) return <div className="center-loading"><Spin size="large" /></div>
 
   const counters = status?.counters || {}
+  const detect24h = status?.detect24h || {}
   const online = Boolean(status?.ollama?.online)
+  const feedbackTotal24h = (detect24h.feedbackCorrect || 0) + (detect24h.feedbackIncorrect || 0)
+  const feedbackAccuracy = feedbackTotal24h
+    ? `${((detect24h.feedbackCorrect / feedbackTotal24h) * 100).toFixed(1)}%`
+    : '-'
 
   return (
     <Space direction="vertical" size={16} className="page-stack">
@@ -162,16 +260,22 @@ export default function AiOpsPage() {
       </div>
 
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={4}>
           <Card className="metric-card"><Statistic title="问答记录" value={counters.qaCount || 0} suffix="条" prefix={<RobotOutlined />} /></Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={4}>
           <Card className="metric-card"><Statistic title="识别记录" value={counters.detectCount || 0} suffix="条" prefix={<CheckCircleOutlined />} /></Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={4}>
+          <Card className="metric-card"><Statistic title="24h 识别率" value={formatPercent(detect24h.recognizeRate || 0)} suffix={`24h 共 ${detect24h.total || 0} 条`} prefix={<CheckCircleOutlined />} /></Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card className="metric-card"><Statistic title="反馈准确率" value={feedbackAccuracy} suffix={`共 ${counters.detectFeedbackTotal || 0} 条反馈`} prefix={<CheckCircleOutlined />} /></Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
           <Card className="metric-card"><Statistic title="知识切片" value={counters.policyChunks || 0} suffix="段" prefix={<SearchOutlined />} /></Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={4}>
           <Card className="metric-card"><Statistic title="AI 开关" value={switches.filter((item) => item.enabled).length} suffix={`/ ${switches.length}`} prefix={<ApiOutlined />} /></Card>
         </Col>
       </Row>
@@ -219,6 +323,11 @@ export default function AiOpsPage() {
         <Col xs={24} xl={12}>
           <Card title="最近问答记录" className="panel-card">
             <Table rowKey="id" size="small" columns={qaColumns} dataSource={qaRows} pagination={false} />
+          </Card>
+        </Col>
+        <Col xs={24} xl={12}>
+          <Card title="最近识别记录" className="panel-card">
+            <Table rowKey="id" size="small" columns={detectColumns} dataSource={detectRows} pagination={false} scroll={{ x: 640 }} />
           </Card>
         </Col>
         <Col xs={24} xl={12}>
