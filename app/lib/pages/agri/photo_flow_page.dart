@@ -54,14 +54,27 @@ class _PhotoFlowPageState extends State<PhotoFlowPage> {
     final image = _image;
     if (image == null) return;
     try {
+      // 走真视觉链路 /ai/image/detect（minicpm-v + JSON 强制 + 中文 few-shot），
+      // 不再用 /agri/disease/detect 的随机抽兜底——香蕉→番茄病害那种胡说已修复。
+      // 后端 imageAnalyze 把识别结果包在 data.result 里，知识库命中时附带 knownDisease。
       final data = _map(await ApiClient.upload(
-        '/agri/disease/detect',
+        '/ai/image/detect',
         image,
         _imageName ?? 'leaf.jpg',
       ));
+      final nested = _map(data['result']);
+      final flat = nested.isNotEmpty ? Map<String, dynamic>.from(nested) : data;
+      // 把 knownDisease 透传成旧版的 disease 键，本页 _reportCard / _archive 既有
+      // 字段读法无需大改。adviceText 也兼容映射到 advice。
+      if (flat['disease'] == null && flat['knownDisease'] != null) {
+        flat['disease'] = flat['knownDisease'];
+      }
+      if (flat['advice'] == null && flat['adviceText'] != null) {
+        flat['advice'] = flat['adviceText'];
+      }
       if (!mounted) return;
       setState(() {
-        _result = data;
+        _result = flat;
         _detecting = false;
       });
     } catch (error) {
@@ -71,13 +84,31 @@ class _PhotoFlowPageState extends State<PhotoFlowPage> {
     }
   }
 
+  bool get _recognized {
+    final r = _result;
+    if (r == null) return false;
+    final flag = r['recognized'];
+    if (flag is bool) return flag;
+    final label = '${r['resultLabel'] ?? ''}';
+    final conf = (r['confidence'] as num?)?.toDouble() ?? 0;
+    return label.isNotEmpty && label != '无法识别' && conf > 0;
+  }
+
   Future<void> _archive() async {
     final result = _result;
     if (result == null || _archiving) return;
     final disease = _map(result['disease']);
     final label =
         '${result['resultLabel'] ?? disease['diseaseName'] ?? '疑似病害'}';
-    final medicine = '${disease['medicineAdvice'] ?? '请按农药标签推荐剂量施用'}';
+    // 用药描述优先取 KB 的 medicineAdvice（结构化、含登记药名），其次取视觉模型
+    // 给出的 adviceText（识别成功但 KB 未收录的病害走这里），最后兜底通用文案。
+    final knownMedicine = '${disease['medicineAdvice'] ?? ''}'.trim();
+    final aiAdvice = '${result['adviceText'] ?? result['advice'] ?? ''}'.trim();
+    final medicine = knownMedicine.isNotEmpty
+        ? knownMedicine
+        : aiAdvice.isNotEmpty
+            ? aiAdvice
+            : '请按农药标签推荐剂量施用';
     final cropType = '${disease['cropType'] ?? ''}';
     final confirmed = await _confirmArchive(label, medicine);
     if (confirmed != true || !mounted) return;
@@ -241,25 +272,28 @@ class _PhotoFlowPageState extends State<PhotoFlowPage> {
             const SizedBox(height: 16),
             _reportCard(),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: _archiving ? null : _archive,
-                icon: _archiving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(Icons.fact_check_outlined),
-                label: Text(_archiving ? '建档中' : '一键建档并提醒复查'),
+            // 「无法识别」不弹建档——避免把胡判的病害写入农事日历。
+            if (_recognized) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _archiving ? null : _archive,
+                  icon: _archiving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.fact_check_outlined),
+                  label: Text(_archiving ? '建档中' : '一键建档并提醒复查'),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
+            ],
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -408,6 +442,46 @@ class _PhotoFlowPageState extends State<PhotoFlowPage> {
 
   Widget _reportCard() {
     final result = _result!;
+
+    // 「无法识别」分支：去 VERIFIED 徽章/置信度/建档，避免把胡判结果展示成权威诊断。
+    if (!_recognized) {
+      final advice = '${result['adviceText'] ?? result['advice'] ?? '未能识别出明确的病害特征，建议重新拍摄叶片正反面或茎秆果实清晰照片。'}';
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(R.md),
+          border: Border.all(color: AppColors.outlineVariant, width: 1),
+          boxShadow: AppColors.ambientShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.help_outline,
+                    color: AppColors.onSurfaceVariant, size: 19),
+                SizedBox(width: 6),
+                Text('智能识别 · 未能识别',
+                    style: TextStyle(
+                      color: AppColors.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    )),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(advice,
+                style: const TextStyle(
+                  color: AppColors.onSurfaceVariant,
+                  fontSize: 13,
+                  height: 1.5,
+                )),
+          ],
+        ),
+      );
+    }
+
     final disease = _map(result['disease']);
     final label =
         '${result['resultLabel'] ?? disease['diseaseName'] ?? '疑似病害'}';

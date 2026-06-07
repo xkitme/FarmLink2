@@ -550,12 +550,26 @@ export async function imageAnalyze(req, res) {
       if (confidence > 1) confidence = confidence / 100
       let adviceText = String(parsed.adviceText || parsed.advice || '').trim()
 
-      // 病害场景：尝试把视觉模型可能输出的英文 modelLabel 映射回中文 diseaseName。
+      // 病害场景：尝试把视觉模型可能输出的英文 modelLabel 映射回中文 diseaseName，
+      // 命中时把整条 DiseaseKnowledge 透传出去（knownDisease），让 PhotoFlowPage
+      // 的建档闭环可以读到 cropType / medicineAdvice / prevention 等完整字段。
+      let knownDisease = null
       if (detectType === 'DISEASE' && rawLabel && rawLabel !== '无法识别') {
         const matched = await resolveDiseaseLabel(rawLabel)
         if (matched) {
           rawLabel = matched.diseaseName
           if (!adviceText) adviceText = matched.prevention || ''
+          knownDisease = {
+            id: matched.id,
+            diseaseName: matched.diseaseName,
+            cropType: matched.cropType,
+            category: matched.category,
+            symptoms: matched.symptoms,
+            cause: matched.cause,
+            prevention: matched.prevention,
+            medicineAdvice: matched.medicineAdvice,
+            modelLabel: matched.modelLabel,
+          }
         } else if (/^[a-zA-Z0-9_\-\s]+$/.test(rawLabel)) {
           // 知识库找不到、又是纯英文/下划线——视觉模型在硬编 ID，按「无法识别」处理。
           const f = unavailableImageResult({ detectType, reason: 'unknown-english-label' })
@@ -579,6 +593,7 @@ export async function imageAnalyze(req, res) {
         recognized: rawLabel !== '无法识别' && confidence > 0,
         adviceText,
         detail: parsed.detail,
+        knownDisease,
       }
     }
     serviceMode = '图像识别服务'
