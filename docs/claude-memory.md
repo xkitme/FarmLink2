@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-06-07 · Codex 收尾 AI 识图等待态 + 图片预览
+
+### 状态：基于 HEAD `aba193bc` 做窄范围前端收尾，保留既有未提交改动不碰
+
+用户要求只改 `app/lib/pages/ai/ai_chat_page.dart`，补两个 AI 识图 UX 点，并回填 `docs/46b-AI双层重构.md` 与本交接簿：
+
+- **识图等待态**：`_pickAndDetect` 发送图片后，用户消息后立即追加 streaming bot 消息「正在识别图片内容...」；新增 `_ChatMessage.subText`，用 `Timer.periodic(const Duration(seconds: 1))` 每秒刷新「已等待 Ns」。等待 12s 后切换为本机视觉模型冷启动提示，说明首次识图通常需要 30-60s。识别成功/失败后替换原 bot 消息，`finally` 中取消 timer。
+- **图片预览**：用户气泡内 160×160 缩略图增加点击预览；用 `showDialog(barrierColor: Colors.black87, barrierDismissible: true)` + `InteractiveViewer` + `Image.memory(fit: BoxFit.contain)`，右上角白色关闭按钮，未引入 `photo_view`。
+- **验证**：`cd D:\dgitc_project\InkFlow\app; C:\dev\flutter\bin\flutter.bat analyze lib/pages/ai` 通过，输出 `No issues found! (ran in 2.4s)`。
+- **工作树注意**：进入本批前已有非本批改动 `app/lib/pages/home/home_page.dart` 以及未跟踪 `.playwright-mcp/`、`design_assets/`；本批不应暂存或提交它们。
+
+---
+
 ## 2026-06-07 · Claude+Codex 并行 session（批4迁移 + 动画诊断 + #17 实测）→ 用户睡前自主收尾后关机
 
 ### 状态：本地 main / origin/main 均在 HEAD `b9afcf1b`（批4），工作树仅剩未跟踪临时文件（已清）。本会话结束后按用户指令 `shutdown /s` 关机。

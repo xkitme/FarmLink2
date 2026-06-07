@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -307,6 +308,8 @@ class _AiChatPageState extends State<AiChatPage> {
 
   Future<void> _pickAndDetect(ImageSource source) async {
     if (_detecting || _sending) return;
+    Timer? waitTimer;
+    int? botMessageIndex;
     try {
       final image = await _picker.pickImage(
         source: source,
@@ -326,13 +329,30 @@ class _AiChatPageState extends State<AiChatPage> {
         ));
         _messages.add(_ChatMessage(
           fromUser: false,
-          text: '识别中...',
+          text: '正在识别图片内容...',
+          subText: _detectWaitingText(0),
           scene: _scene,
           streaming: true,
         ));
+        botMessageIndex = _messages.length - 1;
         _detecting = true;
       });
       _scrollToBottom(animate: animateScroll);
+
+      final startedAt = DateTime.now();
+      waitTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted || botMessageIndex == null) return;
+        final index = botMessageIndex!;
+        if (index < 0 || index >= _messages.length) return;
+        final elapsed = DateTime.now().difference(startedAt).inSeconds;
+        setState(() {
+          final current = _messages[index];
+          if (!current.streaming) return;
+          _messages[index] = current.copyWith(
+            subText: _detectWaitingText(elapsed),
+          );
+        });
+      });
 
       final data = await ApiClient.upload('/ai/image/detect', bytes, image.name)
           as Map<String, dynamic>;
@@ -348,12 +368,15 @@ class _AiChatPageState extends State<AiChatPage> {
       final savedThreadId = _int(saved['threadId']);
       if (!mounted) return;
       setState(() {
-        _messages[_messages.length - 1] = _ChatMessage(
-          fromUser: false,
-          text: result.summaryText,
-          scene: _scene,
-          detect: result,
-        );
+        final index = botMessageIndex ?? _messages.length - 1;
+        if (index >= 0 && index < _messages.length) {
+          _messages[index] = _ChatMessage(
+            fromUser: false,
+            text: result.summaryText,
+            scene: _scene,
+            detect: result,
+          );
+        }
         // 同 _send：首次识别后服务端返回 threadId 仅在页内记录、不再导航，
         // 避免重建本页、重放进入转场并重新拉取历史。
         if (_threadId == null && savedThreadId > 0) {
@@ -364,19 +387,30 @@ class _AiChatPageState extends State<AiChatPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages[_messages.length - 1] = _ChatMessage(
-          fromUser: false,
-          text: '识别失败，请稍后再试。',
-          scene: _scene,
-        );
+        final index = botMessageIndex;
+        if (index != null && index >= 0 && index < _messages.length) {
+          _messages[index] = _ChatMessage(
+            fromUser: false,
+            text: '识别失败，请稍后再试。',
+            scene: _scene,
+          );
+        }
       });
       toast(context, actionErrorMessage('识别', e), error: true);
     } finally {
+      waitTimer?.cancel();
       if (mounted) {
         setState(() => _detecting = false);
         _requestInputFocus();
       }
     }
+  }
+
+  String _detectWaitingText(int seconds) {
+    if (seconds >= 12) {
+      return '已等待 ${seconds}s，本机视觉模型冷启动中，首次识图通常需要 30-60s。';
+    }
+    return '已等待 ${seconds}s，视觉模型通常需要 30-60s。';
   }
 
   void _askFollowUp(String question) {
@@ -678,6 +712,17 @@ class _AiChatPageState extends State<AiChatPage> {
               ],
             ],
           ),
+          if (msg.subText != null && msg.subText!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              msg.subText!,
+              style: const TextStyle(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+                height: 1.45,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
             _time(msg.createdAt),
@@ -898,13 +943,16 @@ class _AiChatPageState extends State<AiChatPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (msg.image != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(R.sm),
-                    child: Image.memory(
-                      msg.image!,
-                      width: 160,
-                      height: 160,
-                      fit: BoxFit.cover,
+                  GestureDetector(
+                    onTap: () => _showImagePreview(msg.image!),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(R.sm),
+                      child: Image.memory(
+                        msg.image!,
+                        width: 160,
+                        height: 160,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -940,6 +988,41 @@ class _AiChatPageState extends State<AiChatPage> {
           child: const Icon(Icons.person, color: AppColors.secondary, size: 18),
         ),
       ],
+    );
+  }
+
+  void _showImagePreview(Uint8List bytes) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      barrierDismissible: true,
+      builder: (dialogContext) => Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 5,
+                child: Center(
+                  child: Image.memory(bytes, fit: BoxFit.contain),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 16,
+              child: IconButton(
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black.withValues(alpha: 0.45),
+                ),
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(dialogContext),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1039,8 +1122,8 @@ class _MarkdownText extends StatelessWidget {
       if (RegExp(r'^([-*_=]\s*){3,}$').hasMatch(t)) {
         blocks.add(const Padding(
           padding: EdgeInsets.symmetric(vertical: 6),
-          child: Divider(
-              height: 1, thickness: 1, color: AppColors.outlineVariant),
+          child:
+              Divider(height: 1, thickness: 1, color: AppColors.outlineVariant),
         ));
         continue;
       }
@@ -1078,7 +1161,8 @@ class _MarkdownText extends StatelessWidget {
                       color: baseStyle.color, shape: BoxShape.circle),
                 ),
               ),
-              Expanded(child: RichText(text: _inline(bullet.group(1)!, baseStyle))),
+              Expanded(
+                  child: RichText(text: _inline(bullet.group(1)!, baseStyle))),
             ],
           ),
         ));
@@ -1204,6 +1288,7 @@ class _StreamingCursorState extends State<_StreamingCursor>
 class _ChatMessage {
   final bool fromUser;
   final String text;
+  final String? subText;
   final String? scene;
   final Uint8List? image;
   final _DetectResult? detect;
@@ -1213,6 +1298,7 @@ class _ChatMessage {
   _ChatMessage({
     required this.fromUser,
     required this.text,
+    this.subText,
     this.scene,
     this.image,
     this.detect,
@@ -1220,9 +1306,11 @@ class _ChatMessage {
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
-  _ChatMessage copyWith({String? text, bool? streaming}) => _ChatMessage(
+  _ChatMessage copyWith({String? text, String? subText, bool? streaming}) =>
+      _ChatMessage(
         fromUser: fromUser,
         text: text ?? this.text,
+        subText: subText ?? this.subText,
         scene: scene,
         image: image,
         detect: detect,

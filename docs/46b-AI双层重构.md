@@ -855,3 +855,6 @@ TextField(
 - 后端：新增 `DELETE /ai/qa/records` 与 `DELETE /ai/qa/records/:id`，分别用于清空当前用户 AI 问答记录和删除单条记录。
 - 诊断卡：图片识别结果在单会话页渲染为「智能植保诊断报告」绿框卡，包含可信度、建议与两个 CTA。
 - 验证：`node --check backend/src/modules/ai/ai.controller.js backend/src/modules/ai/ai.routes.js` 通过；`flutter analyze lib/pages/ai lib/core/router.dart` 通过；`flutter analyze lib` 通过。
+- 2026-06-07 补充：图片识别发送后，bot 气泡先显示「正在识别图片内容...」，通过 `_ChatMessage.subText` + `Timer.periodic` 每秒刷新已等待秒数；等待 12s 后提示本机视觉模型冷启动，识别成功/失败后由最终结果替换，并在 `finally` 取消 timer。
+- 2026-06-07 补充：用户上传图片缩略图保持 160×160，点击后使用 `showDialog` + `InteractiveViewer` 打开黑底预览，右上角关闭；未引入 `photo_view`。
+- 2026-06-07 验证：`cd app; C:\dev\flutter\bin\flutter.bat analyze lib/pages/ai` 通过，输出 `No issues found! (ran in 2.4s)`。
