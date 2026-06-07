@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-06-07 · Codex 收尾 AI 识图历史缩略图 + 反馈按钮
+
+### 状态：窄范围前端收尾，未改 backend / prisma
+
+用户指定本批只改 `app/lib/pages/ai/ai_threads_page.dart`、`app/lib/pages/ai/ai_chat_page.dart` 和本交接簿；工作区里其它未提交差异不要混入提交。
+
+- **AI 历史 DETECT 缩略图**：`_Thread` 增加 `imageUrl`；`_load()` 对 `kind == 'DETECT'` 的记录解析 `referencesJson`（字符串 JSON）里的 `imageUrl` / `detect.imageUrl`，再兜底 `record.imageUrl`。`/uploads/xxx.jpg` 会用 `ApiClient.baseUrl` 的服务端 origin 拼成完整网络 URL，不拼 `/api/v1`。历史卡片保留原左侧日期/报告边框逻辑，DETECT 有图时在 preview 左侧显示 48×48 缩略图，含 loading 和 error fallback。
+- **识图反馈按钮**：`_DetectResult` 增加 `recordId`，从 `/ai/image/detect` 返回的 `data.recordId` 读取，并写入 `referencesJson.detect.recordId`，历史打开时可从 `referencesJson.detect` 重建识图卡片。识图成功卡片新增 3 个 32px 胶囊按钮：`准` / `不准` / `? 不确定`，分别 POST `/api/v1/ai/detect-feedback` 的 `correct` / `incorrect` / `unsure`。`_feedbackSent` 按 `recordId` 防重复提交；404/403/参数错误只 toast，不 crash，并允许重试。
+- **重要合同坑**：反馈接口吃的是 `AiDetectRecord.id`（`/ai/image/detect` 的 `recordId`），不是 `/ai/qa/records/detect` 保存到会话后的 `AiQaRecord.id`。后续不要把 QA 记录 id 当反馈 recordId。
+- **验证**：`cd D:\dgitc_project\InkFlow\app; C:\dev\flutter\bin\flutter.bat analyze lib/pages/ai` 通过，输出 `No issues found! (ran in 1.5s)`。
+
+---
+
 ## 2026-06-07 · Codex 收尾 AI 识图等待态 + 图片预览
 
 ### 状态：基于 HEAD `aba193bc` 做窄范围前端收尾，保留既有未提交改动不碰

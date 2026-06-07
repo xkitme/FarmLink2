@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -46,12 +48,14 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
         final scene = _text(record['scene'], fallback: 'GENERAL');
         final createdAt = _date(record['lastMessageAt'] ?? record['createdAt']);
         final messageCount = _int(record['messageCount']);
+        final kind = _detectKind(record);
         list.add(_Thread(
           id: _int(record['threadId'] ?? record['id']),
           title: _truncate(question.isEmpty ? 'AI 对话' : question, 24),
           preview: _truncate(answer, 60),
           scene: scene,
-          kind: _detectKind(record),
+          kind: kind,
+          imageUrl: kind == 'DETECT' ? _detectImageUrlOf(record) : null,
           createdAt: createdAt,
           messageCount: messageCount <= 0 ? 1 : messageCount,
         ));
@@ -103,7 +107,8 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
               child: const Text('取消')),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('清空', style: TextStyle(color: AppColors.error))),
+              child:
+                  const Text('清空', style: TextStyle(color: AppColors.error))),
         ],
       ),
     );
@@ -262,6 +267,7 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
 
   Widget _threadCard(_Thread thread) {
     final isReport = thread.kind == 'REPORT';
+    final showDetectImage = thread.kind == 'DETECT' && thread.imageUrl != null;
     final isToday = DateTime(
             thread.createdAt.year, thread.createdAt.month, thread.createdAt.day)
         .isAtSameMomentAs(DateTime(
@@ -339,22 +345,76 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(
-                thread.preview,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: AppColors.onSurfaceVariant,
+              if (showDetectImage)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _detectThumbnail(thread.imageUrl!),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        thread.preview,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Text(
+                  thread.preview,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _detectThumbnail(String imageUrl) => Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLow,
+          borderRadius: BorderRadius.circular(R.sm),
+          border: Border.all(color: AppColors.outlineVariant, width: 1),
+          boxShadow: AppColors.ambientShadow,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(R.sm),
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return const Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 1.5),
+                ),
+              );
+            },
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.image_outlined,
+              color: AppColors.onSurfaceVariant,
+              size: 22,
+            ),
+          ),
+        ),
+      );
 
   IconData _iconOf(String kind) {
     switch (kind) {
@@ -389,6 +449,38 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
     final scene = _text(record['scene']).toUpperCase();
     if (scene == 'DETECT') return 'DETECT';
     return 'CHAT';
+  }
+
+  static String? _detectImageUrlOf(Map<String, dynamic> record) {
+    final refs = _jsonMap(record['referencesJson']);
+    var imageUrl = _text(refs['imageUrl']);
+    final detect = refs['detect'];
+    if (imageUrl.isEmpty && detect is Map) {
+      imageUrl = _text(detect['imageUrl']);
+    }
+    if (imageUrl.isEmpty) imageUrl = _text(record['imageUrl']);
+    return _absoluteImageUrl(imageUrl);
+  }
+
+  static Map<String, dynamic> _jsonMap(dynamic value) {
+    if (value is Map) return value.map((k, v) => MapEntry('$k', v));
+    if (value is String && value.trim().isNotEmpty) {
+      try {
+        final parsed = jsonDecode(value);
+        if (parsed is Map) return parsed.map((k, v) => MapEntry('$k', v));
+      } catch (_) {}
+    }
+    return {};
+  }
+
+  static String? _absoluteImageUrl(String value) {
+    final raw = value.trim();
+    if (raw.isEmpty) return null;
+    final uri = Uri.tryParse(raw);
+    if (uri != null && uri.hasScheme) return raw;
+    final base = Uri.tryParse(ApiClient.baseUrl);
+    final path = raw.startsWith('/') ? raw : '/$raw';
+    return base == null ? path : base.resolve(path).toString();
   }
 
   static List<Map<String, dynamic>> _recordsOf(dynamic value) {
@@ -426,6 +518,7 @@ class _Thread {
   final String preview;
   final String scene;
   final String kind;
+  final String? imageUrl;
   final DateTime createdAt;
   final int messageCount;
 
@@ -435,6 +528,7 @@ class _Thread {
     required this.preview,
     required this.scene,
     required this.kind,
+    this.imageUrl,
     required this.createdAt,
     required this.messageCount,
   });

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -31,6 +32,7 @@ class _AiChatPageState extends State<AiChatPage> {
   final _scrollCtrl = ScrollController();
 
   final List<_ChatMessage> _messages = [];
+  final Map<int, String> _feedbackSent = {};
   int? _threadId;
   late String _scene;
   bool _loadingHistory = true;
@@ -92,6 +94,7 @@ class _AiChatPageState extends State<AiChatPage> {
         final question = _text(record['question']);
         final answer = _text(record['answer']);
         final createdAt = _date(record['createdAt']);
+        final detect = _detectResultFromRecord(record);
         if (question.isNotEmpty) {
           list.add(_ChatMessage(
             fromUser: true,
@@ -100,11 +103,12 @@ class _AiChatPageState extends State<AiChatPage> {
             createdAt: createdAt,
           ));
         }
-        if (answer.isNotEmpty) {
+        if (answer.isNotEmpty || detect != null) {
           list.add(_ChatMessage(
             fromUser: false,
-            text: answer,
+            text: detect?.summaryText ?? answer,
             scene: scene,
+            detect: detect,
             createdAt: createdAt,
           ));
         }
@@ -357,13 +361,17 @@ class _AiChatPageState extends State<AiChatPage> {
       final data = await ApiClient.upload('/ai/image/detect', bytes, image.name)
           as Map<String, dynamic>;
       final result = _detectResultOf(data);
+      final imageUrl = _text(data['imageUrl']);
       final saved = await ApiClient.post('/ai/qa/records/detect', body: {
         if (_threadId != null) 'threadId': _threadId,
         'question': '请识别这张图片',
         'answer': result.summaryText,
-        'imageUrl': _text(data['imageUrl']),
+        'imageUrl': imageUrl,
         'modelUsed': _text(data['modelUsed'], fallback: 'platform-vision'),
-        'detect': result.toJson(),
+        'detect': {
+          ...result.toJson(),
+          if (imageUrl.isNotEmpty) 'imageUrl': imageUrl,
+        },
       }) as Map<String, dynamic>;
       final savedThreadId = _int(saved['threadId']);
       if (!mounted) return;
@@ -881,6 +889,8 @@ class _AiChatPageState extends State<AiChatPage> {
             ),
           ),
           const SizedBox(height: 12),
+          _detectFeedbackRow(result),
+          const SizedBox(height: 12),
           const Row(
             children: [
               Icon(Icons.checklist_rounded,
@@ -919,6 +929,115 @@ class _AiChatPageState extends State<AiChatPage> {
         ],
       ),
     );
+  }
+
+  Widget _detectFeedbackRow(_DetectResult result) => Row(
+        children: [
+          Expanded(
+            child: _feedbackButton(
+              result: result,
+              feedback: 'correct',
+              label: '准',
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _feedbackButton(
+              result: result,
+              feedback: 'incorrect',
+              label: '不准',
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _feedbackButton(
+              result: result,
+              feedback: 'unsure',
+              label: '? 不确定',
+            ),
+          ),
+        ],
+      );
+
+  Widget _feedbackButton({
+    required _DetectResult result,
+    required String feedback,
+    required String label,
+  }) {
+    final recordId = result.recordId;
+    final sent = recordId == null ? null : _feedbackSent[recordId];
+    final selected = sent == feedback;
+    final enabled = recordId != null && sent == null;
+    return SizedBox(
+      height: 32,
+      child: OutlinedButton(
+        onPressed: enabled ? () => _sendDetectFeedback(result, feedback) : null,
+        style: ButtonStyle(
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 8),
+          ),
+          minimumSize: WidgetStateProperty.all(const Size(0, 32)),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+          ),
+          side: WidgetStateProperty.resolveWith(
+            (_) => BorderSide(
+              color: selected ? AppColors.primary : AppColors.outlineVariant,
+              width: selected ? 1.4 : 1,
+            ),
+          ),
+          backgroundColor: WidgetStateProperty.all(
+            selected
+                ? AppColors.primaryContainer.withValues(alpha: 0.12)
+                : AppColors.surface,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (_) => selected ? AppColors.primary : AppColors.onSurfaceVariant,
+          ),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sendDetectFeedback(
+    _DetectResult result,
+    String feedback,
+  ) async {
+    final recordId = result.recordId;
+    if (recordId == null || _feedbackSent.containsKey(recordId)) return;
+    setState(() => _feedbackSent[recordId] = feedback);
+    try {
+      await ApiClient.post('/ai/detect-feedback', body: {
+        'recordId': recordId,
+        'feedback': feedback,
+      });
+      if (!mounted) return;
+      toast(context, '感谢反馈：${_feedbackLabel(feedback)}');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _feedbackSent.remove(recordId));
+      toast(context, actionErrorMessage('反馈', e), error: true);
+    }
+  }
+
+  String _feedbackLabel(String feedback) {
+    switch (feedback) {
+      case 'correct':
+        return '准';
+      case 'incorrect':
+        return '不准';
+      case 'unsure':
+        return '不确定';
+      default:
+        return feedback;
+    }
   }
 
   Widget _userBubble(_ChatMessage msg) {
@@ -1030,6 +1149,7 @@ class _AiChatPageState extends State<AiChatPage> {
     final nested = data['result'];
     final result =
         nested is Map ? nested.map((k, v) => MapEntry('$k', v)) : data;
+    final recordId = _int(data['recordId'] ?? result['recordId']);
     final name = _text(
       result['resultLabel'] ?? result['name'],
       fallback: '无法识别',
@@ -1044,12 +1164,22 @@ class _AiChatPageState extends State<AiChatPage> {
         ? recognizedFlag
         : (name != '无法识别' && name != '未识别' && confidence > 0);
     return _DetectResult(
+      recordId: recordId > 0 ? recordId : null,
       name: name,
       confidence: recognized ? (confidence <= 0 ? 0.8 : confidence) : 0,
       advice: advice,
       mode: mode,
       recognized: recognized,
     );
+  }
+
+  _DetectResult? _detectResultFromRecord(Map<String, dynamic> record) {
+    final refs = _jsonMap(record['referencesJson']);
+    final detect = refs['detect'];
+    if (detect is Map) {
+      return _detectResultOf(detect.map((k, v) => MapEntry('$k', v)));
+    }
+    return null;
   }
 
   String _sceneLabel(String scene) {
@@ -1099,6 +1229,17 @@ class _AiChatPageState extends State<AiChatPage> {
   static String _text(dynamic value, {String fallback = ''}) {
     final text = '${value ?? ''}'.trim();
     return text.isEmpty || text == 'null' ? fallback : text;
+  }
+
+  static Map<String, dynamic> _jsonMap(dynamic value) {
+    if (value is Map) return value.map((k, v) => MapEntry('$k', v));
+    if (value is String && value.trim().isNotEmpty) {
+      try {
+        final parsed = jsonDecode(value);
+        if (parsed is Map) return parsed.map((k, v) => MapEntry('$k', v));
+      } catch (_) {}
+    }
+    return {};
   }
 
   static String _time(DateTime value) => DateFormat('HH:mm').format(value);
@@ -1320,6 +1461,7 @@ class _ChatMessage {
 }
 
 class _DetectResult {
+  final int? recordId;
   final String name;
   final double confidence;
   final String advice;
@@ -1327,6 +1469,7 @@ class _DetectResult {
   final bool recognized;
 
   const _DetectResult({
+    this.recordId,
     required this.name,
     required this.confidence,
     required this.advice,
@@ -1335,6 +1478,7 @@ class _DetectResult {
   });
 
   Map<String, dynamic> toJson() => {
+        if (recordId != null) 'recordId': recordId,
         'name': name,
         'confidence': confidence,
         'advice': advice,
