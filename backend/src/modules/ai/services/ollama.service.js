@@ -22,20 +22,36 @@ async function postJson(path, body, timeoutMs = 60000) {
   return res
 }
 
-/** 查询 Ollama 服务与模型列表。 */
+/** 查询 Ollama 服务与模型列表，同时查已加载到显存的模型（/api/ps），
+ *  让 /ai/status 能告诉运维「视觉模型是否还热着」。 */
 export async function getOllamaStatus(timeoutMs = 1500) {
   try {
-    const res = await fetch(`${baseUrl()}/api/tags`, { signal: timeoutSignal(timeoutMs) })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = await res.json()
+    const tagsRes = await fetch(`${baseUrl()}/api/tags`, { signal: timeoutSignal(timeoutMs) })
+    if (!tagsRes.ok) throw new Error(`HTTP ${tagsRes.status}`)
+    const tagsData = await tagsRes.json()
+    let loaded = []
+    try {
+      const psRes = await fetch(`${baseUrl()}/api/ps`, { signal: timeoutSignal(timeoutMs) })
+      if (psRes.ok) {
+        const psData = await psRes.json()
+        loaded = (psData.models || []).map((m) => ({
+          name: m.name,
+          sizeVram: m.size_vram,
+          expiresAt: m.expires_at,
+        }))
+      }
+    } catch { /* /api/ps 失败不影响 tags 结果 */ }
     return {
       online: true,
       baseUrl: config.ollama.baseUrl,
-      models: (data.models || []).map((m) => ({
+      models: (tagsData.models || []).map((m) => ({
         name: m.name,
         size: m.size,
         modifiedAt: m.modified_at,
       })),
+      loadedInVram: loaded,
+      visionWarm: loaded.some((m) => m.name === config.ollama.visionModel),
+      primaryWarm: loaded.some((m) => m.name === config.ollama.primaryModel),
       primaryModel: config.ollama.primaryModel,
       visionModel: config.ollama.visionModel,
       embedModel: config.ollama.embedModel,
@@ -45,6 +61,9 @@ export async function getOllamaStatus(timeoutMs = 1500) {
       online: false,
       baseUrl: config.ollama.baseUrl,
       models: [],
+      loadedInVram: [],
+      visionWarm: false,
+      primaryWarm: false,
       primaryModel: config.ollama.primaryModel,
       visionModel: config.ollama.visionModel,
       embedModel: config.ollama.embedModel,

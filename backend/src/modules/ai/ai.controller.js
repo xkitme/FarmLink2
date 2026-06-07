@@ -150,12 +150,27 @@ async function askScene(req, res, scene) {
 
 /** AI 服务状态 */
 export async function status(req, res) {
-  const [ollama, qaCount, detectCount, policyChunks] = await Promise.all([
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const [ollama, qaCount, detectCount, policyChunks, detect24h, detectFeedback24h] = await Promise.all([
     getOllamaStatus(),
     prisma.aiQaRecord.count(),
     prisma.aiDetectRecord.count(),
     prisma.policyChunk.count(),
+    prisma.aiDetectRecord.findMany({
+      where: { createdAt: { gte: since24h } },
+      select: { resultLabel: true, confidence: true, feedback: true },
+    }),
+    prisma.aiDetectRecord.count({
+      where: { feedback: { not: null } },
+    }),
   ])
+  // 24h 识图统计：识别成功率（resultLabel 不是「无法识别」且 confidence>0）
+  // + 反馈率（24h 内有反馈条数 / 24h 总识图条数）
+  const recognized24h = detect24h.filter(
+    (r) => r.resultLabel !== '无法识别' && r.confidence > 0,
+  ).length
+  const correct24h = detect24h.filter((r) => r.feedback === 1).length
+  const incorrect24h = detect24h.filter((r) => r.feedback === 0).length
   ok(res, {
     serviceMode: '平台智能服务',
     ollama,
@@ -164,7 +179,19 @@ export async function status(req, res) {
       engine: '智能问答服务',
       message: 'AI 服务运行中，可使用平台知识库和规则引擎。',
     },
-    counters: { qaCount, detectCount, policyChunks },
+    counters: {
+      qaCount,
+      detectCount,
+      policyChunks,
+      detectFeedbackTotal: detectFeedback24h,
+    },
+    detect24h: {
+      total: detect24h.length,
+      recognized: recognized24h,
+      recognizeRate: detect24h.length ? Number((recognized24h / detect24h.length).toFixed(3)) : 0,
+      feedbackCorrect: correct24h,
+      feedbackIncorrect: incorrect24h,
+    },
   })
 }
 
@@ -432,6 +459,35 @@ async function resolveDiseaseLabel(rawLabel) {
     where: { OR: [{ modelLabel: label }, { diseaseName: label }] },
   })
   return exact || null
+}
+
+/** 用户对识图结果的反馈。recordId 是 aiDetectRecord.id。
+ *  约定 feedback 取值：'correct'=1（准）、'incorrect'=0（不准）、'unsure'=2（不确定）。
+ *  schema 中 feedback 字段是 Int? (历史预留，无需 migration)。 */
+export async function detectFeedback(req, res) {
+  const recordId = Number(req.body.recordId)
+  if (!Number.isInteger(recordId) || recordId <= 0) throw errors.param('recordId 不合法')
+  const raw = String(req.body.feedback || '').toLowerCase()
+  const map = { correct: 1, incorrect: 0, unsure: 2 }
+  if (!(raw in map)) throw errors.param('feedback 必须是 correct/incorrect/unsure')
+  const value = map[raw]
+
+  const exist = await prisma.aiDetectRecord.findUnique({ where: { id: recordId } })
+  if (!exist) throw errors.notFound('识图记录不存在')
+  // 反馈对象就是自己的识图记录；admin 可看全平台但不能改他人反馈。
+  if (exist.userId !== req.user.id && req.user.role !== 'ADMIN') {
+    throw errors.forbidden('无权对他人的识图记录反馈')
+  }
+
+  const updated = await prisma.aiDetectRecord.update({
+    where: { id: recordId },
+    data: { feedback: value },
+  })
+  ok(res, {
+    recordId: updated.id,
+    feedback: raw,
+    feedbackValue: value,
+  }, '感谢反馈')
 }
 
 /** 图像识别统一入口：Ollama 视觉模型可用时调用，否则诚实回「无法识别」。 */

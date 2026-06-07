@@ -30,5 +30,6 @@ router.delete('/ai/qa/records/:id', wrap(ai.qaRemove))
 router.post('/ai/voice/recognize', upload.single('audio'), wrap(ai.voiceRecognize))
 router.post('/ai/image/analyze', upload.single('image'), wrap(ai.imageAnalyze))
 router.post('/ai/image/detect', upload.single('image'), wrap(ai.imageAnalyze))
+router.post('/ai/detect-feedback', wrap(ai.detectFeedback))
 
 export default router
