@@ -451,6 +451,39 @@ function unavailableImageResult({ detectType, reason }) {
   }
 }
 
+/** 植物前置判别门：识图前先问视觉模型「这是不是一张真实农作物/植物照片」。
+ *  小视觉模型（minicpm-v:8b）对界面截图、文档、人物等非植物垃圾输入会自信地
+ *  幻觉一个病害名（如把 App 截图识成「水稻稻瘟病 95%」），而正常识别 prompt 里
+ *  的「非农业场景→无法识别」约束又一调严就拖垮真植物召回（精度/召回硬跷跷板）。
+ *  因此用一道独立的轻量 yes/no 判别把垃圾输入挡在主识别之外，主识别 prompt 保持不变。
+ *  设计为「只在明确判为 false 时拦截」：解析失败 / 判 true / 出错一律放行，宁可漏挡也不误伤真植物。
+ *  返回 true = 放行进入识别；false = 非植物，直接走无法识别。 */
+async function isAgriculturalPhoto(bytes) {
+  try {
+    const gate = await generateText({
+      prompt: [
+        '判断这张图片里有没有「真实的植物或农作物主体」（叶片、茎秆、花、果实、整株都算；',
+        '不论背景是田间、桌面还是纯色背景，只要主体是真实植物就算 true）。',
+        '只有当画面主体不是真实植物时才判 false，例如：手机/电脑界面截图、含按钮菜单数字的应用界面、',
+        '文档、纯文字、图表表格、二维码、人物、动物、纯风景无作物、与植物无关的物体。',
+        '只输出 JSON：{"isPlant": true 或 false}。',
+      ].join('\n'),
+      system: '只输出严格 JSON，不要任何解释。',
+      model: config.ollama.visionModel,
+      images: [bytes.toString('base64')],
+      temperature: 0,
+      format: 'json',
+      timeoutMs: 30000,
+    })
+    const text = String(gate.answer || '').replace(/^```json|```$/g, '').trim()
+    const parsed = JSON.parse(text)
+    // 只有明确为 false 才拦截；字段缺失/非布尔一律放行
+    return parsed.isPlant !== false
+  } catch {
+    return true // 判别门本身出错（超时/解析失败）不应误伤识别，放行交给主识别
+  }
+}
+
 // 病害知识库辅助：把视觉模型可能输出的英文标签（modelLabel）映射回中文病害名。
 async function resolveDiseaseLabel(rawLabel) {
   const label = String(rawLabel || '').trim()
@@ -503,6 +536,13 @@ export async function imageAnalyze(req, res) {
 
   try {
     const bytes = await fs.readFile(req.file.path)
+    // 植物前置判别门：非真实植物照片（界面截图/文档/人物等）直接挡掉，
+    // 避免小视觉模型对垃圾输入「确信地说错」（详见 isAgriculturalPhoto 注释）。
+    const notPlant = detectType === 'DISEASE' && !(await isAgriculturalPhoto(bytes))
+    if (notPlant) {
+      result = unavailableImageResult({ detectType, reason: 'not-plant-photo' })
+      modelUsed = config.ollama.visionModel
+    } else {
     const prompt = [
       '你是中文农业图像视觉识别助手。请仔细观察图片，按下面给出的 JSON schema 输出。',
       '',
@@ -596,8 +636,9 @@ export async function imageAnalyze(req, res) {
         knownDisease,
       }
     }
-    serviceMode = '图像识别服务'
     modelUsed = generated.model
+    }
+    serviceMode = '图像识别服务'
   } catch (e) {
     result = unavailableImageResult({ detectType, reason: e?.message || 'ollama-unreachable' })
     serviceMode = '图像识别服务'
