@@ -689,6 +689,70 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   Widget _detectReportCard(_DetectResult result) {
+    // 「无法识别」分支：去掉 VERIFIED 徽章 / 置信度 / 施药 CTA，避免「确信地说错」。
+    if (!result.recognized) {
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(R.md),
+          border: Border.all(color: AppColors.outlineVariant, width: 1),
+          boxShadow: AppColors.ambientShadow,
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.help_outline,
+                    color: AppColors.onSurfaceVariant, size: 18),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '智能识别 · 未能识别',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              result.advice.isEmpty
+                  ? '当前未能从这张图中识别出明确的农作物病害特征。建议拍摄叶片正反面、茎秆和整株清晰照片后重试，或联系周边植保服务现场诊断。'
+                  : result.advice,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _openPlusSheet(),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('重新拍照识别'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/machinery/service'),
+                icon: const Icon(Icons.local_phone_outlined, size: 16),
+                label: const Text('呼叫周边植保服务'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -885,16 +949,23 @@ class _AiChatPageState extends State<AiChatPage> {
         nested is Map ? nested.map((k, v) => MapEntry('$k', v)) : data;
     final name = _text(
       result['resultLabel'] ?? result['name'],
-      fallback: '未识别',
+      fallback: '无法识别',
     );
     final confidence = _double(result['confidence']);
     final advice = _text(result['adviceText'] ?? result['advice']);
     final mode = _text(data['serviceMode'] ?? result['mode'], fallback: '智能识别');
+    // 是否「真识别出来了」：后端 recognized 字段优先；缺省时根据 name/confidence 推断。
+    // 不再无脑把 0 置信度兜到 0.8——那会让「无法识别」也披着 80% 的 VERIFIED 外衣（导致香蕉→番茄缺镁症 81% 的 bug）。
+    final recognizedFlag = result['recognized'];
+    final recognized = recognizedFlag is bool
+        ? recognizedFlag
+        : (name != '无法识别' && name != '未识别' && confidence > 0);
     return _DetectResult(
       name: name,
-      confidence: confidence <= 0 ? 0.8 : confidence,
+      confidence: recognized ? (confidence <= 0 ? 0.8 : confidence) : 0,
       advice: advice,
       mode: mode,
+      recognized: recognized,
     );
   }
 
@@ -1165,12 +1236,14 @@ class _DetectResult {
   final double confidence;
   final String advice;
   final String mode;
+  final bool recognized;
 
   const _DetectResult({
     required this.name,
     required this.confidence,
     required this.advice,
     required this.mode,
+    this.recognized = true,
   });
 
   Map<String, dynamic> toJson() => {
@@ -1178,9 +1251,15 @@ class _DetectResult {
         'confidence': confidence,
         'advice': advice,
         'mode': mode,
+        'recognized': recognized,
       };
 
   String get summaryText {
+    if (!recognized) {
+      return advice.isEmpty
+          ? '识别结果：无法识别。建议重新拍摄清晰照片后再试。'
+          : '识别结果：无法识别。\n\n$advice';
+    }
     final confidenceText = '可信度 ${(confidence * 100).round()}%';
     if (advice.isEmpty) return '识别结果：$name（$confidenceText）';
     return '识别结果：$name（$confidenceText）\n\n$advice';

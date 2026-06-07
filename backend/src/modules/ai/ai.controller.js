@@ -8,9 +8,6 @@ import { fallbackAnswer, buildPrompt, systemPrompt } from './services/fallback.s
 import { referencesToPrompt, searchLocalKnowledge } from './services/rag.service.js'
 import { generateText, getOllamaStatus, streamText } from './services/ollama.service.js'
 
-const rand = (min, max) => min + Math.random() * (max - min)
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
-
 function threadIdOf(value) {
   if (value === undefined || value === null || value === '') return null
   const threadId = Number(value)
@@ -406,47 +403,38 @@ export async function voiceRecognize(req, res) {
   }, '语音识别完成')
 }
 
-async function fallbackImageResult({ detectType, cropType, productName }) {
+// 视觉模型不可用 / 返回不可信结果时的「诚实兜底」：
+// 历史上这里会从知识库随机抽一条返回（香蕉图被识成「番茄缺镁症 81% VERIFIED」就是这条路径），
+// 视觉效果像「AI 真识别了」实则全是编的，比说不出口更误导用户。
+// 现在改为统一回「无法识别 / 服务暂不可用」+ confidence 0，前端据此降级展示。
+function unavailableImageResult({ detectType, reason }) {
   const type = String(detectType || 'DISEASE').toUpperCase()
-  if (type === 'DISEASE') {
-    let pool = cropType ? await prisma.diseaseKnowledge.findMany({ where: { cropType } }) : []
-    if (!pool.length) pool = await prisma.diseaseKnowledge.findMany()
-    const disease = pool.length ? pick(pool) : null
-    return {
-      resultLabel: disease?.modelLabel || disease?.diseaseName || '疑似叶斑类病害',
-      confidence: Number(rand(0.78, 0.95).toFixed(2)),
-      adviceText: disease?.prevention || '建议拍摄叶片正反面、茎秆和整株照片，结合田间湿度与近期用药情况进一步判断。',
-      detail: disease,
-    }
-  }
-  if (type === 'GRADE') {
-    const score = Math.round(rand(78, 96))
-    const grade = score >= 92 ? '特级' : score >= 84 ? '一级' : '二级'
-    return {
-      resultLabel: grade,
-      confidence: Number(rand(0.80, 0.96).toFixed(2)),
-      adviceText: `${productName || '农产品'}综合品相评分 ${score}，建议分级包装、优品优价。`,
-      detail: { score, grade },
-    }
-  }
-  if (type === 'SEED') {
-    const germination = Math.round(rand(86, 97))
-    return {
-      resultLabel: germination >= 92 ? '优级种子' : '合格种子',
-      confidence: Number(rand(0.80, 0.94).toFixed(2)),
-      adviceText: `估算发芽率约 ${germination}%，建议播前做小样发芽试验复核。`,
-      detail: { germination },
-    }
+  const adviceMap = {
+    DISEASE: '智能视觉识别暂时不可用，未能识别图片中的作物或病害。建议拍摄叶片正反面、茎秆和整株清晰照片后重试，或联系周边植保服务现场诊断。',
+    GRADE: '智能品相识别暂时不可用，请稍后再试，或人工分级。',
+    SEED: '智能种子识别暂时不可用，请稍后再试，或做小样发芽试验复核。',
+    GROWTH: '智能长势识别暂时不可用，请稍后再试，或现场观察叶色、株高与墒情。',
   }
   return {
-    resultLabel: '长势正常',
-    confidence: Number(rand(0.76, 0.93).toFixed(2)),
-    adviceText: '作物整体长势尚可，建议继续观察叶色、株高、墒情和病虫害发生点。',
-    detail: { healthScore: Math.round(rand(78, 94)) },
+    resultLabel: '无法识别',
+    confidence: 0,
+    recognized: false,
+    adviceText: adviceMap[type] || adviceMap.DISEASE,
+    detail: reason ? { reason } : null,
   }
 }
 
-/** 图像识别统一入口：Ollama 视觉模型可用时调用，否则使用规则引擎。 */
+// 病害知识库辅助：把视觉模型可能输出的英文标签（modelLabel）映射回中文病害名。
+async function resolveDiseaseLabel(rawLabel) {
+  const label = String(rawLabel || '').trim()
+  if (!label || label === '无法识别') return null
+  const exact = await prisma.diseaseKnowledge.findFirst({
+    where: { OR: [{ modelLabel: label }, { diseaseName: label }] },
+  })
+  return exact || null
+}
+
+/** 图像识别统一入口：Ollama 视觉模型可用时调用，否则诚实回「无法识别」。 */
 export async function imageAnalyze(req, res) {
   if (!req.file) throw errors.param('请上传图片')
   const detectType = String(req.body.detectType || req.body.type || 'DISEASE').toUpperCase()
@@ -460,35 +448,73 @@ export async function imageAnalyze(req, res) {
   try {
     const bytes = await fs.readFile(req.file.path)
     const prompt = [
-      '你是农业图像识别助手。请观察图片并输出 JSON：',
-      '{"resultLabel":"识别标签","confidence":0.0,"adviceText":"处理建议","detail":"简要依据"}',
-      `识别类型：${detectType}；作物/产品：${cropType || productName || '未知'}。`,
+      '你是农业图像视觉识别助手。请仔细观察图片，并严格按以下 JSON 输出：',
+      '{"resultLabel":"中文识别标签","confidence":0.0,"adviceText":"处理建议","detail":"简要依据"}',
+      '要求：',
+      '1. resultLabel 必须使用中文病害/作物名称（如「番茄缺镁症」「苹果黑星病」），禁止输出英文标签或下划线 ID。',
+      '2. 如果图片不是农作物 / 叶片 / 果实 / 农产品（例如风景、人物、其他动植物），或无法判定具体病害，必须返回 {"resultLabel":"无法识别","confidence":0,"adviceText":"图片中未发现农作物病害特征，建议重新拍摄叶片正反面或茎秆果实清晰照片。"}。',
+      '3. confidence 必须如实反映把握程度，不确定时给低值或 0；不要为了显得自信就编高数。',
+      `识别类型：${detectType}；作物/产品：${cropType || productName || '未指定'}。`,
     ].join('\n')
     const generated = await generateText({
       prompt,
-      system: '只输出简短 JSON，不要输出 Markdown。',
+      system: '只输出严格 JSON，不要输出 Markdown 或前后缀文本。',
       model: config.ollama.visionModel,
       images: [bytes.toString('base64')],
       temperature: 0.1,
-      // 8GB 显存跑 8B 视觉模型很慢；超过 15s 不返回就退回规则引擎给即时结果，
-      // 不让用户干等（原 90s 会"问一年都不回"）。
+      // 8GB 显存跑 8B 视觉模型很慢；超过 15s 不返回就走兜底给即时结果，不让用户干等。
       timeoutMs: 15000,
     })
     const text = generated.answer.replace(/^```json|```$/g, '').trim()
-    try {
-      result = JSON.parse(text)
-    } catch {
+    let parsed = null
+    try { parsed = JSON.parse(text) } catch { parsed = null }
+    if (!parsed || typeof parsed !== 'object' || !parsed.resultLabel) {
+      // 视觉模型没出结构化结果——按「无法识别」处理，不再硬编一条诱导性答案。
+      result = unavailableImageResult({ detectType, reason: 'vision-no-json' })
+    } else {
+      let rawLabel = String(parsed.resultLabel).trim()
+      let confidence = Number(parsed.confidence)
+      if (!Number.isFinite(confidence) || confidence < 0) confidence = 0
+      if (confidence > 1) confidence = confidence / 100
+      let adviceText = String(parsed.adviceText || parsed.advice || '').trim()
+
+      // 病害场景：尝试把视觉模型可能输出的英文 modelLabel 映射回中文 diseaseName。
+      if (detectType === 'DISEASE' && rawLabel && rawLabel !== '无法识别') {
+        const matched = await resolveDiseaseLabel(rawLabel)
+        if (matched) {
+          rawLabel = matched.diseaseName
+          if (!adviceText) adviceText = matched.prevention || ''
+        } else if (/^[a-zA-Z0-9_\-\s]+$/.test(rawLabel)) {
+          // 知识库找不到、又是纯英文/下划线——视觉模型在硬编 ID，按「无法识别」处理。
+          const f = unavailableImageResult({ detectType, reason: 'unknown-english-label' })
+          rawLabel = f.resultLabel
+          confidence = 0
+          if (!adviceText) adviceText = f.adviceText
+        }
+      }
+
+      // 置信度过低同样降级为「无法识别」，避免低把握结果披着 VERIFIED 外衣误导用户。
+      if (rawLabel !== '无法识别' && confidence > 0 && confidence < 0.4) {
+        const f = unavailableImageResult({ detectType, reason: `low-confidence:${confidence}` })
+        rawLabel = f.resultLabel
+        confidence = 0
+        if (!adviceText) adviceText = f.adviceText
+      }
+
       result = {
-        resultLabel: detectType === 'GRADE' ? '一级' : '疑似病害',
-        confidence: 0.82,
-        adviceText: text || '视觉模型已返回结果，请结合田间情况复核。',
-        detail: text,
+        resultLabel: rawLabel,
+        confidence,
+        recognized: rawLabel !== '无法识别' && confidence > 0,
+        adviceText,
+        detail: parsed.detail,
       }
     }
     serviceMode = '图像识别服务'
     modelUsed = generated.model
-  } catch {
-    result = await fallbackImageResult({ detectType, cropType, productName })
+  } catch (e) {
+    result = unavailableImageResult({ detectType, reason: e?.message || 'ollama-unreachable' })
+    serviceMode = '图像识别服务'
+    modelUsed = 'platform-vision'
   }
 
   const record = await prisma.aiDetectRecord.create({
@@ -496,8 +522,8 @@ export async function imageAnalyze(req, res) {
       userId: req.user.id,
       detectType,
       imageUrl,
-      resultLabel: result.resultLabel || '未知',
-      confidence: Number(result.confidence) || 0.8,
+      resultLabel: result.resultLabel || '无法识别',
+      confidence: Number(result.confidence) || 0,
       adviceText: result.adviceText || result.advice || null,
       isOffline: true,
     },
