@@ -20,7 +20,15 @@
 - **反馈按钮**：点「准」→ `POST /ai/detect-feedback` 200，按钮变绿选中态；后端 `/ai/status` 的 `detect24h.feedbackCorrect` +1、`detectFeedbackTotal` 同步。
 - **status 监控**：`ollama.visionWarm=true`（minicpm-v 4.9GB 在显存）、`detect24h{total,recognized,recognizeRate}` 全部真值刷新。
 
-### ⚠️ 重要新发现：小视觉模型对「非植物垃圾输入」会**自信地幻觉一个病**（精度/召回硬跷跷板，本会话未改 prompt）
+### ✅ 截图幻觉已修：识图加「植物前置判别门」（commit `3ba83d43`）
+用户拍板「加植物前置判别门」。实现 `isAgriculturalPhoto(bytes)`：识图前先用视觉模型问一句 yes/no「画面主体是不是真实植物」（`format=json`、temperature 0、`{"isPlant":bool}`），**只在明确 false 时拦成「无法识别」，主识别 prompt 完全不动**；判别只看有无植物主体、不拿背景说事（避免误拦 PlantVillage 那种纯灰底单叶），出错/超时/判 true 一律放行保召回。判别实测 **4/4 正确**：苹果黑星/番茄叶霉/马铃薯晚疫真叶→true 放行，App 个人页截图→false 拦掉。代价：每次识图多一次视觉调用（暖模型 +~2s，可接受）。
+- ⚠️ **未做的最后一步**：gate+识别串起来的**单次干净 GPU 全链路实测**没跑成（见下方 ollama GPU 掉坑）。判别门 4/4 是 CPU 慢跑验证的（判别质量与 GPU 无关）；苹果走原版识别 0.85 是本会话早些 GPU 下 4/4 验证的。两半各自验过、组合逻辑成立，但 GPU 恢复后建议再点一次真机确认 gate 放行的苹果仍出 95% 卡片。
+
+### ⚠️⚠️ 大坑：ollama 重启后丢 GPU、退化成 CPU-only（demo 前必查！）
+本会话后半段为调 prompt 多次重启 ollama，结果 ollama **彻底不用 GPU 了**：`/api/ps` 所有模型 `sizeVram=0.0G`，连 qwen2.5:1.5b 都 CPU 跑 25s，minicpm-v 冷加载 ~160s 还全在内存。nvidia-smi 明明显示 GPU 健康（用 1.9G/8G、空闲 6G）。试过裸 `ollama serve`、`ollama app.exe` 桌面 app 都没救回 GPU。**最初本会话 ollama 是用 GPU 的（minicpm-v 4.9G 在显存、苹果 4s 出结果）**，多次 kill/restart 后翻车。→ 推测要**重启机器**或正常方式拉起 Ollama 托盘 app 才能恢复 CUDA。**demo 前务必 `curl /api/ps` 确认视觉模型 `sizeVram>0`（在显存），否则识图会卡 CPU 几十秒~两分钟。**
+- 另：模型在 **E: 可移动盘**，冷加载本就慢（5.7G 从 E: 读 ~160s）。E: 在位 + 模型预热进显存，两个都要 demo 前确认。
+
+### （历史）原始发现：小视觉模型对「非植物垃圾输入」会**自信地幻觉一个病**（精度/召回硬跷跷板）—— 已由上面植物前置门解决
 - 上传一张**纯 App UI 截图**（农户个人页，根本不是植物）→ minicpm-v 返回 **「水稻稻瘟病 95% VERIFIED」**。这正是批 64 想根治的「确信地说错」。诚实兜底只在 ① ollama 离线 ② 模型**自己**说无法识别 时生效；模型对垃圾输入不自报无法识别时，两道后端护栏（conf<0.4 降级、纯英文 label 不在 KB 降级）都绕过（它给的是 0.95 + 中文病名且在 KB）。
 - **试过 prompt 加固**（扩约束#2 非农业枚举 + 加「示例4 截图→无法识别」few-shot）：截图能稳定修成「无法识别」3/3，**但同一改动把真苹果黑星病也压到 conf 0.3 → 被 <0.4 护栏砍成无法识别**（召回崩）。隔离验证：**原版 prompt 苹果 4/4 = 0.85 稳，任何截图加固都拖垮真植物召回**。→ **结论：已 `git stash drop` 丢弃 prompt 改动，保留原版**。原版对 demo 招牌路径（真叶片→95%）调得好，截图幻觉是窄边际风险（demo 输入受控，演示者拍真叶片）。
 - **下一步若要根治截图幻觉**（不伤召回）：不能靠 prompt 单调，需要 ① 加一个独立「这是不是植物照片」前置判别（轻分类器/单独问模型 yes-no 再决定走不走识别）② 或 demo 用更大视觉模型（minicpm-v:8b 已是单机 8GB 极限）。优先级看用户对「演示中有人上传非植物图」的容忍度。
