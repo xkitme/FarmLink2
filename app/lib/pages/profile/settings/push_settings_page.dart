@@ -101,7 +101,7 @@ class _PushSettingsPageState extends State<PushSettingsPage> {
           const SizedBox(height: 18),
           const Center(
             child: Text(
-              'FarmLink 智慧农业互联平台',
+              '田园通 智慧农业互联平台',
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.onSurfaceVariant,

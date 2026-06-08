@@ -9,6 +9,10 @@ import { warmupVisionModel } from './modules/ai/services/ollama.service.js'
 // setDefaultEncoding 对控制台代码页无效，已移除避免误导。
 
 const PORT = config.port
+const VISION_WARMUP_ATTEMPTS = Number(process.env.OLLAMA_VISION_WARMUP_ATTEMPTS || 3)
+const VISION_WARMUP_INTERVAL_MS = Number(process.env.OLLAMA_VISION_WARMUP_INTERVAL_MS || 15000)
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function checkOllama() {
   try {
@@ -27,6 +31,36 @@ async function checkOllama() {
   } catch {
     return { online: false }
   }
+}
+
+async function warmupVisionModelWithRetry() {
+  const attempts = Number.isFinite(VISION_WARMUP_ATTEMPTS)
+    ? Math.max(1, Math.floor(VISION_WARMUP_ATTEMPTS))
+    : 3
+  const intervalMs = Number.isFinite(VISION_WARMUP_INTERVAL_MS)
+    ? Math.max(1000, Math.floor(VISION_WARMUP_INTERVAL_MS))
+    : 15000
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const ollama = await checkOllama()
+    if (!ollama.online) {
+      console.warn(`⚠ 视觉模型预热等待 Ollama 在线 (${attempt}/${attempts})`)
+    } else if (!ollama.hasVision) {
+      console.warn(`⚠ 视觉模型 ${config.ollama.visionModel} 未拉取，识图会走「无法识别」兜底；执行: ollama pull ${config.ollama.visionModel}`)
+      return
+    } else {
+      const res = await warmupVisionModel()
+      if (res.ok) {
+        console.log(`✓ 视觉模型预热完成 (${res.elapsedMs} ms)`)
+        return
+      }
+      console.warn(`⚠ 视觉模型预热失败 (${attempt}/${attempts}): ${res.reason}`)
+    }
+
+    if (attempt < attempts) await sleep(intervalMs)
+  }
+
+  console.warn('⚠ 视觉模型预热未完成，首次识图仍会冷启动')
 }
 
 async function bootstrap() {
@@ -51,25 +85,17 @@ async function bootstrap() {
     }
     if (!ollama.hasVision) {
       console.warn(`⚠ 视觉模型 ${config.ollama.visionModel} 未拉取，识图会走「无法识别」兜底；执行: ollama pull ${config.ollama.visionModel}`)
-    } else {
-      // 异步预热视觉模型，不阻塞 listen。首次推理后续用户请求节省 30–60s 冷启动。
-      warmupVisionModel().then((res) => {
-        if (res.ok) {
-          console.log(`✓ 视觉模型预热完成 (${res.elapsedMs} ms)`)
-        } else {
-          console.warn(`⚠ 视觉模型预热失败: ${res.reason}（首次识图仍会冷启动）`)
-        }
-      })
     }
   } else {
     console.warn('⚠ Ollama 未连接，平台知识库与规则服务可用；如需大模型推理请运行: ollama serve')
   }
 
   app.listen(PORT, () => {
-    console.log('\n🌾 FarmLink 田园通服务已启动')
+    console.log('\n🌾 田园通服务已启动')
     console.log(`   后端 API: http://localhost:${PORT}${config.apiPrefix}`)
     console.log(`   健康检查: http://localhost:${PORT}/health`)
     console.log()
+    void warmupVisionModelWithRetry()
   })
 }
 

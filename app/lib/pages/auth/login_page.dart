@@ -83,7 +83,7 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       Icon(Icons.agriculture, color: Colors.white, size: 30),
                       SizedBox(width: 8),
-                      Text('FarmLink 田园通',
+                      Text('田园通',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 20,

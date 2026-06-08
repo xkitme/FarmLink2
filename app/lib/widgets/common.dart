@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 
-/// 品牌顶栏：白底 h64，左农机图标（或返回箭头）、居中「FarmLink 田园通」粗体绿、右搜索/铃铛
+/// 品牌顶栏：白底 h64，左农机图标（或返回箭头）、居中「田园通」粗体绿、右搜索/铃铛
 ///
 /// 一级 tab 页：直接 `FarmAppBar()`，左侧是品牌叶 icon。
 /// 详情页：`FarmAppBar(showBack: true, backFallback: '/home')`，左侧变返回箭头。
@@ -50,7 +50,7 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
               child:
                   Icon(Icons.agriculture, color: AppColors.primary, size: 26),
             ),
-      title: const Text('FarmLink 田园通',
+      title: const Text('田园通',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(

@@ -106,7 +106,7 @@ export default function AdminLayout() {
           {!collapsed && (
             <div className="brand-text">
               <strong>田园通</strong>
-              <span>FarmLink Admin</span>
+              <span>管理台</span>
             </div>
           )}
         </div>

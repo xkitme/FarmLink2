@@ -1,6 +1,6 @@
 {
-    "name": "farmlink",
-    "short_name": "farmlink",
+    "name": "田园通",
+    "short_name": "田园通",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

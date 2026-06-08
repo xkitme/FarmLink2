@@ -38,7 +38,7 @@ class AboutPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 const Text(
-                  '田园通 FarmLink',
+                  '田园通',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -105,7 +105,7 @@ class AboutPage extends StatelessWidget {
             child: Column(
               children: [
                 Text(
-                  '© 2026 田园通科技 (FarmLink Tech)',
+                  '© 2026 WebClass 2 team 版权所有',
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.onSurfaceVariant,

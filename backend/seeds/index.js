@@ -1,5 +1,5 @@
 /**
- * 田园通 FarmLink — 种子数据
+ * 田园通 — 种子数据
  * 运行：npm run db:seed
  */
 import { PrismaClient } from '@prisma/client'
@@ -451,12 +451,12 @@ async function main() {
   // ── 商品 ──────────────────────────────────────────
   await prisma.product.createMany({
     data: [
-      { sellerId: farmer.id,    title: '张大叔松华香米 10斤装',    category: '粮油', price: 58,  unit: '袋', stock: 180, soldCount: 96, traceCode: 'TRACE-SH-2026-RICE-ZDS', regionCode: VILLAGE, description: '东头水田当季新稻，现碾现卖，米香浓郁。' },
-      { sellerId: farmer.id,    title: '张大叔后山红心柑橘 10斤装', category: '水果', price: 46,  unit: '箱', stock: 130, soldCount: 54, traceCode: 'TRACE-SH-2026-CITRUS-ZDS', regionCode: VILLAGE, description: '后山橘园分批采收，皮薄汁多，甜酸平衡。' },
-      { sellerId: bigfarmer.id, title: '李大姐阳光番茄 5斤装',      category: '蔬菜', price: 32,  unit: '箱', stock: 160, soldCount: 78, traceCode: 'TRACE-SH-2026-TOMATO-LGL', regionCode: VILLAGE, description: '桂兰蔬菜棚标准化种植，果形饱满，适合家庭鲜食。' },
-      { sellerId: bigfarmer.id, title: '李大姐有机蔬菜礼盒',        category: '蔬菜', price: 68,  unit: '盒', stock: 60,  soldCount: 42, traceCode: 'TRACE-SH-2026-VEG-LGL', regionCode: VILLAGE, description: '当季8种蔬菜混装，田间采摘后统一分级包装。' },
-      { sellerId: farmer.id,    title: '农家自晒红薯干',            category: '其他', price: 25,  unit: '袋', stock: 60,  soldCount: 21, regionCode: VILLAGE, description: '传统工艺日晒，软糯香甜。' },
-      { sellerId: merchant.id,  title: '生态散养土鸡蛋（30枚）',    category: '畜禽', price: 45,  unit: '箱', stock: 80,  soldCount: 32, regionCode: VILLAGE, description: '自家散养土鸡所产，无添加，营养健康。' },
+      { sellerId: farmer.id,    title: '张大叔松华香米 10斤装',    category: '粮油', price: 58,  unit: '袋', stock: 180, soldCount: 96, traceCode: 'TRACE-SH-2026-RICE-ZDS', regionCode: VILLAGE, images: '["assets/images/_4_7.jpg"]', description: '东头水田当季新稻，现碾现卖，米香浓郁。' },
+      { sellerId: farmer.id,    title: '张大叔后山红心柑橘 10斤装', category: '水果', price: 46,  unit: '箱', stock: 130, soldCount: 54, traceCode: 'TRACE-SH-2026-CITRUS-ZDS', regionCode: VILLAGE, images: '["assets/images/_4_1.jpg"]', description: '后山橘园分批采收，皮薄汁多，甜酸平衡。' },
+      { sellerId: bigfarmer.id, title: '李大姐阳光番茄 5斤装',      category: '蔬菜', price: 32,  unit: '箱', stock: 160, soldCount: 78, traceCode: 'TRACE-SH-2026-TOMATO-LGL', regionCode: VILLAGE, images: '["assets/images/_4_5.jpg"]', description: '桂兰蔬菜棚标准化种植，果形饱满，适合家庭鲜食。' },
+      { sellerId: bigfarmer.id, title: '李大姐有机蔬菜礼盒',        category: '蔬菜', price: 68,  unit: '盒', stock: 60,  soldCount: 42, traceCode: 'TRACE-SH-2026-VEG-LGL', regionCode: VILLAGE, images: '["assets/images/_4_5.jpg"]', description: '当季8种蔬菜混装，田间采摘后统一分级包装。' },
+      { sellerId: farmer.id,    title: '农家自晒红薯干',            category: '其他', price: 25,  unit: '袋', stock: 60,  soldCount: 21, regionCode: VILLAGE, images: '["assets/images/_4_7.jpg"]', description: '传统工艺日晒，软糯香甜。' },
+      { sellerId: merchant.id,  title: '生态散养土鸡蛋（30枚）',    category: '畜禽', price: 45,  unit: '箱', stock: 80,  soldCount: 32, regionCode: VILLAGE, images: '["assets/images/_4_3.jpg"]', description: '自家散养土鸡所产，无添加，营养健康。' },
     ],
   })
 
@@ -684,10 +684,10 @@ async function main() {
 
   await prisma.aiDetectRecord.createMany({
     data: [
-      { userId: farmer.id, detectType: 'DISEASE', imageUrl: '/uploads/demo/rice-planthopper.jpg', resultLabel: 'rice_planthopper', confidence: 91.6, adviceText: '建议按低毒药剂推荐剂量喷雾，7天后复查虫口密度。', feedback: 1, createdAt: dateOf('2026-05-20') },
-      { userId: farmer.id, detectType: 'DISEASE', imageUrl: '/uploads/demo/citrus-leaf.jpg', resultLabel: 'nitrogen_deficiency', confidence: 86.4, adviceText: '建议补充叶面肥并复查新梢叶色。', feedback: 1, createdAt: dateOf('2026-04-03') },
-      { userId: bigfarmer.id, detectType: 'GRADE', imageUrl: '/uploads/demo/tomato-grade.jpg', resultLabel: 'A_GRADE', confidence: 93.2, adviceText: 'A档果建议进入礼盒渠道，B档进入社区团购。', feedback: 1, createdAt: dateOf('2026-05-19') },
-      { userId: village.id, detectType: 'DISASTER', imageUrl: '/uploads/demo/rain-field.jpg', resultLabel: 'waterlogging_medium', confidence: 88.8, adviceText: '建议优先排涝低洼田块，并同步保险员核验。', feedback: 1, createdAt: dateOf('2026-05-22') },
+      { userId: farmer.id, detectType: 'DISEASE', imageUrl: '', resultLabel: 'rice_planthopper', confidence: 91.6, adviceText: '建议按低毒药剂推荐剂量喷雾，7天后复查虫口密度。', feedback: 1, createdAt: dateOf('2026-05-20') },
+      { userId: farmer.id, detectType: 'DISEASE', imageUrl: '', resultLabel: 'nitrogen_deficiency', confidence: 86.4, adviceText: '建议补充叶面肥并复查新梢叶色。', feedback: 1, createdAt: dateOf('2026-04-03') },
+      { userId: bigfarmer.id, detectType: 'GRADE', imageUrl: '', resultLabel: 'A_GRADE', confidence: 93.2, adviceText: 'A档果建议进入礼盒渠道，B档进入社区团购。', feedback: 1, createdAt: dateOf('2026-05-19') },
+      { userId: village.id, detectType: 'DISASTER', imageUrl: '', resultLabel: 'waterlogging_medium', confidence: 88.8, adviceText: '建议优先排涝低洼田块，并同步保险员核验。', feedback: 1, createdAt: dateOf('2026-05-22') },
     ],
   })
 
@@ -734,9 +734,9 @@ async function main() {
 
   await prisma.aiQaRecord.createMany({
     data: [
-      { userId: farmer.id, scene: 'AGRI', question: '水稻叶片上有小虫，应该怎么处理？', answer: '建议先按虫口密度判断是否达标防治。若确认为稻飞虱，可选低毒药剂按推荐剂量喷雾，并在7天后复查。', modelUsed: 'FarmLink AI', referencesJson: '["稻飞虱知识库","水稻绿色防控建议"]', createdAt: dateOf('2026-05-20') },
-      { userId: bigfarmer.id, scene: 'MARKET', question: '番茄怎么分级卖更合适？', answer: 'A档果适合礼盒和社区团购，B档果可走集市散卖，轻微瑕疵果建议做加工或员工福利，避免压价。', modelUsed: 'FarmLink AI', referencesJson: '["AI质量分级","乡村集市订单"]', createdAt: dateOf('2026-05-19') },
-      { userId: village.id, scene: 'POLICY', question: '高标准农田项目材料还缺什么？', answer: '建议补齐地块边界、受益农户清单、管护责任人和年度建设计划，提交后进入乡镇初审。', modelUsed: 'FarmLink AI', referencesJson: '["高标准农田建设项目申报指南"]', createdAt: dateOf('2026-03-26') },
+      { userId: farmer.id, scene: 'AGRI', question: '水稻叶片上有小虫，应该怎么处理？', answer: '建议先按虫口密度判断是否达标防治。若确认为稻飞虱，可选低毒药剂按推荐剂量喷雾，并在7天后复查。', modelUsed: '田园通 AI', referencesJson: '["稻飞虱知识库","水稻绿色防控建议"]', createdAt: dateOf('2026-05-20') },
+      { userId: bigfarmer.id, scene: 'MARKET', question: '番茄怎么分级卖更合适？', answer: 'A档果适合礼盒和社区团购，B档果可走集市散卖，轻微瑕疵果建议做加工或员工福利，避免压价。', modelUsed: '田园通 AI', referencesJson: '["AI质量分级","乡村集市订单"]', createdAt: dateOf('2026-05-19') },
+      { userId: village.id, scene: 'POLICY', question: '高标准农田项目材料还缺什么？', answer: '建议补齐地块边界、受益农户清单、管护责任人和年度建设计划，提交后进入乡镇初审。', modelUsed: '田园通 AI', referencesJson: '["高标准农田建设项目申报指南"]', createdAt: dateOf('2026-03-26') },
     ],
   })
 

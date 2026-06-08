@@ -38,7 +38,7 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
   Widget build(BuildContext context) {
     if (!_ready) {
       return MaterialApp(
-        title: '田园通 FarmLink',
+        title: '田园通',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -53,7 +53,7 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
     return ChangeNotifierProvider.value(
       value: _auth,
       child: MaterialApp.router(
-        title: '田园通 FarmLink',
+        title: '田园通',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
         localizationsDelegates: GlobalMaterialLocalizations.delegates,

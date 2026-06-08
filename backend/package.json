@@ -1,7 +1,7 @@
 {
   "name": "farmlink-backend",
   "version": "1.0.0",
-  "description": "田园通 FarmLink — 数字乡村助农 App 后端 + 管理面板",
+  "description": "田园通 — 数字乡村助农 App 后端 + 管理面板",
   "type": "module",
   "main": "src/server.js",
   "scripts": {

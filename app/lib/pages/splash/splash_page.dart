@@ -198,7 +198,7 @@ class _SlideView extends StatelessWidget {
                         Icon(Icons.agriculture,
                             color: AppColors.primary, size: 22),
                         SizedBox(width: 6),
-                        Text('FarmLink',
+                        Text('田园通',
                             style: TextStyle(
                                 color: AppColors.primary,
                                 fontSize: 22,

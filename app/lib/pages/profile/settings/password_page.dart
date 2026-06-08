@@ -128,7 +128,7 @@ class _PasswordPageState extends State<PasswordPage> {
           const SizedBox(height: 18),
           const Center(
             child: Text(
-              'FarmLink 安全中心保护您的隐私',
+              '田园通 安全中心保护您的隐私',
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.onSurfaceVariant,
