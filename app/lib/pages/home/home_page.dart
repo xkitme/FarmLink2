@@ -662,7 +662,7 @@ class _HomePageState extends State<HomePage> {
         crossAxisCount: 4,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
-        childAspectRatio: 0.95,
+        childAspectRatio: 0.85,
       ),
       itemBuilder: (context, index) {
         final item = kSections[index];
@@ -955,7 +955,7 @@ class _HomePageState extends State<HomePage> {
         crossAxisCount: 4,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
-        childAspectRatio: 0.95,
+        childAspectRatio: 0.85,
       ),
       itemBuilder: (context, index) {
         final item = items[index];

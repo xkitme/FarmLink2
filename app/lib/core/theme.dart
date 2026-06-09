@@ -169,10 +169,16 @@ ThemeData buildAppTheme() {
       space: 1,
     ),
 
+    // chip：未选中浅底深字，选中主绿底白字（高对比，去勾更利落）
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surfaceContainer,
-      labelStyle:
-          const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+      selectedColor: AppColors.primary,
+      labelStyle: const TextStyle(
+          fontSize: 13, color: AppColors.onSurface, fontWeight: FontWeight.w500),
+      secondaryLabelStyle: const TextStyle(
+          fontSize: 13, color: Colors.white, fontWeight: FontWeight.w600),
+      checkmarkColor: Colors.white,
+      showCheckmark: false,
       side: BorderSide.none,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
     ),
