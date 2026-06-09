@@ -128,25 +128,27 @@ function normalizeInitial(record, fields) {
   return values
 }
 
-function FieldInput({ field }) {
+function FieldInput({ field, ...rest }) {
+  // rest 携带 Form.Item 注入的 value/onChange/id，必须透传给真正的控件，否则字段不与表单绑定。
   if (field.type === 'textarea' || field.type === 'json') {
-    return <Input.TextArea rows={field.type === 'json' ? 4 : 3} placeholder={field.placeholder || field.label} />
+    return <Input.TextArea {...rest} rows={field.type === 'json' ? 4 : 3} placeholder={field.placeholder || field.label} />
   }
   if (field.type === 'int' || field.type === 'float') {
-    return <InputNumber className="full-control" precision={field.type === 'float' ? 2 : 0} />
+    return <InputNumber {...rest} className="full-control" precision={field.type === 'float' ? 2 : 0} />
   }
-  if (field.type === 'boolean') return <Switch />
+  if (field.type === 'boolean') return <Switch {...rest} />
   if (field.type === 'select') {
     return (
       <Select
+        {...rest}
         allowClear
         options={(field.options || []).map((item) => ({ label: optionLabel(item), value: optionValue(item) }))}
       />
     )
   }
-  if (field.type === 'date') return <Input type="date" />
-  if (field.type === 'password') return <Input.Password placeholder={field.placeholder || field.label} />
-  return <Input placeholder={field.placeholder || field.label} />
+  if (field.type === 'date') return <Input {...rest} type="date" />
+  if (field.type === 'password') return <Input.Password {...rest} placeholder={field.placeholder || field.label} />
+  return <Input {...rest} placeholder={field.placeholder || field.label} />
 }
 
 function ResourceTable({ resourceKey, title }) {
@@ -207,7 +209,6 @@ function ResourceTable({ resourceKey, title }) {
             icon={<EditOutlined />}
             onClick={() => {
               setEditing(record)
-              form.setFieldsValue(normalizeInitial(record, fields))
               setModalOpen(true)
             }}
           >
@@ -224,7 +225,6 @@ function ResourceTable({ resourceKey, title }) {
 
   function openCreate() {
     setEditing(null)
-    form.resetFields()
     setModalOpen(true)
   }
 
@@ -289,9 +289,19 @@ function ResourceTable({ resourceKey, title }) {
         onCancel={() => setModalOpen(false)}
         onOk={() => form.submit()}
         width={760}
-        destroyOnClose
+        destroyOnHidden
+        afterOpenChange={(open) => {
+          if (!open) return
+          if (editing) form.setFieldsValue(normalizeInitial(editing, fields))
+          else form.resetFields()
+        }}
       >
-        <Form form={form} layout="vertical" onFinish={submit} preserve={false}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={submit}
+          preserve={false}
+        >
           <div className="resource-form-grid">
             {fields.map((field) => {
               if (field.createOnly && editing) return null

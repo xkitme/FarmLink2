@@ -21,13 +21,19 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         },
         components: {
           Layout: {
-            bodyBg: '#f4f7f6',
-            siderBg: '#10251f',
+            bodyBg: '#f5f7f6',
+            siderBg: '#ffffff',
+            headerBg: '#ffffff',
           },
           Menu: {
-            darkItemBg: '#10251f',
-            darkSubMenuItemBg: '#0c1c18',
-            darkItemSelectedBg: '#167d5b',
+            itemBg: 'transparent',
+            subMenuItemBg: 'transparent',
+            itemColor: '#42554d',
+            itemHoverColor: '#167d5b',
+            itemHoverBg: '#eef5f1',
+            itemSelectedColor: '#167d5b',
+            itemSelectedBg: '#e7f2ec',
+            itemActiveBg: '#e7f2ec',
           },
         },
       }}

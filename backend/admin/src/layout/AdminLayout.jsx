@@ -111,7 +111,7 @@ export default function AdminLayout() {
           )}
         </div>
         <Menu
-          theme="dark"
+          theme="light"
           mode="inline"
           selectedKeys={selectedKeys(location.pathname)}
           defaultOpenKeys={['business', 'ai', 'system']}
