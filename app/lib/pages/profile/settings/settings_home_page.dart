@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/api_client.dart';
 import '../../../core/auth_state.dart';
 import '../../../core/constants.dart';
+import '../../../core/elder_mode.dart';
 import '../../../widgets/common.dart';
 import 'settings_widgets.dart';
 
@@ -14,6 +16,7 @@ class SettingsHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
+    final elderMode = context.watch<ElderModeState>().enabled;
     final user = auth.user;
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -65,6 +68,19 @@ class SettingsHomePage extends StatelessWidget {
                   icon: Icons.thunderstorm_outlined,
                   label: '气象预警提醒',
                   onTap: () => context.push('/profile/settings/weather'),
+                ),
+                const Divider(height: 1, indent: 56),
+                SwitchListTile(
+                  value: elderMode,
+                  onChanged: (value) => _setElderMode(context, value),
+                  secondary: const Icon(
+                    Icons.elderly_outlined,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+                  title: const Text('适老模式'),
+                  subtitle: const Text('放大字号，方便长辈使用'),
+                  activeColor: AppColors.primary,
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
@@ -149,11 +165,19 @@ class SettingsHomePage extends StatelessWidget {
     return '${phone.substring(0, 3)}****${phone.substring(phone.length - 4)}';
   }
 
+  static Future<void> _setElderMode(BuildContext context, bool value) async {
+    await context.read<ElderModeState>().setEnabled(value);
+    try {
+      await ApiClient.put('/user/profile', body: {'isElderMode': value});
+    } catch (_) {
+      // The backend may not accept this field yet; local persistence is enough.
+    }
+  }
+
   static Future<void> _clearCache(BuildContext context) async {
     final sp = await SharedPreferences.getInstance();
     // C1：仅 `cache:` 前缀有 writer，dashboard:/service: 为死前缀，去掉
-    final keys =
-        sp.getKeys().where((key) => key.startsWith('cache:')).toList();
+    final keys = sp.getKeys().where((key) => key.startsWith('cache:')).toList();
     for (final key in keys) {
       await sp.remove(key);
     }

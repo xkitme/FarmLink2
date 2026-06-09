@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'core/auth_state.dart';
+import 'core/elder_mode.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
 
@@ -22,6 +23,7 @@ class FarmLinkApp extends StatefulWidget {
 
 class _FarmLinkAppState extends State<FarmLinkApp> {
   final AuthState _auth = AuthState();
+  final ElderModeState _elderMode = ElderModeState();
   late final GoRouter _router;
   bool _ready = false;
 
@@ -29,7 +31,10 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
   void initState() {
     super.initState();
     _router = buildRouter(_auth);
-    _auth.init().whenComplete(() {
+    _auth
+        .init()
+        .then((_) => _elderMode.init(user: _auth.user))
+        .whenComplete(() {
       if (mounted) setState(() => _ready = true);
     });
   }
@@ -50,8 +55,11 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
         ),
       );
     }
-    return ChangeNotifierProvider.value(
-      value: _auth,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _auth),
+        ChangeNotifierProvider.value(value: _elderMode),
+      ],
       child: MaterialApp.router(
         title: '田园通',
         debugShowCheckedModeBanner: false,
@@ -76,8 +84,10 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
   ///    非 web（APK）走原逻辑，零影响。
   Widget _appBuilder(BuildContext context, Widget? child) {
     final mq = MediaQuery.of(context);
-    final textScaler =
-        mq.textScaler.clamp(minScaleFactor: 0.9, maxScaleFactor: 1.1);
+    final elderMode = context.watch<ElderModeState?>()?.enabled ?? false;
+    final textScaler = elderMode
+        ? mq.textScaler.clamp(minScaleFactor: 1.3, maxScaleFactor: 1.35)
+        : mq.textScaler.clamp(minScaleFactor: 0.9, maxScaleFactor: 1.1);
 
     if (!kIsWeb || mq.size.width <= _phoneFrameWidth) {
       // 原生端，或 web 窗口本就 ≤ 手机宽（真机浏览器）：只做字号 clamp
