@@ -15,6 +15,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   static const _hotWords = ['补贴', '行情', '病虫害', '农机', '天气'];
+  static const _voiceDialects = ['普通话', '四川话', '客家话', '粤语'];
 
   final _ctrl = TextEditingController();
   final _focus = FocusNode();
@@ -99,6 +100,109 @@ class _SearchPageState extends State<SearchPage> {
     _searchContent();
   }
 
+  Future<void> _listenAndSearch() async {
+    final transcript = await _recognizeVoice();
+    if (transcript == null || !mounted) return;
+    _ctrl.text = transcript;
+    _ctrl.selection = TextSelection.collapsed(offset: _ctrl.text.length);
+    setState(() => _query = transcript);
+    await _searchContent();
+  }
+
+  Future<String?> _recognizeVoice() async {
+    final dialect = await showModalBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sm)),
+      ),
+      builder: (sheetCtx) {
+        var selectedDialect = _voiceDialects.first;
+        return StatefulBuilder(
+          builder: (ctx, setSheet) => Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final dialect in _voiceDialects)
+                      ChoiceChip(
+                        label: Text(dialect),
+                        selected: selectedDialect == dialect,
+                        onSelected: (_) =>
+                            setSheet(() => selectedDialect = dialect),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const _VoicePulseIcon(),
+                      const SizedBox(height: 16),
+                      Text(
+                        '正在以$selectedDialect聆听...',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        '语音将转换为搜索文字',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              Navigator.pop(sheetCtx, selectedDialect),
+                          icon:
+                              const Icon(Icons.stop_circle_outlined, size: 18),
+                          label: const Text('松开/点击结束'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (dialect == null || !mounted) return null;
+    try {
+      final data = await ApiClient.post('/ai/voice/recognize', body: {
+        'text': '',
+        'scene': 'search',
+        'dialect': dialect,
+      });
+      final transcript =
+          data is Map ? '${data['transcript'] ?? ''}'.trim() : '';
+      if (transcript.isEmpty) {
+        if (mounted) toast(context, '未识别到语音内容', error: true);
+        return null;
+      }
+      return transcript;
+    } catch (e) {
+      if (mounted) toast(context, serviceErrorMessage(e), error: true);
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final featureHits = _featureHits;
@@ -146,6 +250,13 @@ class _SearchPageState extends State<SearchPage> {
                   }),
                   onSubmitted: (_) => _searchContent(),
                 ),
+              ),
+              IconButton(
+                tooltip: '语音输入',
+                onPressed: _listenAndSearch,
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.mic_none,
+                    size: 20, color: AppColors.outline),
               ),
               if (_query.isNotEmpty)
                 GestureDetector(
@@ -432,5 +543,53 @@ class _SearchPageState extends State<SearchPage> {
 
   static String _join(List<String> parts) {
     return parts.where((part) => part.trim().isNotEmpty).join(' · ');
+  }
+}
+
+class _VoicePulseIcon extends StatefulWidget {
+  const _VoicePulseIcon();
+
+  @override
+  State<_VoicePulseIcon> createState() => _VoicePulseIconState();
+}
+
+class _VoicePulseIconState extends State<_VoicePulseIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 820),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 0.94, end: 1.08).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: AppColors.primaryContainer.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(R.sm),
+          border: Border.all(color: AppColors.primaryContainer),
+        ),
+        child: const Icon(Icons.mic_none, color: AppColors.primary, size: 32),
+      ),
+    );
   }
 }

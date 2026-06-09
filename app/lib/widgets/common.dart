@@ -135,6 +135,9 @@ class AppSearchField extends StatefulWidget {
 
   /// 清空已有文本后触发，可用于提交式搜索恢复完整列表。
   final VoidCallback? onClear;
+
+  /// 传入时在右侧显示语音输入按钮，不影响默认搜索框行为。
+  final VoidCallback? onVoice;
   const AppSearchField({
     super.key,
     required this.controller,
@@ -142,6 +145,7 @@ class AppSearchField extends StatefulWidget {
     this.onSubmitted,
     this.onChanged,
     this.onClear,
+    this.onVoice,
   });
 
   @override
@@ -242,6 +246,14 @@ class _AppSearchFieldState extends State<AppSearchField> {
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.close,
                   size: 18, color: AppColors.onSurfaceVariant),
+            ),
+          if (widget.onVoice != null)
+            IconButton(
+              tooltip: '语音输入',
+              onPressed: widget.onVoice,
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.mic_none,
+                  size: 20, color: accent ?? AppColors.onSurfaceVariant),
             ),
           // 方角品牌绿「搜索」按钮：仅提交式（传 onSubmitted）才显示
           if (widget.onSubmitted != null) ...[
