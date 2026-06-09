@@ -41,11 +41,12 @@ class _Machine {
   });
 
   factory _Machine.fromApi(Map<String, dynamic> json, int index) {
+    final type = '${json['machineType'] ?? '通用农机'}';
     return _Machine(
       id: json['id'] as int?,
-      image: 'assets/images/_5_2.jpg',
+      image: _imageFromJson(json, type),
       name: '${json['machineName'] ?? '共享农机'}',
-      type: '${json['machineType'] ?? '通用农机'}',
+      type: type,
       price: (json['dailyPrice'] as num?)?.toDouble() ?? 0,
       deposit: (json['deposit'] as num?)?.toDouble() ?? 0,
       rating: (json['rating'] as num?)?.toDouble() ?? 4.8,
@@ -82,6 +83,69 @@ class _Machine {
         distance: map['distance'] as String? ?? '',
         fromApi: map['fromApi'] as bool? ?? false,
       );
+
+  static String _imageFromJson(Map<String, dynamic> json, String type) {
+    for (final key in const [
+      'image',
+      'imageUrl',
+      'cover',
+      'coverUrl',
+      'thumbnail',
+      'thumbnailUrl',
+      'photo',
+      'photoUrl',
+      'picture',
+      'pictureUrl',
+    ]) {
+      final value = _text(json[key]);
+      if (value.isNotEmpty) return value;
+    }
+    for (final key in const ['images', 'photos']) {
+      final value = json[key];
+      if (value is List && value.isNotEmpty) {
+        final first = value.first;
+        final text = first is Map
+            ? _text(first['url'] ?? first['imageUrl'])
+            : _text(first);
+        if (text.isNotEmpty) return text;
+      }
+    }
+    return _fallbackImageForType(type);
+  }
+
+  static String _fallbackImageForType(String type) => 'assets/images/_5_2.jpg';
+
+  static String _text(dynamic value) {
+    final text = '$value'.trim();
+    return text == 'null' ? '' : text;
+  }
+}
+
+Widget _machineImage(String image,
+    {required double width, required double height, double iconSize = 36}) {
+  final source = image.trim().isEmpty ? 'assets/images/_5_2.jpg' : image.trim();
+  final fallback = Container(
+    width: width,
+    height: height,
+    color: AppColors.surfaceContainer,
+    child: Icon(Icons.agriculture, color: AppColors.primary, size: iconSize),
+  );
+  if (source.startsWith('http://') || source.startsWith('https://')) {
+    return Image.network(
+      source,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => fallback,
+    );
+  }
+  return Image.asset(
+    source,
+    width: width,
+    height: height,
+    fit: BoxFit.cover,
+    errorBuilder: (_, __, ___) => fallback,
+  );
 }
 
 // ── 页面状态 ────────────────────────────────────────────
@@ -509,19 +573,7 @@ class _MachineListCard extends StatelessWidget {
               // 左缩略图 ~84px
               ClipRRect(
                 borderRadius: BorderRadius.circular(R.sm),
-                child: Image.asset(
-                  machine.image,
-                  width: 84,
-                  height: 84,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 84,
-                    height: 84,
-                    color: AppColors.surfaceContainer,
-                    child: const Icon(Icons.agriculture,
-                        color: AppColors.primary, size: 36),
-                  ),
-                ),
+                child: _machineImage(machine.image, width: 84, height: 84),
               ),
               const SizedBox(width: 12),
               // 右信息区
@@ -579,13 +631,17 @@ class _MachineListCard extends StatelessWidget {
                                 fontSize: 12,
                                 color: AppColors.onSurfaceVariant),
                           ),
-                          const Spacer(),
-                          // 押金 + 距离
-                          Text(
-                            '押金￥${machine.deposit.toStringAsFixed(0)} · ${machine.distance}',
-                            style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '押金￥${machine.deposit.toStringAsFixed(0)} · ${machine.distance}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.end,
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.onSurfaceVariant),
+                            ),
                           ),
                         ],
                       ),
@@ -1126,17 +1182,11 @@ class MachineDetailPage extends StatelessWidget {
           children: [
             // 图片区
             ClipRRect(
-              child: Image.asset(
+              child: _machineImage(
                 machine.image,
                 width: double.infinity,
                 height: 240,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  height: 240,
-                  color: AppColors.surfaceContainer,
-                  child: const Icon(Icons.agriculture,
-                      color: AppColors.primary, size: 64),
-                ),
+                iconSize: 64,
               ),
             ),
             Padding(
@@ -1229,11 +1279,9 @@ class MachineDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   // 机主 + 距离
-                  _infoRow(
-                      Icons.person_outline, '机主', machine.owner),
+                  _infoRow(Icons.person_outline, '机主', machine.owner),
                   const SizedBox(height: 12),
-                  _infoRow(Icons.location_on_outlined, '距离',
-                      machine.distance),
+                  _infoRow(Icons.location_on_outlined, '距离', machine.distance),
                   const SizedBox(height: 28),
                   // 预约按钮
                   SizedBox(
@@ -1244,8 +1292,7 @@ class MachineDetailPage extends StatelessWidget {
                           ? () => _showBookingSheet(context, machine)
                           : null,
                       icon: const Icon(Icons.calendar_today, size: 20),
-                      label:
-                          Text(canBook ? '预约农机' : '暂不可预约'),
+                      label: Text(canBook ? '预约农机' : '暂不可预约'),
                     ),
                   ),
                 ],

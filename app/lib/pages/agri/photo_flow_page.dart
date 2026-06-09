@@ -443,9 +443,10 @@ class _PhotoFlowPageState extends State<PhotoFlowPage> {
   Widget _reportCard() {
     final result = _result!;
 
-    // 「无法识别」分支：去 VERIFIED 徽章/置信度/建档，避免把胡判结果展示成权威诊断。
+    // 「无法识别」分支：去验证徽章/置信度/建档，避免把胡判结果展示成权威诊断。
     if (!_recognized) {
-      final advice = '${result['adviceText'] ?? result['advice'] ?? '未能识别出明确的病害特征，建议重新拍摄叶片正反面或茎秆果实清晰照片。'}';
+      final advice =
+          '${result['adviceText'] ?? result['advice'] ?? '未能识别出明确的病害特征，建议重新拍摄叶片正反面或茎秆果实清晰照片。'}';
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -516,7 +517,7 @@ class _PhotoFlowPageState extends State<PhotoFlowPage> {
                   ),
                 ),
               ),
-              StatusChip('VERIFIED'),
+              StatusChip('已验证', color: AppColors.primary),
             ],
           ),
           const SizedBox(height: 14),

@@ -41,7 +41,9 @@ class _PolicyItem {
 
 class _PolicyPageState extends State<PolicyPage> {
   static const _tabs = ['惠农政策', '党建学习', '文明乡风'];
-  static const _images = ['_3_1.jpg', '_3_2.jpg', '_3_3.jpg'];
+  static const _policyFallbackImage = 'assets/images/_3_1.jpg';
+  static const _partyFallbackImage = 'assets/images/_3_2.jpg';
+  static const _honorFallbackImage = 'assets/images/_3_3.jpg';
 
   var _active = 0;
   final _loading = [true, true, true];
@@ -91,34 +93,27 @@ class _PolicyPageState extends State<PolicyPage> {
     if (tab == 0) {
       final data = await ApiClient.get('/policy/list', query: {'pageSize': 20});
       final records = (data['records'] as List? ?? []);
-      return [
-        for (var i = 0; i < records.length; i++)
-          _policyItem(_castMap(records[i]), i)
-      ];
+      return [for (final record in records) _policyItem(_castMap(record))];
     }
     if (tab == 1) {
       final data = await ApiClient.get('/party/lesson/list');
       final list = (data as List? ?? []);
-      return [
-        for (var i = 0; i < list.length; i++) _partyItem(_castMap(list[i]), i)
-      ];
+      return [for (final item in list) _partyItem(_castMap(item))];
     }
     final data = await ApiClient.get('/village/honor');
     final list = (data as List? ?? []);
-    return [
-      for (var i = 0; i < list.length; i++) _honorItem(_castMap(list[i]), i)
-    ];
+    return [for (final item in list) _honorItem(_castMap(item))];
   }
 
   Map<String, dynamic> _castMap(dynamic v) =>
       v is Map ? v.cast<String, dynamic>() : <String, dynamic>{};
 
-  _PolicyItem _policyItem(Map<String, dynamic> j, int i) {
+  _PolicyItem _policyItem(Map<String, dynamic> j) {
     final category = '${j['category'] ?? '政策解读'}';
     return _PolicyItem(
       id: j['id'] as int?,
       source: 'policy',
-      image: 'assets/images/${_images[i % 3]}',
+      image: _imageFromJson(j, _policyFallbackImage),
       title: '${j['title'] ?? '惠农政策'}',
       summary: '${j['summary'] ?? j['publishOrg'] ?? '政策服务'}',
       body: '${j['summary'] ?? ''}',
@@ -128,12 +123,12 @@ class _PolicyPageState extends State<PolicyPage> {
     );
   }
 
-  _PolicyItem _partyItem(Map<String, dynamic> j, int i) {
+  _PolicyItem _partyItem(Map<String, dynamic> j) {
     final type = '${j['type'] ?? '党建学习'}';
     return _PolicyItem(
       id: j['id'] as int?,
       source: 'party',
-      image: 'assets/images/${_images[i % 3]}',
+      image: _imageFromJson(j, _partyFallbackImage),
       title: '${j['title'] ?? '党建学习'}',
       summary: '完成学习可得 ${j['pointsReward'] ?? 0} 积分'
           '${j['learned'] == true ? ' · 已学习' : ''}',
@@ -144,12 +139,12 @@ class _PolicyPageState extends State<PolicyPage> {
     );
   }
 
-  _PolicyItem _honorItem(Map<String, dynamic> j, int i) {
+  _PolicyItem _honorItem(Map<String, dynamic> j) {
     final type = '${j['honorType'] ?? '文明乡风'}';
     return _PolicyItem(
       id: j['id'] as int?,
       source: 'honor',
-      image: 'assets/images/${_images[i % 3]}',
+      image: _imageFromJson(j, _honorFallbackImage),
       title: '${j['honoreeName'] ?? '身边榜样'} · $type',
       summary: '${j['deed'] ?? '乡风文明事迹'}',
       body: '${j['deed'] ?? ''}',
@@ -167,19 +162,68 @@ class _PolicyPageState extends State<PolicyPage> {
         'body': e.body,
         'time': e.time,
         'tag': e.tag,
+        'image': e.image,
       };
 
-  _PolicyItem _fromCacheItem(Map<String, dynamic> j, int i) => _PolicyItem(
-        id: j['id'] as int?,
-        source: '${j['source'] ?? 'policy'}',
-        image: 'assets/images/${_images[i % 3]}',
-        title: '${j['title'] ?? ''}',
-        summary: '${j['summary'] ?? ''}',
-        body: '${j['body'] ?? ''}',
-        time: '${j['time'] ?? ''}',
-        tag: '${j['tag'] ?? '政策'}',
-        tagColor: _tagColor('${j['tag'] ?? ''}'),
-      );
+  _PolicyItem _fromCacheItem(Map<String, dynamic> j, int i) {
+    final source = '${j['source'] ?? 'policy'}';
+    return _PolicyItem(
+      id: j['id'] as int?,
+      source: source,
+      image: _text(j['image']).isNotEmpty
+          ? _text(j['image'])
+          : _fallbackImageForSource(source),
+      title: '${j['title'] ?? ''}',
+      summary: '${j['summary'] ?? ''}',
+      body: '${j['body'] ?? ''}',
+      time: '${j['time'] ?? ''}',
+      tag: '${j['tag'] ?? '政策'}',
+      tagColor: _tagColor('${j['tag'] ?? ''}'),
+    );
+  }
+
+  String _imageFromJson(Map<String, dynamic> json, String fallback) {
+    for (final key in const [
+      'coverImage',
+      'coverUrl',
+      'image',
+      'imageUrl',
+      'thumbnail',
+      'thumbnailUrl',
+      'picUrl',
+      'banner',
+      'photo',
+      'photoUrl',
+    ]) {
+      final value = _text(json[key]);
+      if (value.isNotEmpty) return value;
+    }
+    for (final key in const ['images', 'photos']) {
+      final value = json[key];
+      if (value is List && value.isNotEmpty) {
+        final first = value.first;
+        final text = first is Map
+            ? _text(first['url'] ?? first['imageUrl'])
+            : _text(first);
+        if (text.isNotEmpty) return text;
+      }
+    }
+    return fallback;
+  }
+
+  String _fallbackImageForSource(String source) {
+    switch (source) {
+      case 'party':
+        return _partyFallbackImage;
+      case 'honor':
+        return _honorFallbackImage;
+      default:
+        return _policyFallbackImage;
+    }
+  }
+
+  String _text(dynamic value) =>
+      '$value'.trim() == 'null' ? '' : '$value'.trim();
 
   @override
   Widget build(BuildContext context) {
@@ -281,19 +325,7 @@ class _PolicyPageState extends State<PolicyPage> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(R.md),
-            child: Image.asset(
-              item.image,
-              width: 104,
-              height: 104,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                width: 104,
-                height: 104,
-                color: AppColors.surfaceContainer,
-                child: const Icon(Icons.account_balance,
-                    color: AppColors.primary, size: 34),
-              ),
-            ),
+            child: _itemImage(item),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -334,6 +366,7 @@ class _PolicyPageState extends State<PolicyPage> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     _tag(item.tag, item.tagColor),
                   ],
                 ),
@@ -379,25 +412,58 @@ class _PolicyPageState extends State<PolicyPage> {
       ));
     }
 
-    context.push('/detail/info', extra: InfoDetailData(
-      title: title,
-      body: body.isEmpty ? '暂无更多内容' : body,
-      sections: sections,
-    ));
+    context.push('/detail/info',
+        extra: InfoDetailData(
+          title: title,
+          body: body.isEmpty ? '暂无更多内容' : body,
+          sections: sections,
+        ));
   }
 
   Widget _tag(String text, Color color) => Container(
+        constraints: const BoxConstraints(maxWidth: 132),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(R.sm),
         ),
         child: Text(
           text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
               fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
         ),
       );
+
+  Widget _itemImage(_PolicyItem item) {
+    final image = item.image.trim().isEmpty
+        ? _fallbackImageForSource(item.source)
+        : item.image.trim();
+    final fallback = Container(
+      width: 104,
+      height: 104,
+      color: AppColors.surfaceContainer,
+      child:
+          const Icon(Icons.account_balance, color: AppColors.primary, size: 34),
+    );
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return Image.network(
+        image,
+        width: 104,
+        height: 104,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    }
+    return Image.asset(
+      image,
+      width: 104,
+      height: 104,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => fallback,
+    );
+  }
 }
 
 Color _tagColor(String category) {

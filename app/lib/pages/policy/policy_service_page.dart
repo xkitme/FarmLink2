@@ -752,7 +752,8 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
       case 'REJECTED':
         return '未通过';
       default:
-        return status.isEmpty ? '已提交' : status;
+        if (status.isEmpty) return '已提交';
+        return RegExp(r'[\u4e00-\u9fa5]').hasMatch(status) ? status : '处理中';
     }
   }
 }

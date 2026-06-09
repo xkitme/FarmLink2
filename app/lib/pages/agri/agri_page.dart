@@ -425,7 +425,9 @@ class _AgriPageState extends State<AgriPage> {
   void _detectResultSheet(String name, Uint8List img, Map<String, dynamic> r) {
     final lines = <String>[];
     if (r['healthScore'] != null) {
-      lines.add('健康度：${r['healthScore']}  ·  ${r['status'] ?? ''}');
+      final status = _healthStatusLabel(r['status']);
+      lines.add('健康度：${r['healthScore']}'
+          '${status.isEmpty ? '' : '  ·  $status'}');
     }
     if (r['growthStage'] != null) lines.add('生长阶段：${r['growthStage']}');
     if (r['weedName'] != null) lines.add('识别结果：${r['weedName']}');
@@ -443,10 +445,32 @@ class _AgriPageState extends State<AgriPage> {
           imageBytes: img,
           sections: [
             InfoSection(items: lines),
-            InfoSection(
-                body: '${r['advice'] ?? r['adviceText'] ?? '已生成识别结果'}'),
+            InfoSection(body: '${r['advice'] ?? r['adviceText'] ?? '已生成识别结果'}'),
           ],
         ));
+  }
+
+  String _healthStatusLabel(dynamic status) {
+    final text = '${status ?? ''}'.trim();
+    switch (text.toUpperCase()) {
+      case '':
+        return '';
+      case 'HEALTHY':
+      case 'NORMAL':
+      case 'GOOD':
+        return '健康';
+      case 'WARNING':
+      case 'RISK':
+      case 'ATTENTION':
+        return '需关注';
+      case 'SICK':
+      case 'DISEASE':
+      case 'ABNORMAL':
+      case 'BAD':
+        return '异常';
+      default:
+        return RegExp(r'[\u4e00-\u9fa5]').hasMatch(text) ? text : '待确认';
+    }
   }
 
   Future<ImageSource?> _pickSource() {
@@ -559,7 +583,8 @@ class _AgriPageState extends State<AgriPage> {
       context.push('/detail/info',
           extra: InfoDetailData(
             title: '灌溉计划',
-            body: '${plan['advice'] ?? ''}\n${r['note'] ?? ''}\n\n${r['tip'] ?? ''}',
+            body:
+                '${plan['advice'] ?? ''}\n${r['note'] ?? ''}\n\n${r['tip'] ?? ''}',
           ));
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('生成', e), error: true);

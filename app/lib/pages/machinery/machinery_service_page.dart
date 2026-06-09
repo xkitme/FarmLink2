@@ -133,30 +133,31 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
             child: AppCard(
               child: Row(
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: (r['level'] == 'DUE'
-                              ? AppColors.error
-                              : AppColors.primary)
-                          .withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(R.md),
-                    ),
-                    child: Icon(Icons.handyman,
-                        color: r['level'] == 'DUE'
-                            ? AppColors.error
-                            : AppColors.primary),
-                  ),
+                  Builder(builder: (_) {
+                    final color = _maintenanceLevelColor(r['level']);
+                    return Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(R.md),
+                      ),
+                      child: Icon(Icons.handyman, color: color),
+                    );
+                  }),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('${r['machineName'] ?? '农机'}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 fontSize: 15, fontWeight: FontWeight.w600)),
                         Text('${r['advice'] ?? ''}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 fontSize: 12,
                                 height: 1.4,
@@ -164,14 +165,51 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
                       ],
                     ),
                   ),
-                  if (r['level'] == 'DUE')
-                    const StatusChip('待保养', color: AppColors.error),
+                  StatusChip(_maintenanceLevelLabel(r['level']),
+                      color: _maintenanceLevelColor(r['level'])),
                 ],
               ),
             ),
           ),
       ],
     );
+  }
+
+  Color _maintenanceLevelColor(dynamic level) {
+    switch ('${level ?? ''}'.trim().toUpperCase()) {
+      case 'OVERDUE':
+      case 'DUE':
+        return AppColors.error;
+      case 'SOON':
+      case 'UPCOMING':
+      case 'WARNING':
+        return AppColors.goldContainer;
+      case 'OK':
+      case 'NORMAL':
+      case 'DONE':
+        return AppColors.primary;
+      default:
+        return AppColors.secondary;
+    }
+  }
+
+  String _maintenanceLevelLabel(dynamic level) {
+    switch ('${level ?? ''}'.trim().toUpperCase()) {
+      case 'OVERDUE':
+        return '已逾期';
+      case 'DUE':
+        return '待保养';
+      case 'SOON':
+      case 'UPCOMING':
+      case 'WARNING':
+        return '临近保养';
+      case 'OK':
+      case 'NORMAL':
+      case 'DONE':
+        return '状态正常';
+      default:
+        return '待确认';
+    }
   }
 
   // ── 土地流转 ──────────────────────────────
@@ -534,22 +572,18 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
                       children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: (r['level'] == 'DUE'
-                                    ? AppColors.error
-                                    : AppColors.primary)
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(R.md),
-                          ),
-                          child: Icon(Icons.handyman,
-                              size: 20,
-                              color: r['level'] == 'DUE'
-                                  ? AppColors.error
-                                  : AppColors.primary),
-                        ),
+                        Builder(builder: (_) {
+                          final color = _maintenanceLevelColor(r['level']);
+                          return Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(R.md),
+                            ),
+                            child: Icon(Icons.handyman, size: 20, color: color),
+                          );
+                        }),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -567,8 +601,8 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
                             ],
                           ),
                         ),
-                        if (r['level'] == 'DUE')
-                          const StatusChip('待保养', color: AppColors.error),
+                        StatusChip(_maintenanceLevelLabel(r['level']),
+                            color: _maintenanceLevelColor(r['level'])),
                       ],
                     ),
                   ),

@@ -140,6 +140,133 @@ class _LifePageState extends State<LifePage> {
     _elder = _m(cache['elder']);
   }
 
+  String _imageFromJson(Map<String, dynamic> json, String fallback) {
+    for (final key in const [
+      'coverImage',
+      'coverUrl',
+      'image',
+      'imageUrl',
+      'thumbnail',
+      'thumbnailUrl',
+      'photo',
+      'photoUrl',
+      'picture',
+      'pictureUrl',
+    ]) {
+      final value = _text(json[key]);
+      if (value.isNotEmpty) return value;
+    }
+    for (final key in const ['images', 'photos']) {
+      final value = json[key];
+      if (value is List && value.isNotEmpty) {
+        final first = value.first;
+        final text = first is Map
+            ? _text(first['url'] ?? first['imageUrl'])
+            : _text(first);
+        if (text.isNotEmpty) return text;
+      }
+    }
+    return fallback;
+  }
+
+  String _text(dynamic value) {
+    final text = '${value ?? ''}'.trim();
+    return text == 'null' ? '' : text;
+  }
+
+  Widget _lifeImage(String image,
+      {required double width,
+      required double height,
+      IconData icon = Icons.landscape}) {
+    final source =
+        image.trim().isEmpty ? 'assets/images/_7_1.jpg' : image.trim();
+    final fallback = Container(
+      width: width,
+      height: height,
+      color: AppColors.surfaceContainer,
+      child: Icon(icon, color: AppColors.primary),
+    );
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return Image.network(
+        source,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    }
+    return Image.asset(
+      source,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => fallback,
+    );
+  }
+
+  String _localizedStatus(
+      dynamic status, Map<String, String> labels, String fallback) {
+    final text = _text(status);
+    if (text.isEmpty) return fallback;
+    final upper = text.toUpperCase();
+    if (labels.containsKey(upper)) return labels[upper]!;
+    return RegExp(r'[\u4e00-\u9fa5]').hasMatch(text) ? text : fallback;
+  }
+
+  String _helpStatusLabel(dynamic status) => _localizedStatus(
+      status,
+      const {
+        'DONE': '已响应',
+        'COMPLETED': '已响应',
+        'RESOLVED': '已响应',
+        'PENDING': '待响应',
+        'WAITING': '待响应',
+        'IN_PROGRESS': '进行中',
+        'PROCESSING': '进行中',
+        'ACTIVE': '进行中',
+        'CANCELED': '已关闭',
+        'CANCELLED': '已关闭',
+        'CLOSED': '已关闭',
+      },
+      '进行中');
+
+  Color _helpStatusColor(dynamic status) {
+    switch (_text(status).toUpperCase()) {
+      case 'DONE':
+      case 'COMPLETED':
+      case 'RESOLVED':
+        return AppColors.onSurfaceVariant;
+      case 'PENDING':
+      case 'WAITING':
+        return AppColors.goldContainer;
+      case 'CANCELED':
+      case 'CANCELLED':
+      case 'CLOSED':
+        return AppColors.outline;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  String _expressStatusLabel(dynamic status) => _localizedStatus(
+      status,
+      const {
+        'PENDING': '待揽收',
+        'WAITING': '待取件',
+        'PICKUP': '待取件',
+        'ARRIVED': '待取件',
+        'IN_TRANSIT': '运输中',
+        'TRANSIT': '运输中',
+        'SHIPPING': '运输中',
+        'DELIVERING': '派送中',
+        'SIGNED': '已签收',
+        'DELIVERED': '已签收',
+        'RECEIVED': '已签收',
+        'EXCEPTION': '异常',
+        'FAILED': '异常',
+      },
+      '查询中');
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,15 +328,7 @@ class _LifePageState extends State<LifePage> {
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) =>
                   const ColoredBox(color: AppColors.primaryContainer)),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xCC1A1C1C), Color(0x7730492F)],
-              ),
-            ),
-          ),
+          const ColoredBox(color: Color(0x991A1C1C)),
           Padding(
             padding: const EdgeInsets.all(18),
             child: Column(
@@ -244,8 +363,8 @@ class _LifePageState extends State<LifePage> {
   Widget _heroMetric(String label, String value) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.88),
-          borderRadius: BorderRadius.circular(R.md),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(R.sm),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -437,18 +556,10 @@ class _LifePageState extends State<LifePage> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(R.md),
-                    child: Image.asset(
-                      'assets/images/_5_1.jpg',
+                    child: _lifeImage(
+                      _imageFromJson(t, 'assets/images/_7_1.jpg'),
                       width: 92,
                       height: 76,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 92,
-                        height: 76,
-                        color: AppColors.surfaceContainer,
-                        child: const Icon(Icons.landscape,
-                            color: AppColors.primary),
-                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -530,10 +641,8 @@ class _LifePageState extends State<LifePage> {
                       ],
                     ),
                   ),
-                  StatusChip(h['status'] == 'DONE' ? '已响应' : '进行中',
-                      color: h['status'] == 'DONE'
-                          ? AppColors.onSurfaceVariant
-                          : AppColors.primary),
+                  StatusChip(_helpStatusLabel(h['status']),
+                      color: _helpStatusColor(h['status'])),
                 ],
               ),
             ),
@@ -738,9 +847,10 @@ class _LifePageState extends State<LifePage> {
       final traces = (r['traces'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
       if (!mounted) return;
+      final statusLabel = _expressStatusLabel(r['status']);
       context.push('/detail/info',
           extra: InfoDetailData(
-            title: '快递状态 · ${r['status'] ?? ''}',
+            title: '快递状态 · $statusLabel',
             sections: [
               InfoSection(
                 items: [
