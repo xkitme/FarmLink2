@@ -137,12 +137,12 @@ class _AgriPageState extends State<AgriPage> {
               label: const Text('添加'),
             )),
         if (_plots.isEmpty)
-          const AppCard(child: Text('还没有地块，点击「添加」建立你的第一块地'))
+          _flatBox(const Text('还没有地块，点击「添加」建立你的第一块地'))
         else
           ..._plots.map((p) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: AppCard(
-                  child: Row(
+                child: _flatBox(
+                  Row(
                     children: [
                       Container(
                         width: 44,
@@ -215,7 +215,7 @@ class _AgriPageState extends State<AgriPage> {
               label: const Text('记一笔'),
             )),
         if (_records.isEmpty)
-          const AppCard(child: Text('还没有农事记录，点击「记一笔」开始记录'))
+          _flatBox(const Text('还没有农事记录，点击「记一笔」开始记录'))
         else
           ..._records.take(5).map((r) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
@@ -236,8 +236,8 @@ class _AgriPageState extends State<AgriPage> {
         : isToday
             ? '今日'
             : '${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
-    return AppCard(
-      child: Row(
+    return _flatBox(
+      Row(
         children: [
           StatusChip(
             '${record['recordType'] ?? '农事'}',
@@ -290,9 +290,9 @@ class _AgriPageState extends State<AgriPage> {
   Widget _photoFlowEntry() {
     return Padding(
       padding: const EdgeInsets.only(top: 6, bottom: 8),
-      child: AppCard(
+      child: _flatBox(
         onTap: () => context.push('/agri/diagnose'),
-        child: Row(
+        Row(
           children: [
             Container(
               width: 48,
@@ -771,6 +771,31 @@ class _AgriPageState extends State<AgriPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // 扁平容器：白底 + 1px outlineVariant 描边 + R.sm 圆角 + 无阴影，
+  // 替代展示型 AppCard，去掉浮卡感。
+  Widget _flatBox(Widget child,
+      {VoidCallback? onTap,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    final box = Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: box,
       ),
     );
   }

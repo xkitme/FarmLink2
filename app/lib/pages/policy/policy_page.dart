@@ -317,10 +317,10 @@ class _PolicyPageState extends State<PolicyPage> {
   }
 
   Widget _card(BuildContext context, _PolicyItem item) {
-    return AppCard(
-      padding: const EdgeInsets.all(14),
+    return _flatBox(
       onTap: () => _openDetail(context, item),
-      child: Row(
+      padding: const EdgeInsets.all(14),
+      Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
@@ -418,6 +418,31 @@ class _PolicyPageState extends State<PolicyPage> {
           body: body.isEmpty ? '暂无更多内容' : body,
           sections: sections,
         ));
+  }
+
+  // 扁平容器：白底 + 1px outlineVariant 描边 + R.sm 圆角 + 无阴影，
+  // 替代展示型 AppCard，去掉浮卡感。
+  Widget _flatBox(Widget child,
+      {VoidCallback? onTap,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    final box = Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: box,
+      ),
+    );
   }
 
   Widget _tag(String text, Color color) => Container(
