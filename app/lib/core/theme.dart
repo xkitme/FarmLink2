@@ -93,24 +93,43 @@ ThemeData buildAppTheme() {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
     ),
 
-    // 输入框：浅白填充 + 底部棕色边
-    inputDecorationTheme: const InputDecorationTheme(
+    // 输入框：白底 + 方角描边（R.sm），聚焦转主绿。
+    // 利落方正，无下划线 / 无灰胶囊（沉淀自 AppSearchField 标准）。
+    inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surfaceLow,
-      hintStyle: TextStyle(color: AppColors.outline),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      enabledBorder: UnderlineInputBorder(
-        borderSide: BorderSide(color: AppColors.secondary, width: 2),
+      fillColor: AppColors.surface,
+      hintStyle: const TextStyle(color: AppColors.outline),
+      labelStyle:
+          const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14),
+      floatingLabelStyle: const TextStyle(
+          color: AppColors.primary, fontWeight: FontWeight.w600),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(R.sm),
+        borderSide:
+            const BorderSide(color: AppColors.outlineVariant, width: 1.5),
       ),
-      focusedBorder: UnderlineInputBorder(
-        borderSide: BorderSide(color: AppColors.primary, width: 2),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(R.sm),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
       ),
-      border: UnderlineInputBorder(
-        borderSide: BorderSide(color: AppColors.secondary, width: 2),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(R.sm),
+        borderSide:
+            const BorderSide(color: AppColors.outlineVariant, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(R.sm),
+        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(R.sm),
+        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
       ),
     ),
 
-    // 主按钮：胶囊形实心绿
+    // 主按钮：方角实心绿（R.sm），利落方正，无胶囊
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
@@ -118,19 +137,21 @@ ThemeData buildAppTheme() {
         elevation: 0,
         minimumSize: const Size(0, 52),
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        shape: const StadiumBorder(),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(R.sm)),
         textStyle: const TextStyle(
             fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5),
       ),
     ),
 
-    // 次按钮：胶囊棕色描边
+    // 次按钮：方角主绿描边（R.sm）
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.secondary,
+        foregroundColor: AppColors.primary,
         minimumSize: const Size(0, 52),
-        side: const BorderSide(color: AppColors.secondary, width: 2),
-        shape: const StadiumBorder(),
+        side: const BorderSide(color: AppColors.outlineVariant, width: 1.5),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(R.sm)),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     ),
