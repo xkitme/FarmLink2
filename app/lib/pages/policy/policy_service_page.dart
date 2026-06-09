@@ -173,14 +173,14 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
   }
 
   Widget _subsidyList() {
-    if (_subsidies.isEmpty) return const AppCard(child: Text('暂无补贴申请记录'));
+    if (_subsidies.isEmpty) return _flatBox(const Text('暂无补贴申请记录'));
     return Column(
       children: [
         for (final s in _subsidies.take(3))
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              child: Row(
+            child: _flatBox(
+              Row(
                 children: [
                   const Icon(Icons.assignment_turned_in,
                       color: AppColors.primary),
@@ -213,8 +213,8 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
 
   Widget _pointsCard() {
     final me = _me;
-    return AppCard(
-      child: Column(
+    return _flatBox(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -272,19 +272,14 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
   }
 
   Widget _affairList() {
-    if (_affairs.isEmpty) return const AppCard(child: Text('暂无村务公开'));
+    if (_affairs.isEmpty) return _flatBox(const Text('暂无村务公开'));
     return Column(
       children: [
         for (final a in _affairs.take(4))
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              onTap: () => context.push('/detail/info',
-                  extra: InfoDetailData(
-                    title: '${a['title'] ?? '村务公开'}',
-                    body: '${a['content'] ?? '暂无详情'}',
-                  )),
-              child: Row(
+            child: _flatBox(
+              Row(
                 children: [
                   const Icon(Icons.campaign, color: AppColors.secondary),
                   const SizedBox(width: 12),
@@ -308,6 +303,11 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
                       color: AppColors.secondary),
                 ],
               ),
+              onTap: () => context.push('/detail/info',
+                  extra: InfoDetailData(
+                    title: '${a['title'] ?? '村务公开'}',
+                    body: '${a['content'] ?? '暂无详情'}',
+                  )),
             ),
           ),
       ],
@@ -315,14 +315,14 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
   }
 
   Widget _courseList() {
-    if (_courses.isEmpty) return const AppCard(child: Text('暂无培训课程'));
+    if (_courses.isEmpty) return _flatBox(const Text('暂无培训课程'));
     return Column(
       children: [
         for (final c in _courses.take(4))
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              child: Column(
+            child: _flatBox(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -369,14 +369,14 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
   }
 
   Widget _talentList() {
-    if (_talents.isEmpty) return const AppCard(child: Text('暂无人才档案'));
+    if (_talents.isEmpty) return _flatBox(const Text('暂无人才档案'));
     return Column(
       children: [
         for (final t in _talents.take(4))
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              child: Row(
+            child: _flatBox(
+              Row(
                 children: [
                   CircleAvatar(
                     radius: 23,
@@ -506,9 +506,8 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
             for (final item in _items)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: AppCard(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
+                child: _flatBox(
+                  Row(
                     children: [
                       Expanded(
                         child: Text('${item['name']}',
@@ -528,6 +527,7 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
                       ),
                     ],
                   ),
+                  padding: const EdgeInsets.all(12),
                 ),
               ),
           ],
@@ -603,21 +603,44 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
       children: [
         for (final it in items) ...[
           Expanded(
-            child: AppCard(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              onTap: it.$3,
-              child: Column(
+            child: _flatBox(
+              Column(
                 children: [
                   Icon(it.$1, color: AppColors.primary, size: 26),
                   const SizedBox(height: 6),
                   Text(it.$2, style: const TextStyle(fontSize: 13)),
                 ],
               ),
+              onTap: it.$3,
+              padding: const EdgeInsets.symmetric(vertical: 16),
             ),
           ),
           if (it != items.last) const SizedBox(width: 12),
         ],
       ],
+    );
+  }
+
+  Widget _flatBox(Widget child,
+      {VoidCallback? onTap,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    final box = Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: box,
+      ),
     );
   }
 

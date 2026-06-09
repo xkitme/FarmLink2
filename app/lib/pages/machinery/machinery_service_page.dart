@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
+import '../common/info_detail_page.dart';
 
 /// 农机共享服务 —— 维保提醒/故障诊断/作业轨迹/成本核算/
 /// 土地流转/机手认证/农机保险（7 项均接服务端）
@@ -120,18 +121,42 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
     );
   }
 
+  // 展示型扁平容器：白底 + 1px 描边 + R.sm 圆角 + 无阴影。
+  Widget _flatBox(Widget child,
+      {VoidCallback? onTap,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    final box = Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: box,
+      ),
+    );
+  }
+
   // ── 维保提醒 ──────────────────────────────
   Widget _reminderList() {
     if (_reminders.isEmpty) {
-      return const AppCard(child: Text('你名下暂无农机，发布农机后将自动提醒维保'));
+      return _flatBox(const Text('你名下暂无农机，发布农机后将自动提醒维保'));
     }
     return Column(
       children: [
         for (final r in _reminders)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              child: Row(
+            child: _flatBox(
+              Row(
                 children: [
                   Builder(builder: (_) {
                     final color = _maintenanceLevelColor(r['level']);
@@ -214,14 +239,14 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
 
   // ── 土地流转 ──────────────────────────────
   Widget _transferList() {
-    if (_transfers.isEmpty) return const AppCard(child: Text('暂无土地流转信息'));
+    if (_transfers.isEmpty) return _flatBox(const Text('暂无土地流转信息'));
     return Column(
       children: [
         for (final t in _transfers)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              child: Column(
+            child: _flatBox(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -302,26 +327,19 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
       }));
       final causes = (r['possibleCauses'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
-      _sheet('诊断结果',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('可能原因：',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 6),
-              for (final c in causes)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text('· $c', style: const TextStyle(fontSize: 14)),
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '诊断结果',
+            sections: [
+              if (causes.isNotEmpty)
+                InfoSection(
+                  subtitle: '可能原因',
+                  items: [for (final c in causes) '$c'],
                 ),
-              const SizedBox(height: 10),
-              Text('${r['advice'] ?? ''}',
-                  style: const TextStyle(
-                      fontSize: 14, height: 1.6, color: AppColors.onSurface)),
-              const SizedBox(height: 8),
-              Text('${r['tip'] ?? ''}',
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.onSurfaceVariant)),
+              if ('${r['advice'] ?? ''}'.isNotEmpty)
+                InfoSection(body: '${r['advice']}'),
+              if ('${r['tip'] ?? ''}'.isNotEmpty)
+                InfoSection(body: '${r['tip']}'),
             ],
           ));
     } catch (e) {
@@ -344,35 +362,25 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
       final r = _m(await ApiClient.get('/machinery/cost/summary', query: q));
       final byType = (r['costByType'] as List? ?? []).cast<dynamic>();
       if (!mounted) return;
-      _sheet('${r['year']} 年成本核算',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('农资投入合计：¥${r['totalCost'] ?? 0}（${r['recordCount'] ?? 0} 笔）',
-                  style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              for (final c in byType)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text('· ${(c as Map)['type']}：¥${c['cost']}',
-                      style: const TextStyle(fontSize: 14)),
+      context.push('/detail/info',
+          extra: InfoDetailData(
+            title: '${r['year']} 年成本核算',
+            body: '农资投入合计：¥${r['totalCost'] ?? 0}（${r['recordCount'] ?? 0} 笔）',
+            sections: [
+              if (byType.isNotEmpty)
+                InfoSection(
+                  items: [
+                    for (final c in byType)
+                      '${(c as Map)['type']}：¥${c['cost']}',
+                  ],
                 ),
-              if (r['profit'] != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                    '收入 ¥${r['income']} · 净利润 ¥${r['profit']} · 利润率 ${r['profitRate']}%',
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
-              ],
-              if ('${r['advice'] ?? ''}'.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text('${r['advice']}',
-                    style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.6,
-                        color: AppColors.onSurfaceVariant)),
-              ],
+              if (r['profit'] != null)
+                InfoSection(
+                  body:
+                      '收入 ¥${r['income']} · 净利润 ¥${r['profit']} · 利润率 ${r['profitRate']}%',
+                ),
+              if ('${r['advice'] ?? ''}'.isNotEmpty)
+                InfoSection(body: '${r['advice']}'),
             ],
           ));
     } catch (e) {
@@ -557,58 +565,23 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
     );
   }
 
-  /// 「维保提醒」tile 点击 —— 弹出 sheet 展示提醒列表
+  /// 「维保提醒」tile 点击 —— 跳详情页展示提醒列表
   void _scrollToReminders() {
-    _sheet(
-      '维保提醒',
-      child: _reminders.isEmpty
-          ? const Text('你名下暂无农机，发布农机后将自动提醒维保',
-              style: TextStyle(color: AppColors.onSurfaceVariant))
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final r in _reminders)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Builder(builder: (_) {
-                          final color = _maintenanceLevelColor(r['level']);
-                          return Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(R.md),
-                            ),
-                            child: Icon(Icons.handyman, size: 20, color: color),
-                          );
-                        }),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('${r['machineName'] ?? '农机'}',
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600)),
-                              Text('${r['advice'] ?? ''}',
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      height: 1.4,
-                                      color: AppColors.onSurfaceVariant)),
-                            ],
-                          ),
-                        ),
-                        StatusChip(_maintenanceLevelLabel(r['level']),
-                            color: _maintenanceLevelColor(r['level'])),
-                      ],
+    context.push('/detail/info',
+        extra: InfoDetailData(
+          title: '维保提醒',
+          body: _reminders.isEmpty ? '你名下暂无农机，发布农机后将自动提醒维保' : null,
+          sections: _reminders.isEmpty
+              ? null
+              : [
+                  for (final r in _reminders)
+                    InfoSection(
+                      subtitle:
+                          '${r['machineName'] ?? '农机'} · ${_maintenanceLevelLabel(r['level'])}',
+                      body: '${r['advice'] ?? ''}',
                     ),
-                  ),
-              ],
-            ),
-    );
+                ],
+        ));
   }
 
   Future<void> _submit(String path, Map<String, dynamic> payload, String table,

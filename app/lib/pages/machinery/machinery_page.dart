@@ -356,11 +356,11 @@ class _MachineryPageState extends State<MachineryPage> {
                 child: Loading(text: '正在同步附近农机...'),
               )
             else if (_machines.isEmpty)
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: AppCard(
-                    child: Center(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _flatBox(
+                    const Center(
                       child: Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
                         child: Text(
@@ -542,6 +542,30 @@ class _MachineryPageState extends State<MachineryPage> {
       ),
     );
   }
+
+  // 展示型扁平容器：白底 + 1px 描边 + R.sm 圆角 + 无阴影。
+  Widget _flatBox(Widget child,
+      {VoidCallback? onTap,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    final box = Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: box,
+      ),
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -559,12 +583,12 @@ class _MachineListCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(R.sm),
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(R.md),
-            boxShadow: AppColors.ambientShadow,
+            borderRadius: BorderRadius.circular(R.sm),
+            border: Border.all(color: AppColors.outlineVariant, width: 1),
           ),
           padding: const EdgeInsets.all(12),
           child: Row(

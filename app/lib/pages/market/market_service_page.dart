@@ -142,10 +142,9 @@ class _MarketServicePageState extends State<MarketServicePage> {
 
   // ── 实时行情 ──────────────────────────────
   Widget _priceList() {
-    if (_prices.isEmpty) return const AppCard(child: Text('暂无行情数据'));
-    return AppCard(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
+    if (_prices.isEmpty) return _flatBox(const Text('暂无行情数据'));
+    return _flatBox(
+      Column(
         children: [
           for (var i = 0; i < _prices.length && i < 8; i++) ...[
             if (i > 0) const Divider(height: 1),
@@ -179,19 +178,20 @@ class _MarketServicePageState extends State<MarketServicePage> {
           ],
         ],
       ),
+      padding: const EdgeInsets.symmetric(vertical: 4),
     );
   }
 
   // ── 收购站 ────────────────────────────────
   Widget _buyerList() {
-    if (_buyers.isEmpty) return const AppCard(child: Text('暂无收购站信息'));
+    if (_buyers.isEmpty) return _flatBox(const Text('暂无收购站信息'));
     return Column(
       children: [
         for (final b in _buyers)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              child: Row(
+            child: _flatBox(
+              Row(
                 children: [
                   Container(
                     width: 44,
@@ -239,16 +239,15 @@ class _MarketServicePageState extends State<MarketServicePage> {
   // ── 农资团购 ──────────────────────────────
   Widget _groupbuyList() {
     if (_groupbuys.isEmpty) {
-      return const AppCard(child: Text('暂无团购，点击「发起」组织一次集采'));
+      return _flatBox(const Text('暂无团购，点击「发起」组织一次集采'));
     }
     return Column(
       children: [
         for (final g in _groupbuys)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              onTap: () => _joinGroupbuy(g),
-              child: Column(
+            child: _flatBox(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -281,6 +280,7 @@ class _MarketServicePageState extends State<MarketServicePage> {
                   ),
                 ],
               ),
+              onTap: () => _joinGroupbuy(g),
             ),
           ),
       ],
@@ -555,21 +555,44 @@ class _MarketServicePageState extends State<MarketServicePage> {
       children: [
         for (final it in items) ...[
           Expanded(
-            child: AppCard(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              onTap: it.$3,
-              child: Column(
+            child: _flatBox(
+              Column(
                 children: [
                   Icon(it.$1, color: AppColors.primary, size: 26),
                   const SizedBox(height: 6),
                   Text(it.$2, style: const TextStyle(fontSize: 13)),
                 ],
               ),
+              onTap: it.$3,
+              padding: const EdgeInsets.symmetric(vertical: 16),
             ),
           ),
           if (it != items.last) const SizedBox(width: 12),
         ],
       ],
+    );
+  }
+
+  Widget _flatBox(Widget child,
+      {VoidCallback? onTap,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    final box = Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: box,
+      ),
     );
   }
 

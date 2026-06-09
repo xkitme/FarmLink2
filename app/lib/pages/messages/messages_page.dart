@@ -117,19 +117,20 @@ class _MessagesPageState extends State<MessagesPage> {
       } catch (_) {}
     }
     if (!mounted) return;
-    context.push('/detail/info', extra: InfoDetailData(
-      title: _text(item['title'], fallback: '消息详情'),
-      body: _text(item['content'], fallback: '暂无详细内容'),
-      sections: [
-        InfoSection(
-          subtitle: '消息信息',
-          items: [
-            '消息类型：${_labelOf(type)}',
-            '创建时间：${_date(item['createdAt'])}',
+    context.push('/detail/info',
+        extra: InfoDetailData(
+          title: _text(item['title'], fallback: '消息详情'),
+          body: _text(item['content'], fallback: '暂无详细内容'),
+          sections: [
+            InfoSection(
+              subtitle: '消息信息',
+              items: [
+                '消息类型：${_labelOf(type)}',
+                '创建时间：${_date(item['createdAt'])}',
+              ],
+            ),
           ],
-        ),
-      ],
-    ));
+        ));
   }
 
   @override
@@ -169,21 +170,17 @@ class _MessagesPageState extends State<MessagesPage> {
                       _filterBar(),
                       const SizedBox(height: 12),
                       if (_items.isEmpty)
-                        const AppCard(
-                          child: EmptyView('暂无消息通知',
+                        _flatBox(
+                          const EmptyView('暂无消息通知',
                               icon: Icons.notifications_none_rounded),
                         )
                       else if (visibleItems.isEmpty)
-                        AppCard(
-                          child: EmptyView(_emptyTextForFilter(),
+                        _flatBox(
+                          EmptyView(_emptyTextForFilter(),
                               icon: _iconOf(_activeFilter)),
                         )
                       else
-                        for (final item in visibleItems)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _messageCard(item),
-                          ),
+                        _messageList(visibleItems),
                       if (_items.length < _total) ...[
                         const SizedBox(height: 4),
                         OutlinedButton.icon(
@@ -216,14 +213,8 @@ class _MessagesPageState extends State<MessagesPage> {
   }
 
   Widget _hero() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(R.lg),
-        boxShadow: AppColors.ambientShadow,
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Row(
+    return _flatBox(
+      Row(
         children: [
           Container(
             width: 52,
@@ -260,6 +251,7 @@ class _MessagesPageState extends State<MessagesPage> {
               color: _unread > 0 ? AppColors.error : AppColors.primary),
         ],
       ),
+      padding: const EdgeInsets.all(18),
     );
   }
 
@@ -306,94 +298,138 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 
-  Widget _messageCard(Map<String, dynamic> item) {
+  Widget _messageList(List<Map<String, dynamic>> items) {
+    return _flatBox(
+      Material(
+        color: Colors.transparent,
+        child: Column(
+          children: [
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const Divider(height: 1, indent: 70),
+              _messageRow(items[i]),
+            ],
+          ],
+        ),
+      ),
+      padding: EdgeInsets.zero,
+    );
+  }
+
+  Widget _messageRow(Map<String, dynamic> item) {
     final type = _typeOf(item);
     final read = _isRead(item);
     final color = _colorOf(type);
-    return AppCard(
+    return InkWell(
       onTap: () => _openMessage(item),
-      child: Row(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(R.md),
-                ),
-                child: Icon(_iconOf(type), color: color, size: 24),
-              ),
-              if (!read)
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      border: Border.all(color: AppColors.surface, width: 2),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _text(item['title'], fallback: '通知'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: read ? FontWeight.w600 : FontWeight.w800,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    StatusChip(_labelOf(type), color: color),
-                    Text(
-                      _date(item['createdAt']),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.outline,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  _text(item['content'], fallback: '点击查看消息详情'),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.35,
-                    color: AppColors.onSurfaceVariant,
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(R.md),
                   ),
+                  child: Icon(_iconOf(type), color: color, size: 24),
                 ),
+                if (!read)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        border: Border.all(color: AppColors.surface, width: 2),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _text(item['title'], fallback: '通知'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight:
+                                read ? FontWeight.w600 : FontWeight.w800,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      StatusChip(_labelOf(type), color: color),
+                      Text(
+                        _date(item['createdAt']),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _text(item['content'], fallback: '点击查看消息详情'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _flatBox(Widget child,
+      {VoidCallback? onTap,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    final box = Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: box,
       ),
     );
   }

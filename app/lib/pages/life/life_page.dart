@@ -477,14 +477,14 @@ class _LifePageState extends State<LifePage> {
   }
 
   Widget _jobList() {
-    if (_jobs.isEmpty) return const AppCard(child: Text('暂无附近岗位'));
+    if (_jobs.isEmpty) return _flatBox(const Text('暂无附近岗位'));
     return Column(
       children: [
         for (final j in _jobs.take(4))
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              child: Row(
+            child: _flatBox(
+              Row(
                 children: [
                   _iconBox(Icons.work_outline, AppColors.goldContainer),
                   const SizedBox(width: 12),
@@ -532,8 +532,8 @@ class _LifePageState extends State<LifePage> {
 
   Widget _tourismList() {
     if (_tourism.isEmpty) {
-      return AppCard(
-        child: Row(
+      return _flatBox(
+        Row(
           children: [
             _iconBox(Icons.landscape, AppColors.primary),
             const SizedBox(width: 12),
@@ -549,10 +549,10 @@ class _LifePageState extends State<LifePage> {
         for (final t in _tourism.take(3))
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
+            child: _flatBox(
               padding: const EdgeInsets.all(12),
               onTap: () => _tourismDetail(t),
-              child: Row(
+              Row(
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(R.md),
@@ -610,15 +610,15 @@ class _LifePageState extends State<LifePage> {
   }
 
   Widget _helpList() {
-    if (_help.isEmpty) return const AppCard(child: Text('暂无邻里互助信息'));
+    if (_help.isEmpty) return _flatBox(const Text('暂无邻里互助信息'));
     return Column(
       children: [
         for (final h in _help.take(3))
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
+            child: _flatBox(
               onTap: () => _helpDetail(h),
-              child: Row(
+              Row(
                 children: [
                   _iconBox(Icons.volunteer_activism, AppColors.secondary),
                   const SizedBox(width: 12),
@@ -661,8 +661,8 @@ class _LifePageState extends State<LifePage> {
 
   Widget _secondhandList() {
     if (_secondhand.isEmpty) {
-      return AppCard(
-        child: Row(
+      return _flatBox(
+        Row(
           children: [
             _iconBox(Icons.recycling, AppColors.secondary),
             const SizedBox(width: 12),
@@ -692,8 +692,8 @@ class _LifePageState extends State<LifePage> {
     final price = _priceOf(item['price']);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: AppCard(
-        child: Row(
+      child: _flatBox(
+        Row(
           children: [
             _iconBox(Icons.inventory_2_outlined, AppColors.secondary),
             const SizedBox(width: 12),
@@ -738,8 +738,8 @@ class _LifePageState extends State<LifePage> {
   Widget _cultureAndEnv() {
     return Column(
       children: [
-        AppCard(
-          child: Column(
+        _flatBox(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -779,6 +779,30 @@ class _LifePageState extends State<LifePage> {
           ),
         ),
       ],
+    );
+  }
+
+  // 展示型扁平容器：白底 + 1px 描边 + R.sm 圆角 + 无阴影。
+  Widget _flatBox(Widget child,
+      {VoidCallback? onTap,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    final box = Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: box,
+      ),
     );
   }
 

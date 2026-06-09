@@ -448,8 +448,32 @@ class _DataServicePageState extends State<DataServicePage> {
         ),
       );
 
-  Widget _annualReportCard() => AppCard(
-        child: Column(
+  // 展示型扁平容器：白底 + 1px 描边 + R.sm 圆角 + 无阴影。
+  Widget _flatBox(Widget child,
+      {VoidCallback? onTap,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    final box = Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: box,
+      ),
+    );
+  }
+
+  Widget _annualReportCard() => _flatBox(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -559,8 +583,8 @@ class _DataServicePageState extends State<DataServicePage> {
   Widget _statisticsCard() {
     final byType = _list(_statSummary['byType']);
     final byStatus = _list(_statSummary['byStatus']);
-    return AppCard(
-      child: Column(
+    return _flatBox(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -659,8 +683,8 @@ class _DataServicePageState extends State<DataServicePage> {
     // 分段 40：待发送 = 队列中 status != synced
     final waiting =
         _localQueue.where((item) => item.status != SyncStatus.synced).length;
-    return AppCard(
-      child: Column(
+    return _flatBox(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(

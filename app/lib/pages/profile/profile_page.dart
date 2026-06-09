@@ -36,8 +36,7 @@ class _ProfilePageState extends State<ProfilePage> {
     });
     // 在 await 之前捕获，避免跨异步间隙用 context
     final auth = context.read<AuthState>();
-    // 本地队列始终先取（离线也能读）——保证同步卡入口在离线/在线失败时仍可见，
-    // 否则 G7 的重试入口恰恰在最需要它的离线场景不可达。
+    // 待发送队列始终先取，保证同步卡入口在服务响应异常时仍可见。
     var queue = _queue;
     try {
       queue = await OfflineSyncQueue.all();
@@ -57,7 +56,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _loading = false;
       });
     } catch (e) {
-      // 在线部分失败：保留本地队列，降级为内联提示，不整屏报错（缓存用户 + 队列仍可用）
+      // 服务端数据读取失败：保留待发送队列，降级为内联提示，不整屏报错。
       if (!mounted) return;
       setState(() {
         _queue = queue;
@@ -99,7 +98,7 @@ class _ProfilePageState extends State<ProfilePage> {
       body: _loading
           ? const Loading(text: '正在读取个人数据')
           // 只有在「无缓存用户、也无任何数据」时才整屏报错；
-          // 否则降级渲染（缓存用户 + 本地同步队列），G7 重试入口离线仍可达。
+          // 否则降级渲染缓存用户与待发送队列，保留 G7 重试入口。
           : (_error != null && user == null && _dashboard.isEmpty)
               ? ErrorRetry(message: _error!, onRetry: _load)
               : RefreshIndicator(
@@ -140,19 +139,17 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _profileHero(dynamic user) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: AppColors.heroGradient,
-        borderRadius: BorderRadius.circular(R.lg),
-        boxShadow: AppColors.ambientShadow,
-      ),
-      child: Row(
+    return _flatBox(
+      Row(
         children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: Colors.white.withValues(alpha: 0.22),
-            child: const Icon(Icons.person, size: 36, color: Colors.white),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.primaryContainer.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(R.md),
+            ),
+            child: const Icon(Icons.person, size: 36, color: AppColors.primary),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -166,7 +163,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: AppColors.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -186,7 +183,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         Text(
                           '${user?.points ?? 0} 积分',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.onSurface,
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                           ),
@@ -200,24 +197,27 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
+      padding: const EdgeInsets.all(20),
     );
   }
 
   Widget _whiteBadge(String text) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.20),
+          color: AppColors.primaryContainer.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(R.sm),
+          border: Border.all(color: AppColors.outlineVariant, width: 1),
         ),
         child: Text(
           text,
-          style: const TextStyle(color: Colors.white, fontSize: 12),
+          style:
+              const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12),
         ),
       );
 
   Widget _overview(Map<String, dynamic> cards) {
-    return AppCard(
-      child: Row(
+    return _flatBox(
+      Row(
         children: [
           _stat('地块', '${_int(cards['plotCount'])}'),
           _divider(),
@@ -254,11 +254,8 @@ class _ProfilePageState extends State<ProfilePage> {
       stateColor = AppColors.primary;
     }
 
-    return AppCard(
-      padding: EdgeInsets.zero,
-      // G7：有待发送/失败/冲突时，卡片本身不再整块跳转，改露重试入口
-      onTap: hasError ? null : () => context.push('/data/service'),
-      child: Column(
+    return _flatBox(
+      Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
@@ -334,13 +331,15 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
         ],
       ),
+      // G7：有待发送/失败/冲突时，卡片本身不再整块跳转，改露重试入口
+      onTap: hasError ? null : () => context.push('/data/service'),
+      padding: EdgeInsets.zero,
     );
   }
 
   Widget _menuPanel(BuildContext context) {
-    return AppCard(
-      padding: EdgeInsets.zero,
-      child: Column(
+    return _flatBox(
+      Column(
         children: [
           _menu(context, Icons.receipt_long_outlined, '我的订单', '/market'),
           _line(),
@@ -357,6 +356,30 @@ class _ProfilePageState extends State<ProfilePage> {
           _line(),
           _menu(context, Icons.settings_outlined, '设置', '/profile/settings'),
         ],
+      ),
+      padding: EdgeInsets.zero,
+    );
+  }
+
+  Widget _flatBox(Widget child,
+      {VoidCallback? onTap,
+      EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    final box = Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: box,
       ),
     );
   }
