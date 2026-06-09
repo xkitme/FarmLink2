@@ -393,7 +393,7 @@ class _DisasterPageState extends State<DisasterPage>
           padding: const EdgeInsets.only(bottom: 12),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.error,
+              color: _alertColor('${a['alertLevel'] ?? ''}'),
               borderRadius: BorderRadius.circular(R.md),
               boxShadow: AppColors.ambientShadow,
             ),
@@ -429,6 +429,14 @@ class _DisasterPageState extends State<DisasterPage>
           ),
         ),
     ];
+  }
+
+  Color _alertColor(String level) {
+    if (level.contains('红')) return AppColors.error;
+    if (level.contains('橙')) return const Color(0xFFE06A00);
+    if (level.contains('黄')) return const Color(0xFFC58B00);
+    if (level.contains('蓝')) return const Color(0xFF2563EB);
+    return AppColors.error;
   }
 
   // ── 冻害防护 ──────────────────────────────
@@ -737,39 +745,38 @@ class _DisasterPageState extends State<DisasterPage>
     required String title,
     required List<Widget> Function(void Function(void Function())) builder,
   }) {
-    return showModalBottomSheet<bool>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 20, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + 20),
-        child: StatefulBuilder(
-          builder: (ctx, setS) => Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface)),
-              const SizedBox(height: 14),
-              ...builder(setS),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(sheetCtx, true),
-                  child: const Text('提交'),
+    return Navigator.of(context, rootNavigator: true).push<bool>(
+      MaterialPageRoute(
+        builder: (pageCtx) => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.surface,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+              onPressed: () => Navigator.of(pageCtx).pop(false),
+            ),
+            title: Text(title,
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary)),
+          ),
+          body: StatefulBuilder(
+            builder: (ctx, setS) => ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              children: [
+                ...builder(setS),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(pageCtx).pop(true),
+                    child: const Text('提交'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
