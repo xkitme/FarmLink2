@@ -8,6 +8,7 @@ import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
 import '../common/info_detail_page.dart';
+import '../common/form_scaffold_page.dart';
 import '../../widgets/section_tool_chips.dart';
 
 /// 农业生产板块 —— 地块/农事记录 + 作物长势/杂草/种子识别 +
@@ -738,39 +739,9 @@ class _AgriPageState extends State<AgriPage> {
   // ── 通用弹层 ──────────────────────────────
   Future<bool?> _formSheet(
       {required String title, required List<Widget> fields}) {
-    return showModalBottomSheet<bool>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 20, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface)),
-            const SizedBox(height: 14),
-            ...fields,
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(sheetCtx, true),
-                child: const Text('提交'),
-              ),
-            ),
-          ],
-        ),
+    return Navigator.of(context, rootNavigator: true).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => FormScaffoldPage(title: title, fields: fields),
       ),
     );
   }
