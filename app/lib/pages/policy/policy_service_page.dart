@@ -501,38 +501,60 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
       toast(context, '暂无可兑换物品');
       return;
     }
-    _sheet('积分兑换',
-        child: Column(
-          children: [
-            for (final item in _items)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _flatBox(
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text('${item['name']}',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                      Text('${item['cost']} 分',
-                          style: const TextStyle(
-                              color: AppColors.onSurfaceVariant)),
-                      const SizedBox(width: 10),
-                      OutlinedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _exchangeItem(item);
-                        },
-                        child: const Text('兑换'),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(12),
-                ),
+    await Navigator.of(context, rootNavigator: true).push<void>(
+      MaterialPageRoute(
+        builder: (ctx) => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.surface,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+            title: const Text(
+              '积分兑换',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
               ),
-          ],
-        ));
+            ),
+          ),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            children: [
+              for (final item in _items)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _flatBox(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text('${item['name']}',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                        Text('${item['cost']} 分',
+                            style: const TextStyle(
+                                color: AppColors.onSurfaceVariant)),
+                        const SizedBox(width: 10),
+                        OutlinedButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            _exchangeItem(item);
+                          },
+                          child: const Text('兑换'),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(12),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _exchangeItem(Map<String, dynamic> item) async {
@@ -657,37 +679,6 @@ class _PolicyServicePageState extends State<PolicyServicePage> {
           tableName: table, payload: payload, path: path);
       if (mounted) toast(context, '已加入待发送队列，将自动重传');
     }
-  }
-
-  void _sheet(String title, {required Widget child}) {
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.55,
-        maxChildSize: 0.9,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface)),
-            const SizedBox(height: 14),
-            child,
-          ],
-        ),
-      ),
-    );
   }
 
   Future<bool?> _formSheet(

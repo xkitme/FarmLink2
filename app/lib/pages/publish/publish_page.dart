@@ -439,149 +439,164 @@ class _PublishPageState extends State<PublishPage> {
     var type = '互助求助';
     const types = [..._helpPublishTypes, ..._secondhandPublishTypes];
 
-    final ok = await showModalBottomSheet<bool>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 20, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + 20),
-        child: StatefulBuilder(
-          builder: (ctx, setSheet) => Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('发布乡村动态',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface)),
-              const SizedBox(height: 4),
-              const Text('选择类型，详细描述后发布到乡村动态广场',
-                  style: TextStyle(
-                      fontSize: 12, color: AppColors.onSurfaceVariant)),
-              const SizedBox(height: 14),
-              const Text('特殊上报',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.onSurfaceVariant)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(sheetCtx, false);
-                        context.push('/disaster');
-                      },
-                      icon: const Icon(Icons.thunderstorm_outlined, size: 16),
-                      label: const Text('灾情上报'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(sheetCtx, false);
-                        context.push('/agri');
-                      },
-                      icon: const Icon(Icons.eco_outlined, size: 16),
-                      label: const Text('农事记录'),
-                    ),
-                  ),
-                ],
+    final ok = await Navigator.of(context, rootNavigator: true).push<bool>(
+      MaterialPageRoute(
+        builder: (pageCtx) => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.surface,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+              onPressed: () => Navigator.of(pageCtx).pop(),
+            ),
+            title: const Text(
+              '发布乡村动态',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
               ),
-              const SizedBox(height: 16),
-              const Text('动态类型',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.onSurfaceVariant)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final t in types)
-                    ChoiceChip(
-                      label: Text(t),
-                      selected: type == t,
-                      onSelected: (_) => setSheet(() => type = t),
+            ),
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+              child: StatefulBuilder(
+                builder: (ctx, setSheet) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('发布乡村动态',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onSurface)),
+                    const SizedBox(height: 4),
+                    const Text('选择类型，详细描述后发布到乡村动态广场',
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.onSurfaceVariant)),
+                    const SizedBox(height: 14),
+                    const Text('特殊上报',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.onSurfaceVariant)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(pageCtx, false);
+                              context.push('/disaster');
+                            },
+                            icon: const Icon(Icons.thunderstorm_outlined,
+                                size: 16),
+                            label: const Text('灾情上报'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(pageCtx, false);
+                              context.push('/agri');
+                            },
+                            icon: const Icon(Icons.eco_outlined, size: 16),
+                            label: const Text('农事记录'),
+                          ),
+                        ),
+                      ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: titleC,
-                decoration:
-                    InputDecoration(labelText: _titleLabel(type), filled: true),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: contentC,
-                maxLines: 4,
-                minLines: 3,
-                decoration: InputDecoration(
-                  labelText: _contentLabel(type),
-                  filled: true,
-                  alignLabelWithHint: true,
-                  suffixIcon: IconButton(
-                    tooltip: '语音输入',
-                    onPressed: () async {
-                      final transcript = await _recognizeVoice(ctx);
-                      if (transcript == null || !ctx.mounted) return;
-                      _appendVoiceText(contentC, transcript);
-                    },
-                    icon: const Icon(Icons.mic_none),
-                  ),
+                    const SizedBox(height: 16),
+                    const Text('动态类型',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.onSurfaceVariant)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final t in types)
+                          ChoiceChip(
+                            label: Text(t),
+                            selected: type == t,
+                            onSelected: (_) => setSheet(() => type = t),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: titleC,
+                      decoration: InputDecoration(
+                          labelText: _titleLabel(type), filled: true),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: contentC,
+                      maxLines: 4,
+                      minLines: 3,
+                      decoration: InputDecoration(
+                        labelText: _contentLabel(type),
+                        filled: true,
+                        alignLabelWithHint: true,
+                        suffixIcon: IconButton(
+                          tooltip: '语音输入',
+                          onPressed: () async {
+                            final transcript = await _recognizeVoice(ctx);
+                            if (transcript == null || !ctx.mounted) return;
+                            _appendVoiceText(contentC, transcript);
+                          },
+                          icon: const Icon(Icons.mic_none),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: phoneC,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                          labelText: '联系电话（选填）', filled: true),
+                    ),
+                    if (type == '二手交易') ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: priceC,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: '售价（元）',
+                          hintText: '例如 80.00',
+                          filled: true,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (titleC.text.trim().isEmpty) {
+                            toast(ctx, '请填写标题', error: true);
+                            return;
+                          }
+                          if (type == '二手交易' &&
+                              (double.tryParse(priceC.text.trim()) ?? 0) <= 0) {
+                            toast(ctx, '请填写售价', error: true);
+                            return;
+                          }
+                          Navigator.pop(pageCtx, true);
+                        },
+                        child: const Text('发布'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneC,
-                keyboardType: TextInputType.phone,
-                decoration:
-                    const InputDecoration(labelText: '联系电话（选填）', filled: true),
-              ),
-              if (type == '二手交易') ...[
-                const SizedBox(height: 12),
-                TextField(
-                  controller: priceC,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: '售价（元）',
-                    hintText: '例如 80.00',
-                    filled: true,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (titleC.text.trim().isEmpty) {
-                      toast(ctx, '请填写标题', error: true);
-                      return;
-                    }
-                    if (type == '二手交易' &&
-                        (double.tryParse(priceC.text.trim()) ?? 0) <= 0) {
-                      toast(ctx, '请填写售价', error: true);
-                      return;
-                    }
-                    Navigator.pop(sheetCtx, true);
-                  },
-                  child: const Text('发布'),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

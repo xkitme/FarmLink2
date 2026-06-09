@@ -394,35 +394,56 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
     try {
       final tracks = _list(await ApiClient.get('/machinery/track/list'));
       if (!mounted) return;
-      _sheet('作业轨迹记录',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _reportTrack();
-                  },
-                  icon: const Icon(Icons.add_location_alt, size: 18),
-                  label: const Text('上报一条作业轨迹'),
+      await Navigator.of(context, rootNavigator: true).push<void>(
+        MaterialPageRoute(
+          builder: (ctx) => Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              backgroundColor: AppColors.surface,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+              title: const Text(
+                '作业轨迹记录',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
                 ),
               ),
-              const SizedBox(height: 12),
-              if (tracks.isEmpty)
-                const Text('暂无作业轨迹',
-                    style: TextStyle(color: AppColors.onSurfaceVariant))
-              else
-                for (final t in tracks)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(
-                        '· 作业 ${t['workArea'] ?? 0} 亩 · ${t['durationHours'] ?? 0} 小时 · ${'${t['workDate'] ?? ''}'.split('T').first}',
-                        style: const TextStyle(fontSize: 14)),
+            ),
+            body: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _reportTrack();
+                    },
+                    icon: const Icon(Icons.add_location_alt, size: 18),
+                    label: const Text('上报一条作业轨迹'),
                   ),
-            ],
-          ));
+                ),
+                const SizedBox(height: 12),
+                if (tracks.isEmpty)
+                  const Text('暂无作业轨迹',
+                      style: TextStyle(color: AppColors.onSurfaceVariant))
+                else
+                  for (final t in tracks)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                          '· 作业 ${t['workArea'] ?? 0} 亩 · ${t['durationHours'] ?? 0} 小时 · ${'${t['workDate'] ?? ''}'.split('T').first}',
+                          style: const TextStyle(fontSize: 14)),
+                    ),
+              ],
+            ),
+          ),
+        ),
+      );
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('读取', e), error: true);
     }
@@ -597,37 +618,6 @@ class _MachineryServicePageState extends State<MachineryServicePage> {
           tableName: table, payload: payload, path: path);
       if (mounted) toast(context, '已加入待发送队列，将自动重传');
     }
-  }
-
-  void _sheet(String title, {required Widget child}) {
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.55,
-        maxChildSize: 0.9,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface)),
-            const SizedBox(height: 14),
-            child,
-          ],
-        ),
-      ),
-    );
   }
 
   Future<bool?> _formSheet(

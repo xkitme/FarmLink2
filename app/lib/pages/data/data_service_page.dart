@@ -201,22 +201,23 @@ class _DataServicePageState extends State<DataServicePage> {
     final content = _text(report['reportContent'], fallback: '本年度暂无足够农事记录');
     final cost = _num(report['totalCost']);
     final year = _int(report['year']);
-    context.push('/detail/info', extra: InfoDetailData(
-      title: '$year 年度农事报告',
-      body: content,
-      sections: [
-        InfoSection(
-          subtitle: '报告摘要',
-          body: summary,
-        ),
-        InfoSection(
-          items: [
-            '年度：$year',
-            '成本：￥$cost',
+    context.push('/detail/info',
+        extra: InfoDetailData(
+          title: '$year 年度农事报告',
+          body: content,
+          sections: [
+            InfoSection(
+              subtitle: '报告摘要',
+              body: summary,
+            ),
+            InfoSection(
+              items: [
+                '年度：$year',
+                '成本：￥$cost',
+              ],
+            ),
           ],
-        ),
-      ],
-    ));
+        ));
   }
 
   // ────────────────────────────────────────────────
@@ -225,15 +226,29 @@ class _DataServicePageState extends State<DataServicePage> {
 
   Future<void> _openStatForm() async {
     // F5：表单抽成 _StatFormSheet StatefulWidget，controller 在 dispose 中释放
-    final result = await showModalBottomSheet<_StatFormData>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.md)),
+    final result =
+        await Navigator.of(context, rootNavigator: true).push<_StatFormData>(
+      MaterialPageRoute(
+        builder: (ctx) => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.surface,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+            title: const Text(
+              '统计上报',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          body: const _StatFormSheet(),
+        ),
       ),
-      builder: (_) => const _StatFormSheet(),
     );
     if (result == null || !mounted) return;
     try {
@@ -262,24 +277,30 @@ class _DataServicePageState extends State<DataServicePage> {
 
   Future<void> _openSyncLogs() async {
     // 在 sheet 关闭后刷新一次，以反映立即同步后的最新队列
-    await showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.md)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        minChildSize: 0.4,
-        maxChildSize: 0.92,
-        builder: (ctx, scrollCtrl) => _SyncLogsSheet(
-          scrollController: scrollCtrl,
-          localQueueListenable: _localQueueNotifier,
-          onFlush: _flushQueue,
-          flushingListenable: _flushingNotifier,
+    await Navigator.of(context, rootNavigator: true).push<void>(
+      MaterialPageRoute(
+        builder: (ctx) => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.surface,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+            title: const Text(
+              '同步日志',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          body: _SyncLogsSheet(
+            localQueueListenable: _localQueueNotifier,
+            onFlush: _flushQueue,
+            flushingListenable: _flushingNotifier,
+          ),
         ),
       ),
     );
@@ -1035,53 +1056,50 @@ class _StatFormSheetState extends State<_StatFormSheet> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now().year;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 18,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('新建统计上报',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 14),
-          _formField('统计类型', _typeCtrl, hint: '如：种植面积 / 产量 / 投入'),
-          _formField('年份', null,
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  for (var i = 0; i < 4; i++)
-                    ChoiceChip(
-                      label: Text('${now - i}'),
-                      selected: _year == now - i,
-                      onSelected: (_) => setState(() => _year = now - i),
-                    ),
-                ],
-              )),
-          _formField('周期', _periodCtrl, hint: '如：Q1 / 上半年 / 全年'),
-          _formField('作物', _cropCtrl, hint: '如：水稻'),
-          Row(
-            children: [
-              Expanded(child: _formField('面积（亩）', _areaCtrl, number: true)),
-              const SizedBox(width: 10),
-              Expanded(child: _formField('产量（公斤）', _yieldCtrl, number: true)),
-            ],
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: _submit,
-              icon: const Icon(Icons.upload_rounded, size: 18),
-              label: const Text('提交上报'),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('新建统计上报',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 14),
+            _formField('统计类型', _typeCtrl, hint: '如：种植面积 / 产量 / 投入'),
+            _formField('年份', null,
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    for (var i = 0; i < 4; i++)
+                      ChoiceChip(
+                        label: Text('${now - i}'),
+                        selected: _year == now - i,
+                        onSelected: (_) => setState(() => _year = now - i),
+                      ),
+                  ],
+                )),
+            _formField('周期', _periodCtrl, hint: '如：Q1 / 上半年 / 全年'),
+            _formField('作物', _cropCtrl, hint: '如：水稻'),
+            Row(
+              children: [
+                Expanded(child: _formField('面积（亩）', _areaCtrl, number: true)),
+                const SizedBox(width: 10),
+                Expanded(child: _formField('产量（公斤）', _yieldCtrl, number: true)),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _submit,
+                icon: const Icon(Icons.upload_rounded, size: 18),
+                label: const Text('提交上报'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1092,12 +1110,10 @@ class _StatFormSheetState extends State<_StatFormSheet> {
 // ────────────────────────────────────────────────
 
 class _SyncLogsSheet extends StatefulWidget {
-  final ScrollController scrollController;
   final ValueListenable<List<SyncQueueItem>> localQueueListenable;
   final Future<void> Function() onFlush;
   final ValueListenable<bool> flushingListenable;
   const _SyncLogsSheet({
-    required this.scrollController,
     required this.localQueueListenable,
     required this.onFlush,
     required this.flushingListenable,
@@ -1166,18 +1182,9 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
     final waiting =
         localQueue.where((item) => item.status != SyncStatus.synced).length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
       child: Column(
         children: [
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.outlineVariant,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 14),
           Row(
             children: [
               const Icon(Icons.history_rounded, color: AppColors.primary),
@@ -1274,7 +1281,6 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
                         ? const EmptyView('当前筛选下暂无同步记录',
                             icon: Icons.history_toggle_off)
                         : ListView.separated(
-                            controller: widget.scrollController,
                             itemCount: _records.length,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 6),
@@ -1284,7 +1290,6 @@ class _SyncLogsSheetState extends State<_SyncLogsSheet> {
                     ? const EmptyView('本地队列为空，所有数据已同步',
                         icon: Icons.check_circle_outline)
                     : ListView.separated(
-                        controller: widget.scrollController,
                         itemCount: localQueue.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 6),
                         itemBuilder: (_, i) => _localTile(localQueue[i]),
