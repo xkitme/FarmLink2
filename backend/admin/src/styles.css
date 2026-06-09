@@ -14,21 +14,38 @@ body {
 }
 
 .login-page {
+  position: relative;
+  overflow: hidden;
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(360px, 1fr) 440px;
-  align-items: stretch;
-  background: #eef4f1;
+  grid-template-columns: 1fr;
+  align-items: end;
+  justify-items: center;
+  padding: 40px clamp(20px, 5vw, 72px) clamp(26px, 4.5vh, 46px);
+  background: #1a1713;
+}
+
+.login-page::before,
+.login-page::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.login-page::before {
+  background: url('./assets/backend-login-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  animation: login-bg-fade 900ms ease-out both;
+}
+
+.login-page::after {
+  background: linear-gradient(180deg, rgba(11, 18, 15, 0.08), rgba(11, 18, 15, 0.04) 56%, rgba(11, 18, 15, 0.26));
 }
 
 .login-visual {
-  position: relative;
-  overflow: hidden;
-  background:
-    linear-gradient(135deg, rgba(22, 125, 91, 0.82), rgba(36, 104, 178, 0.62)),
-    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900"><rect width="1200" height="900" fill="%23d8e8dc"/><path d="M0 640 C240 560 430 760 680 650 C880 560 1010 590 1200 500 L1200 900 L0 900 Z" fill="%238fbf8f"/><path d="M0 720 C260 620 470 830 730 720 C920 640 1030 670 1200 600 L1200 900 L0 900 Z" fill="%236b9f77"/><path d="M0 500 L1200 330 L1200 470 L0 650 Z" fill="%23f1d28a" opacity="0.9"/><path d="M0 420 L1200 280 L1200 330 L0 500 Z" fill="%2386b96f" opacity="0.9"/></svg>');
-  background-size: cover;
-  background-position: center;
+  display: none;
 }
 
 .field-map {
@@ -50,18 +67,33 @@ body {
 }
 
 .login-card {
-  align-self: center;
+  position: relative;
+  z-index: 1;
+  grid-column: 1;
+  align-self: end;
   justify-self: center;
-  width: min(380px, calc(100vw - 32px));
+  width: min(980px, calc(100vw - 40px));
   border-radius: 8px;
-  box-shadow: 0 18px 42px rgba(16, 37, 31, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  box-shadow: 0 22px 56px rgba(16, 37, 31, 0.22);
+  backdrop-filter: blur(12px);
+  animation: login-card-rise 560ms cubic-bezier(0.18, 0.9, 0.24, 1) both;
+}
+
+.login-card .ant-card-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) 1fr;
+  gap: 20px;
+  align-items: center;
+  padding: 20px 28px 22px;
 }
 
 .login-title {
   display: flex;
   gap: 14px;
   align-items: center;
-  margin-bottom: 28px;
+  margin-bottom: 0;
 }
 
 .login-title > .anticon {
@@ -77,6 +109,51 @@ body {
 
 .login-title h2 {
   margin: 0;
+  font-size: 28px !important;
+}
+
+.login-title .ant-typography-secondary {
+  display: block;
+  white-space: nowrap;
+}
+
+.login-card .ant-form {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 18px;
+}
+
+.login-card .ant-form-item {
+  margin-bottom: 0;
+}
+
+.login-card .ant-form > .ant-btn {
+  grid-column: 1 / -1;
+}
+
+@keyframes login-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(34px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes login-bg-fade {
+  from {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .admin-shell {
@@ -266,10 +343,27 @@ body {
 @media (max-width: 860px) {
   .login-page {
     grid-template-columns: 1fr;
+    padding: 24px 16px;
+    background-position: center;
   }
 
-  .login-visual {
-    display: none;
+  .login-card {
+    grid-column: auto;
+    width: min(440px, calc(100vw - 32px));
+  }
+
+  .login-card .ant-card-body {
+    display: block;
+    padding: 24px 28px 22px;
+  }
+
+  .login-title {
+    margin-bottom: 20px;
+  }
+
+  .login-card .ant-form {
+    grid-column: auto;
+    grid-template-columns: 1fr;
   }
 
   .placeholder-grid {
