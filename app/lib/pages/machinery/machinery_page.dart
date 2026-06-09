@@ -529,16 +529,26 @@ class _MachineryPageState extends State<MachineryPage> {
   // ── M1 发布农机 sheet ─────────────────────────────────
 
   void _openPublishSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (sheetCtx) => _PublishMachineSheet(
-        onSuccess: () => _loadMachines(initChips: true),
+    Navigator.of(context, rootNavigator: true).push<void>(
+      MaterialPageRoute(
+        builder: (pageCtx) => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.surface,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+              onPressed: () => Navigator.of(pageCtx).pop(),
+            ),
+            title: const Text('发布农机',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary)),
+          ),
+          body: _PublishMachineSheet(
+            onSuccess: () => _loadMachines(initChips: true),
+          ),
+        ),
       ),
     );
   }
@@ -796,25 +806,12 @@ class _BookingSheetState extends State<_BookingSheet> {
     final canBook = machine.id != null;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 拖拽把手
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
             Text(
               '预约 · ${machine.name}',
               style: const TextStyle(
@@ -1050,32 +1047,12 @@ class _PublishMachineSheetState extends State<_PublishMachineSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const Text(
-              '发布农机',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.onSurface),
-            ),
-            const SizedBox(height: 16),
             // 农机名称（必填）
             _Field(_nameCtrl, '农机名称（必填）'),
             // 农机类型 ChoiceChip
@@ -1180,15 +1157,25 @@ class MachineDetailPage extends StatelessWidget {
   const MachineDetailPage({super.key, required this.data});
 
   void _showBookingSheet(BuildContext context, _Machine machine) {
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+    Navigator.of(context, rootNavigator: true).push<void>(
+      MaterialPageRoute(
+        builder: (pageCtx) => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.surface,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+              onPressed: () => Navigator.of(pageCtx).pop(),
+            ),
+            title: const Text('预约农机',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary)),
+          ),
+          body: _BookingSheet(machine: machine),
+        ),
       ),
-      builder: (sheetCtx) => _BookingSheet(machine: machine),
     );
   }
 

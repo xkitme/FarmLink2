@@ -330,39 +330,42 @@ class _IotPageState extends State<IotPage> {
 
   void _showDetail(Map<String, dynamic> device) {
     final id = _text(device['id']);
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.md)),
-      ),
-      builder: (context) {
-        return FutureBuilder<Map<String, dynamic>>(
-          future: _loadDetail(id),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const SizedBox(
-                height: 360,
-                child: Loading(text: '正在加载设备详情'),
-              );
-            }
-            if (snapshot.hasError) {
-              return SizedBox(
-                height: 360,
-                child: ErrorRetry(
+    Navigator.of(context, rootNavigator: true).push<void>(
+      MaterialPageRoute(
+        builder: (pageCtx) => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.surface,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+              onPressed: () => Navigator.of(pageCtx).pop(),
+            ),
+            title: const Text('设备详情',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary)),
+          ),
+          body: FutureBuilder<Map<String, dynamic>>(
+            future: _loadDetail(id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Loading(text: '正在加载设备详情');
+              }
+              if (snapshot.hasError) {
+                return ErrorRetry(
                   message: serviceErrorMessage(snapshot.error!),
                   onRetry: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(pageCtx).pop();
                     _showDetail(device);
                   },
-                ),
-              );
-            }
-            return _DeviceDetailSheet(device: snapshot.data ?? device);
-          },
-        );
-      },
+                );
+              }
+              return _DeviceDetailSheet(device: snapshot.data ?? device);
+            },
+          ),
+        ),
+      ),
     );
   }
 
@@ -440,27 +443,13 @@ class _DeviceDetailSheetState extends State<_DeviceDetailSheet> {
         ? <String, dynamic>{}
         : metrics[_metricIndex.clamp(0, metrics.length - 1)];
     final points = _seriesPoints(series, _text(selected['key']));
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
 
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 38,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             Row(
               children: [
                 Container(
@@ -587,8 +576,7 @@ class _DeviceDetailSheetState extends State<_DeviceDetailSheet> {
                         _detailStat('更新时间', _date(widget.device['updatedAt']))),
               ],
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
