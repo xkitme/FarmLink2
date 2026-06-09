@@ -128,6 +128,8 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
                       const SizedBox(height: 8),
                       _heroCard(),
                       const SizedBox(height: 16),
+                      _iotEntryCard(),
+                      const SizedBox(height: 16),
                       if (isAdminOrVillage) ...[
                         _metricGrid(),
                         const SizedBox(height: 16),
@@ -150,6 +152,54 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
                 ),
     );
   }
+
+  Widget _iotEntryCard() => AppCard(
+        onTap: () => context.push('/iot'),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(R.md),
+              ),
+              child: const Icon(Icons.sensors_rounded,
+                  color: AppColors.primary, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '智慧物联',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    '设备监测、状态巡检与趋势读数',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: AppColors.outline),
+          ],
+        ),
+      );
 
   Widget _heroCard() {
     final cards = _map(_dashboard['cards']);

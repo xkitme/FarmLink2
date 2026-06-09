@@ -25,6 +25,7 @@ import '../pages/messages/messages_page.dart';
 import '../pages/policy/policy_page.dart';
 import '../pages/data/data_dashboard_page.dart';
 import '../pages/data/data_service_page.dart';
+import '../pages/iot/iot_page.dart';
 import '../pages/screen/village_screen_page.dart';
 import '../pages/profile/profile_page.dart';
 import '../pages/profile/settings/about_page.dart';
@@ -146,6 +147,7 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
                 builder: (_, __) => const MarketServicePage()),
             GoRoute(
                 path: '/data', builder: (_, __) => const DataDashboardPage()),
+            GoRoute(path: '/iot', builder: (_, __) => const IotPage()),
             GoRoute(
                 path: '/data/service',
                 builder: (_, __) => const DataServicePage()),

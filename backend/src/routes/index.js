@@ -8,6 +8,7 @@ import disasterRoutes from '../modules/disaster/disaster.routes.js'
 import policyRoutes from '../modules/policy/policy.routes.js'
 import lifeRoutes from '../modules/life/life.routes.js'
 import dataRoutes from '../modules/data/data.routes.js'
+import iotRoutes from '../modules/iot/iot.routes.js'
 import aiRoutes from '../modules/ai/ai.routes.js'
 
 /**
@@ -36,6 +37,8 @@ export function registerRoutes(app, prefix) {
   router.use(lifeRoutes)
   // 板块七 data：数据与智能管理
   router.use(dataRoutes)
+  // 智慧物联：设备监测看板
+  router.use(iotRoutes)
   // AI 能力：Ollama + SQLite RAG + 规则引擎
   router.use(aiRoutes)
 
