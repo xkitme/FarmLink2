@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-06-10 · Claude 收尾 doc76 配图批 + 清 GitHub issue（release 真机逐页验证）
+
+### 状态：本地/origin/main 同步在 `29c8f408`，工作树仅未跟踪临时文件（`.playwright-mcp/`、`design_assets/`、若干 *.png demo 截图、`市赛PPT/`、`outputs/`，均非本会话产物）。后端 8000 / web 5000(release) / admin 5173 / ollama 全程在跑。
+
+用户「继续写项目，你和 Codex 一起，可开 subagent」。开工发现 doc76 配图批在飞（Codex 早上做好未提交），核实+真机验证后提交，再清 GitHub open issue。本会话未派 Codex/subagent——可并行的活要么已做完(doc76)、要么是 1 行改(#21)、要么是非 bug(#22)，拆活开销大于收益。
+
+**1) doc76 前端业务配图重生成与接入（commit `e6b1f1ba`）**：19 张专业农业摄影配图(`app/assets/images/generated/`)替换旧 `_x_x.jpg` 占位图，接入引导页/首页横幅/登录注册/设置/政策/农机/生活/集市；pubspec 收窄资产清单(只打包 generated/ + 正式Logo + ai_1.jpg 测试样本)；market/policy/machinery/life/商品详情支持服务端 `/uploads` 相对图(走 `ApiClient.resolveImageUrl`)；seeds 商品图同步切 SKU 图。**核实**：源码 lib/ + seeds 无残留旧图引用(只 .dart_tool 陈旧 bundle 里有)，build 产物 19 图全打包、旧图全不打包。**release 真机逐页验**(farmer token 注入+CDP 清缓存)：首页/集市(商品图语义全对)/农机(农田航拍地图底图)/政策/登录(auth-hero 暖光摄影招牌页) 5 页配图全部正常加载、0 控制台错误。集市 SKU 映射在更早 `389b412c`(doc66) 已提交。
+
+**2) #21 首页搜索框用不了（commit `29c8f408`，已修验证）**：根因=`home_page.dart` 搜索框 onTap 是占位 `toast('全局搜索即将上线')`，但 `/search` 全局搜索页+`/search` API 早做好了。改成 `context.push('/search')`。**release 真机验**：点首页搜索框正确进全局搜索页(关键词框+语音mic+热门搜索 补贴/行情/病虫害/农机/天气)，不再弹占位。
+
+**3) #22 兑换积分 BUG（结论：已被迁移顺手修掉，建议用户再测后关）**：报告「兑换时无论成功与否都跳首页」。**关键时间线**：issue 建于 06-09 **14:47**(北京)，而积分兑换 sheet→独立页迁移 `f5edbfa5` 在 06-09 **15:27**(晚 40min)。报 issue 时兑换还是 `showModalBottomSheet`(旧 sheet 的兑换 onTap 多半用 shell context 的 `Navigator.pop` 把 GoRoute `/policy/service` 弹掉→回落 `/home`=跳首页)。**当前代码**用 `Navigator.of(ctx,rootNavigator:true).push` 独立页、pop 正确。**release 真机验两条路径**(临时给 farmer 加分到 500 测成功、65 分测失败，验后已还原 65)：成功兑换(积分 500→400、排名刷新、URL 留 `/policy/service`)、失败(400 提示)，**都不跳首页**。⚠️ web 已证不复现；APK 未测但结构正确(rootNavigator.push 的 route 自己 pop)。
+
+### 其它 open issue 落地核查（代码已在，是否够格关由用户定，没擅关）
+- **#18 输入框语音输入**：已落地(ai_chat/publish/search/common，`e734e4f3`)，全局搜索页就有 mic。
+- **#20 适老模式+方言入口**：已落地(`core/elder_mode.dart`/main.dart/user model/settings + publish/search 方言)。
+- **#19 物联网设备联动**：有 `pages/iot/iot_page.dart` + router + data_dashboard 入口。
+- 这 3 个建议用户在比赛机/真机点一遍后自行 close；#21 这次已修可关；#22 建议真机再测后关。
+
+### 下一步建议
+1. 用户拍板 #18/#19/#20/#21/#22 哪些可关（#21 已修、#22 已验不复现）。
+2. 若要继续：#19 IoT 联动 / #20 适老模式深化是有设计含量的特性活，适合先出工作单再拆 Claude+Codex 并行；纯 bug 清扫我自己带浏览器验更快。
+3. demo 前老规矩：预热 ollama 两个模型(冷加载 E: 盘 ~160s)、确认 E: 在位、release 包跑。
+
+---
+
 ## 2026-06-07（深夜·自主）· Claude+Codex 并行：通宵 QA 扫描 + KB 广度扩充（用户睡前交代，明早 review）
 
 ### 状态：本地/origin/main 同步在 `bd8f36be` 之后（本条目对应的 docs commit 再 +1）。后端/ollama/web(5000 release) 全程在跑。工作树仅未跟踪 `.playwright-mcp/` `design_assets/`（QA 截图已清）。
