@@ -77,10 +77,9 @@ class _ShellPageState extends State<ShellPage> {
 
   Widget _navBar(int idx) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(R.lg)),
-        boxShadow: AppColors.ambientShadowUp,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sm)),
       ),
       child: SafeArea(
         top: false,
@@ -127,7 +126,7 @@ class _NavItem extends StatelessWidget {
     final color = active ? AppColors.primary : AppColors.onSurfaceVariant;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(R.md),
+      borderRadius: BorderRadius.circular(R.sm),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -135,7 +134,7 @@ class _NavItem extends StatelessWidget {
           color: active
               ? AppColors.primaryContainer.withValues(alpha: 0.16)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(R.sm),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

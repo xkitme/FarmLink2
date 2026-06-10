@@ -172,6 +172,10 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
         onPressed: () => context.push('/ai/chat/new'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
+        highlightElevation: 0,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
         child: const Icon(Icons.add),
       ),
       body: _loading
@@ -247,10 +251,50 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
     );
   }
 
-  Widget _searchBar() => AppSearchField(
-        controller: _searchCtrl,
-        hintText: '搜索话题或关键词…',
-        onChanged: (value) => setState(() => _query = value.trim()),
+  Widget _searchBar() => Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(R.sm),
+          border: Border.all(color: AppColors.outlineVariant, width: 1.5),
+        ),
+        padding: const EdgeInsets.only(left: 14, right: 6),
+        child: Row(
+          children: [
+            const Icon(Icons.search,
+                color: AppColors.onSurfaceVariant, size: 21),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: _searchCtrl,
+                textInputAction: TextInputAction.search,
+                onChanged: (value) => setState(() => _query = value.trim()),
+                decoration: const InputDecoration(
+                  hintText: '搜索话题或关键词...',
+                  hintStyle: TextStyle(fontSize: 14, color: AppColors.outline),
+                  filled: false,
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                ),
+                style:
+                    const TextStyle(fontSize: 15, color: AppColors.onSurface),
+              ),
+            ),
+            if (_searchCtrl.text.isNotEmpty)
+              IconButton(
+                tooltip: '清除',
+                onPressed: () {
+                  _searchCtrl.clear();
+                  setState(() => _query = '');
+                },
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.close,
+                    size: 18, color: AppColors.onSurfaceVariant),
+              ),
+          ],
+        ),
       );
 
   Widget _groupLabel(String text) => Padding(
@@ -274,9 +318,9 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
             DateTime.now().year, DateTime.now().month, DateTime.now().day));
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(R.md),
+      borderRadius: BorderRadius.circular(R.sm),
       child: InkWell(
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(R.sm),
         onTap: () {
           if (isReport) {
             context.push('/data/service');
@@ -287,7 +331,7 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(R.md),
+            borderRadius: BorderRadius.circular(R.sm),
             border: Border(
               left: BorderSide(
                 color: isReport
@@ -298,7 +342,6 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
                 width: isToday || isReport ? 3 : 1,
               ),
             ),
-            boxShadow: AppColors.ambientShadow,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -390,7 +433,6 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
           color: AppColors.surfaceLow,
           borderRadius: BorderRadius.circular(R.sm),
           border: Border.all(color: AppColors.outlineVariant, width: 1),
-          boxShadow: AppColors.ambientShadow,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(R.sm),
