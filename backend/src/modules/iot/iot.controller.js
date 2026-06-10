@@ -131,6 +131,161 @@ function buildSeries(template) {
   })
 }
 
+// ── 设备联动（自动化规则 + 触发记录）────────────────────
+// 规则把某设备指标越过阈值与一个执行动作绑定；阈值留足余量，
+// 保证 demo 下「虫情」常触发、其余待命、水位停用，呈现稳定。
+const LINKAGE_RULES = [
+  {
+    id: 'lk-soil-irrigation',
+    name: '墒情自动滴灌',
+    deviceId: 'soil-01',
+    metricKey: 'soilMoisture',
+    op: '<',
+    threshold: 45,
+    actionType: 'irrigation',
+    action: '联动东区滴灌阀开启 15 分钟',
+    desc: '土壤湿度低于 45% 自动补水，避免作物受旱',
+    enabledDefault: true,
+  },
+  {
+    id: 'lk-pest-alert',
+    name: '虫情活跃 · 植保预警',
+    deviceId: 'pest-01',
+    metricKey: 'catchCount',
+    op: '>',
+    threshold: 15,
+    actionType: 'alert',
+    action: '推送植保预警 · 建议无人机统防统治',
+    desc: '诱捕量高于 15 只/夜，联动植保服务提醒',
+    enabledDefault: true,
+  },
+  {
+    id: 'lk-greenhouse-vent',
+    name: '棚室高温通风',
+    deviceId: 'greenhouse-01',
+    metricKey: 'canopyTemp',
+    op: '>',
+    threshold: 31,
+    actionType: 'ventilation',
+    action: '联动育苗棚顶窗通风降温',
+    desc: '冠层温度高于 31℃ 自动开窗散热',
+    enabledDefault: true,
+  },
+  {
+    id: 'lk-weather-frost',
+    name: '低温霜冻保温',
+    deviceId: 'air-01',
+    metricKey: 'airTemp',
+    op: '<',
+    threshold: 12,
+    actionType: 'warming',
+    action: '联动育苗棚保温帘 · 推送防冻提醒',
+    desc: '气温低于 12℃ 放下保温帘并提醒农户',
+    enabledDefault: true,
+  },
+  {
+    id: 'lk-water-drain',
+    name: '水位过高排涝',
+    deviceId: 'water-01',
+    metricKey: 'waterLevel',
+    op: '>',
+    threshold: 1.8,
+    actionType: 'drainage',
+    action: '联动南沟泵站启动排水',
+    desc: '水位高于 1.8m 自动启泵排涝',
+    enabledDefault: false,
+  },
+]
+
+// 启用态运行期覆盖（重启回到默认，demo 足够）
+const linkageEnabledOverride = new Map()
+
+function ruleEnabled(rule) {
+  return linkageEnabledOverride.has(rule.id)
+    ? linkageEnabledOverride.get(rule.id)
+    : rule.enabledDefault
+}
+
+function conditionMet(op, value, threshold) {
+  if (op === '<') return value < threshold
+  if (op === '<=') return value <= threshold
+  if (op === '>') return value > threshold
+  if (op === '>=') return value >= threshold
+  return false
+}
+
+function buildRule(rule) {
+  const template = DEVICE_TEMPLATES.find((item) => item.id === rule.deviceId)
+  const metric = template?.metrics.find((item) => item.key === rule.metricKey)
+  const current = metric ? reading(metric) : null
+  const enabled = ruleEnabled(rule)
+  const triggered = !!current && conditionMet(rule.op, current.value, rule.threshold)
+  return {
+    id: rule.id,
+    name: rule.name,
+    desc: rule.desc,
+    deviceId: rule.deviceId,
+    deviceName: template?.name || '未知设备',
+    deviceType: template?.type || '',
+    metricKey: rule.metricKey,
+    metricLabel: metric?.label || '',
+    op: rule.op,
+    threshold: rule.threshold,
+    unit: metric?.unit || '',
+    action: rule.action,
+    actionType: rule.actionType,
+    currentValue: current ? current.value : null,
+    enabled,
+    status: !enabled ? 'disabled' : triggered ? 'triggered' : 'idle',
+  }
+}
+
+export async function listLinkageRules(req, res) {
+  ok(res, LINKAGE_RULES.map(buildRule))
+}
+
+export async function toggleLinkageRule(req, res) {
+  const id = `${req.params.id || ''}`.trim()
+  const rule = LINKAGE_RULES.find((item) => item.id === id)
+  if (!rule) throw errors.notFound('联动规则不存在')
+  const enabled = !!(req.body && req.body.enabled)
+  linkageEnabledOverride.set(id, enabled)
+  ok(res, buildRule(rule))
+}
+
+export async function linkageLogs(req, res) {
+  // 合成最近触发记录：仅启用规则，按时间倒序，覆盖最近 ~10 小时
+  const now = Date.now()
+  const samples = [
+    { ruleId: 'lk-pest-alert', minutesAgo: 42, value: 23, result: '已推送植保预警' },
+    { ruleId: 'lk-soil-irrigation', minutesAgo: 156, value: 41, result: '已开启滴灌 15 分钟' },
+    { ruleId: 'lk-greenhouse-vent', minutesAgo: 268, value: 32.4, result: '已开顶窗通风' },
+    { ruleId: 'lk-pest-alert', minutesAgo: 393, value: 21, result: '已推送植保预警' },
+    { ruleId: 'lk-weather-frost', minutesAgo: 605, value: 10.6, result: '已放保温帘并提醒' },
+  ]
+  const logs = samples
+    .map((sample, index) => {
+      const rule = LINKAGE_RULES.find((item) => item.id === sample.ruleId)
+      if (!rule || !ruleEnabled(rule)) return null
+      const template = DEVICE_TEMPLATES.find((item) => item.id === rule.deviceId)
+      const metric = template?.metrics.find((item) => item.key === rule.metricKey)
+      return {
+        id: `log-${index}`,
+        ruleId: rule.id,
+        ruleName: rule.name,
+        deviceName: template?.name || '',
+        message: rule.action,
+        value: sample.value,
+        unit: metric?.unit || '',
+        metricLabel: metric?.label || '',
+        result: sample.result,
+        createdAt: new Date(now - sample.minutesAgo * 60 * 1000).toISOString(),
+      }
+    })
+    .filter(Boolean)
+  ok(res, logs)
+}
+
 export async function listDevices(req, res) {
   ok(res, DEVICE_TEMPLATES.map(buildDevice))
 }

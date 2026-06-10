@@ -18,6 +18,9 @@ class _IotPageState extends State<IotPage> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _devices = [];
+  List<Map<String, dynamic>> _rules = [];
+  List<Map<String, dynamic>> _logs = [];
+  final Set<String> _togglingIds = {};
 
   @override
   void initState() {
@@ -33,8 +36,25 @@ class _IotPageState extends State<IotPage> {
     try {
       final data = await ApiClient.get('/iot/devices');
       if (!mounted) return;
+      // 联动数据 best-effort：失败也不影响设备监测主流程
+      var rules = _rules;
+      var logs = _logs;
+      try {
+        final extra = await Future.wait<dynamic>([
+          ApiClient.get('/iot/linkage/rules'),
+          ApiClient.get('/iot/linkage/logs'),
+        ]);
+        rules = _list(extra[0]);
+        logs = _list(extra[1]);
+      } catch (_) {
+        rules = [];
+        logs = [];
+      }
+      if (!mounted) return;
       setState(() {
         _devices = _list(data);
+        _rules = rules;
+        _logs = logs;
         _loading = false;
       });
     } catch (e) {
@@ -43,6 +63,32 @@ class _IotPageState extends State<IotPage> {
         _error = serviceErrorMessage(e);
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _toggleRule(Map<String, dynamic> rule, bool value) async {
+    final id = _text(rule['id']);
+    if (id.isEmpty || _togglingIds.contains(id)) return;
+    setState(() => _togglingIds.add(id));
+    try {
+      final updated =
+          _map(await ApiClient.post('/iot/linkage/rules/$id/toggle', body: {
+        'enabled': value,
+      }));
+      List<Map<String, dynamic>> logs = _logs;
+      try {
+        logs = _list(await ApiClient.get('/iot/linkage/logs'));
+      } catch (_) {/* 保持原日志 */}
+      if (!mounted) return;
+      setState(() {
+        final index = _rules.indexWhere((item) => _text(item['id']) == id);
+        if (index >= 0 && updated.isNotEmpty) _rules[index] = updated;
+        _logs = logs;
+      });
+    } catch (e) {
+      if (mounted) toast(context, actionErrorMessage('更新', e), error: true);
+    } finally {
+      if (mounted) setState(() => _togglingIds.remove(id));
     }
   }
 
@@ -85,6 +131,7 @@ class _IotPageState extends State<IotPage> {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _deviceCard(device),
                           ),
+                      ..._linkageSection(),
                     ],
                   ),
                 ),
@@ -328,6 +375,205 @@ class _IotPageState extends State<IotPage> {
     );
   }
 
+  // ── 设备联动 ───────────────────────────────
+  List<Widget> _linkageSection() {
+    if (_rules.isEmpty) return const [];
+    final triggered =
+        _rules.where((r) => _text(r['status']) == 'triggered').length;
+    final active = _rules.where((r) => _bool(r['enabled'])).length;
+    return [
+      const SizedBox(height: 4),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Expanded(child: SectionTitle('设备联动')),
+          StatusChip(
+            triggered > 0 ? '$triggered 条已触发' : '$active 条已启用',
+            color: triggered > 0 ? AppColors.warning : AppColors.primary,
+          ),
+        ],
+      ),
+      for (final rule in _rules)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _ruleCard(rule),
+        ),
+      if (_logs.isNotEmpty) ...[
+        const SectionTitle('联动记录'),
+        AppCard(
+          child: Column(
+            children: [
+              for (var i = 0; i < _logs.length; i++) ...[
+                if (i > 0)
+                  const Divider(height: 18, color: AppColors.outlineVariant),
+                _logRow(_logs[i]),
+              ],
+            ],
+          ),
+        ),
+      ],
+    ];
+  }
+
+  Widget _ruleCard(Map<String, dynamic> rule) {
+    final status = _text(rule['status'], fallback: 'idle');
+    final enabled = _bool(rule['enabled']);
+    final meta = _ruleStatusMeta(status);
+    final id = _text(rule['id']);
+    final metricLabel = _text(rule['metricLabel']);
+    final unit = _text(rule['unit']);
+    final op = _text(rule['op']);
+    final threshold = _text(rule['threshold']);
+    final current = _text(rule['currentValue'], fallback: '-');
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: meta.color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(R.md),
+                ),
+                child: Icon(_actionIcon(rule['actionType']), color: meta.color),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _text(rule['name'], fallback: '联动规则'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${_text(rule['deviceName'], fallback: '关联设备')} · ${_text(rule['desc'])}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: enabled,
+                activeColor: AppColors.primary,
+                onChanged: _togglingIds.contains(id)
+                    ? null
+                    : (value) => _toggleRule(rule, value),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceLow,
+              borderRadius: BorderRadius.circular(R.sm),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    StatusChip(meta.label, color: meta.color),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '触发条件 $metricLabel $op $threshold$unit · 当前 $current$unit',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.bolt_rounded,
+                        size: 16,
+                        color: enabled
+                            ? AppColors.primary
+                            : AppColors.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _text(rule['action'], fallback: '执行联动动作'),
+                        style: const TextStyle(
+                          color: AppColors.onSurface,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _logRow(Map<String, dynamic> log) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 5),
+          width: 8,
+          height: 8,
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_text(log['ruleName'], fallback: '联动')} · ${_text(log['result'])}',
+                style: const TextStyle(
+                  color: AppColors.onSurface,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${_text(log['deviceName'])} · ${_text(log['metricLabel'])} ${_text(log['value'])}${_text(log['unit'])} · ${_logTime(log['createdAt'])}',
+                style: const TextStyle(
+                  color: AppColors.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showDetail(Map<String, dynamic> device) {
     final id = _text(device['id']);
     Navigator.of(context, rootNavigator: true).push<void>(
@@ -420,6 +666,44 @@ class _IotPageState extends State<IotPage> {
       return Icons.wb_sunny_outlined;
     }
     return Icons.sensors_rounded;
+  }
+
+  static bool _bool(dynamic value) {
+    if (value is bool) return value;
+    return '$value'.toLowerCase() == 'true';
+  }
+
+  static ({String label, Color color}) _ruleStatusMeta(String status) {
+    if (status == 'triggered') {
+      return (label: '已触发', color: AppColors.warning);
+    }
+    if (status == 'disabled') {
+      return (label: '已停用', color: AppColors.onSurfaceVariant);
+    }
+    return (label: '待命', color: AppColors.primary);
+  }
+
+  static IconData _actionIcon(dynamic actionType) {
+    switch (_text(actionType)) {
+      case 'irrigation':
+        return Icons.water_drop_rounded;
+      case 'alert':
+        return Icons.campaign_rounded;
+      case 'ventilation':
+        return Icons.air_rounded;
+      case 'warming':
+        return Icons.thermostat_rounded;
+      case 'drainage':
+        return Icons.waves_rounded;
+      default:
+        return Icons.bolt_rounded;
+    }
+  }
+
+  static String _logTime(dynamic value) {
+    final parsed = DateTime.tryParse(_text(value));
+    if (parsed == null) return '-';
+    return DateFormat('MM-dd HH:mm').format(parsed.toLocal());
   }
 }
 
