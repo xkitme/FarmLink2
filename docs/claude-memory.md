@@ -17,11 +17,11 @@
 
 **3) #22 兑换积分 BUG（结论：已被迁移顺手修掉，建议用户再测后关）**：报告「兑换时无论成功与否都跳首页」。**关键时间线**：issue 建于 06-09 **14:47**(北京)，而积分兑换 sheet→独立页迁移 `f5edbfa5` 在 06-09 **15:27**(晚 40min)。报 issue 时兑换还是 `showModalBottomSheet`(旧 sheet 的兑换 onTap 多半用 shell context 的 `Navigator.pop` 把 GoRoute `/policy/service` 弹掉→回落 `/home`=跳首页)。**当前代码**用 `Navigator.of(ctx,rootNavigator:true).push` 独立页、pop 正确。**release 真机验两条路径**(临时给 farmer 加分到 500 测成功、65 分测失败，验后已还原 65)：成功兑换(积分 500→400、排名刷新、URL 留 `/policy/service`)、失败(400 提示)，**都不跳首页**。⚠️ web 已证不复现；APK 未测但结构正确(rootNavigator.push 的 route 自己 pop)。
 
-### 其它 open issue 落地核查（代码已在，是否够格关由用户定，没擅关）
-- **#18 输入框语音输入**：已落地(ai_chat/publish/search/common，`e734e4f3`)，全局搜索页就有 mic。
-- **#20 适老模式+方言入口**：已落地(`core/elder_mode.dart`/main.dart/user model/settings + publish/search 方言)。
-- **#19 物联网设备联动**：有 `pages/iot/iot_page.dart` + router + data_dashboard 入口。
-- 这 3 个建议用户在比赛机/真机点一遍后自行 close；#21 这次已修可关；#22 建议真机再测后关。
+### 其它 open issue 落地核查 + 续作（用户第二次「继续」后）
+- **#20 适老模式**：已落地且 **release 真机验过**——设置页开关打开后全局字号放大 1.3×(main.dart textScaler clamp)、布局自适应不溢出。方言入口/语音也在(`e734e4f3`)。建议可关。
+- **#18 输入框语音输入**：已落地(ai_chat/publish/search/common)，全局搜索页就有 mic。建议可关。
+- **#19 物联网设备联动（commit `2cb4ea98`，本会话新建特性，doc77）**：原 `/iot` 只有设备监测，缺「联动」。新建**设备联动**：后端 iot 模块加 5 条联动规则(墒情→滴灌/虫情→植保预警/棚温→通风/低温→保温/水位→排涝)+`GET /iot/linkage/rules`+`/logs`+`POST .../toggle`，实时读数判触发态，启用态内存 Map(重启回默认)，阈值留余量保证 demo 稳定(1触发+3待命+1停用)；前端 iot_page 设备监测下方加「设备联动」区(规则卡:状态徽章/触发条件/当前值/⚡动作/启用 Switch)+「联动记录」倒序表。**release 真机验过**：联动区/5规则卡/记录全渲染，API 停用虫情后重载→区头「3条已启用」/虫情「已停用」/记录按启用态过滤端到端联动正确。⚠️ canvas 上直接点 Switch 受 Playwright 命中精度限制没逐一点到(写端 curl 验过、onChanged 已接线、读端 toggle 后渲染已证)。⚠️ `Switch` 用 `activeColor`(开发机 3.32.1 无 `activeThumbColor`，3.44 仅 deprecated)。
+- **#21 已修可关；#22 建议真机再测后关。**
 
 ### 下一步建议
 1. 用户拍板 #18/#19/#20/#21/#22 哪些可关（#21 已修、#22 已验不复现）。
