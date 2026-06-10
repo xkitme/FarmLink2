@@ -416,9 +416,9 @@ class _AiChatPageState extends State<AiChatPage> {
 
   String _detectWaitingText(int seconds) {
     if (seconds >= 12) {
-      return '已等待 ${seconds}s，本机视觉模型冷启动中，首次识图通常需要 30-60s。';
+      return '已等待 ${seconds}s，本机视觉模型冷启动中，首次识图可能需要 2-3 分钟。';
     }
-    return '已等待 ${seconds}s，视觉模型通常需要 30-60s。';
+    return '已等待 ${seconds}s，视觉模型正在分析图片。';
   }
 
   void _askFollowUp(String question) {

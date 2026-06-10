@@ -40,12 +40,16 @@ class _Product {
   });
 
   factory _Product.fromApi(Map<String, dynamic> json, int index) {
-    final images = ['_4_1.jpg', '_4_2.jpg', '_4_3.jpg', '_4_4.jpg'];
     final category = '${json['category'] ?? '农产品'}';
+    final title = '${json['title'] ?? '乡村好物'}';
+    final rawImages = (json['images'] as List? ?? const [])
+        .map((item) => '$item')
+        .where((item) => item.isNotEmpty)
+        .toList();
     return _Product(
       id: json['id'] as int?,
-      image: 'assets/images/${images[index % images.length]}',
-      title: '${json['title'] ?? '乡村好物'}',
+      image: _imageFor(title, category, index, rawImages),
+      title: title,
       price: (json['price'] as num?)?.toDouble() ?? 0,
       unit: '${json['unit'] ?? '件'}',
       stock: (json['stock'] as num?)?.toInt() ?? 0,
@@ -62,6 +66,52 @@ class _Product {
               : AppColors.goldContainer,
       fromApi: true,
     );
+  }
+
+  static String _imageFor(
+      String title, String category, int index, List<String> rawImages) {
+    for (final image in rawImages) {
+      if (image.isNotEmpty && !image.startsWith('assets/images/_')) {
+        return image;
+      }
+    }
+    if (title.contains('蛋') || category.contains('畜禽')) {
+      return 'assets/images/generated/product-eggs.jpg';
+    }
+    if (title.contains('番茄')) {
+      return 'assets/images/generated/product-tomato.jpg';
+    }
+    if (title.contains('礼盒')) {
+      return 'assets/images/generated/product-vegetable-box.jpg';
+    }
+    if (title.contains('芦笋')) {
+      return 'assets/images/generated/product-asparagus.jpg';
+    }
+    if (title.contains('菜') || category.contains('蔬菜')) {
+      return 'assets/images/generated/product-vegetable-box.jpg';
+    }
+    if (title.contains('红薯')) {
+      return 'assets/images/generated/product-sweet-potato.jpg';
+    }
+    if (title.contains('玉米')) {
+      return 'assets/images/generated/product-corn.jpg';
+    }
+    if (title.contains('米') || category.contains('粮')) {
+      return 'assets/images/generated/product-rice.jpg';
+    }
+    if (title.contains('果') ||
+        title.contains('柑') ||
+        title.contains('橘') ||
+        category.contains('水果')) {
+      return 'assets/images/generated/product-citrus.jpg';
+    }
+    const fallbackImages = [
+      'assets/images/generated/product-citrus.jpg',
+      'assets/images/generated/product-eggs.jpg',
+      'assets/images/generated/product-vegetable-box.jpg',
+      'assets/images/generated/product-rice.jpg',
+    ];
+    return fallbackImages[index % fallbackImages.length];
   }
 }
 
@@ -84,7 +134,7 @@ class _MarketPageState extends State<MarketPage> {
 
   static const _fallback = [
     _Product(
-      image: 'assets/images/_4_1.jpg',
+      image: 'assets/images/generated/product-citrus.jpg',
       title: '丹东红颜草莓 新鲜采摘 有机种植',
       price: 45,
       unit: '斤',
@@ -93,7 +143,7 @@ class _MarketPageState extends State<MarketPage> {
       badgeColor: AppColors.secondary,
     ),
     _Product(
-      image: 'assets/images/_4_2.jpg',
+      image: 'assets/images/generated/product-eggs.jpg',
       title: '散养土鸡蛋 谷物喂养 30枚装',
       price: 58,
       unit: '箱',
@@ -102,7 +152,7 @@ class _MarketPageState extends State<MarketPage> {
       badgeColor: AppColors.primary,
     ),
     _Product(
-      image: 'assets/images/_4_3.jpg',
+      image: 'assets/images/generated/product-asparagus.jpg',
       title: '高山露天有机芦笋 现采现发',
       price: 22.5,
       unit: '把',
@@ -111,7 +161,7 @@ class _MarketPageState extends State<MarketPage> {
       badgeColor: AppColors.primaryContainer,
     ),
     _Product(
-      image: 'assets/images/_4_4.jpg',
+      image: 'assets/images/generated/product-corn.jpg',
       title: '农家自种水果玉米 鲜嫩多汁',
       price: 19.9,
       unit: '5斤',
@@ -355,15 +405,7 @@ class _MarketPageState extends State<MarketPage> {
                 ClipRRect(
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(R.md)),
-                  child: Image.asset(
-                    product.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.surfaceContainer,
-                      child: const Icon(Icons.storefront,
-                          color: AppColors.primary, size: 40),
-                    ),
-                  ),
+                  child: _productImage(product.image),
                 ),
                 Positioned(
                   left: 10,
@@ -506,6 +548,28 @@ class _MarketPageState extends State<MarketPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _productImage(String source) {
+    Widget fallback() => Container(
+          color: AppColors.surfaceContainer,
+          child:
+              const Icon(Icons.storefront, color: AppColors.primary, size: 40),
+        );
+    if (source.startsWith('http://') ||
+        source.startsWith('https://') ||
+        source.startsWith('/')) {
+      return Image.network(
+        ApiClient.resolveImageUrl(source),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback(),
+      );
+    }
+    return Image.asset(
+      source,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => fallback(),
     );
   }
 

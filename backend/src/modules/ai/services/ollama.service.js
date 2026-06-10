@@ -84,6 +84,7 @@ export async function generateText({ prompt, system, model, images, temperature 
     system,
     images,
     stream: false,
+    keep_alive: '60m',
     options: {
       temperature,
       num_ctx: 4096,
@@ -104,7 +105,7 @@ export async function generateText({ prompt, system, model, images, temperature 
 /** 视觉模型预热：启动时调一次（不传图片，只让 ollama 把模型权重加载进显存），
  *  避免第一个真实用户请求承担 30–60s 冷启动。
  *  失败不抛——预热失败不应阻塞服务启动；用户后续请求自然会经历冷启动。 */
-export async function warmupVisionModel(timeoutMs = 120000) {
+export async function warmupVisionModel(timeoutMs = 240000) {
   const model = config.ollama.visionModel
   if (!model) return { ok: false, reason: 'no-vision-model-configured' }
   const started = Date.now()
@@ -114,6 +115,7 @@ export async function warmupVisionModel(timeoutMs = 120000) {
       model,
       prompt: 'warmup',
       stream: false,
+      keep_alive: '60m',
       options: { num_predict: 1, temperature: 0 },
     }, timeoutMs)
     return { ok: true, model, elapsedMs: Date.now() - started }
@@ -130,6 +132,7 @@ export async function streamText({ prompt, system, model, onDelta, images, tempe
     system,
     images,
     stream: true,
+    keep_alive: '60m',
     options: {
       temperature,
       num_ctx: 4096,

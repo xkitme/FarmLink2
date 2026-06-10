@@ -41,6 +41,14 @@ class ApiClient {
     return Uri.parse('$baseUrl$kApiPrefix$path').replace(queryParameters: q);
   }
 
+  static String resolveImageUrl(String value) {
+    final source = value.trim();
+    if (source.isEmpty) return source;
+    final uri = Uri.tryParse(source);
+    if (uri?.hasScheme == true) return source;
+    return Uri.parse(baseUrl).resolve(source).toString();
+  }
+
   static Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
     final res = await http
         .get(_uri(path, query), headers: _headers)
@@ -77,7 +85,7 @@ class ApiClient {
       ..files
           .add(http.MultipartFile.fromBytes(field, bytes, filename: filename));
     if (fields != null) req.fields.addAll(fields);
-    final streamed = await req.send().timeout(const Duration(seconds: 60));
+    final streamed = await req.send().timeout(const Duration(seconds: 240));
     return _parse(await http.Response.fromStream(streamed));
   }
 

@@ -205,8 +205,8 @@ export async function modelVersion(req, res) {
       embedModel: config.ollama.embedModel,
     },
     recommendedForRtx5060Laptop: [
-      { name: 'qwen2.5:7b-instruct-q4_K_M', use: '政策/农技/法律问答，默认推荐（约4.7GB，8GB可跑，答得更准）' },
-      { name: 'qwen2.5:3b-instruct-q4_K_M', use: '显存紧张时的折中选择' },
+      { name: 'qwen2.5:3b-instruct-q4_K_M', use: '8GB 显存 demo 默认推荐，降低与视觉模型切换时的显存压力' },
+      { name: 'qwen2.5:7b-instruct-q4_K_M', use: '12GB+ 显存或不频繁切换识图时使用，答得更准' },
       { name: 'qwen2.5:1.5b-instruct-q4_K_M', use: '极限速度优先，质量较弱不推荐' },
       { name: 'minicpm-v:8b-2.6-q4_K_M', use: '图像理解，显存紧张时使用规则引擎' },
       { name: 'bge-m3', use: '向量检索，可后续用于更精细 RAG' },
@@ -473,7 +473,7 @@ async function isAgriculturalPhoto(bytes) {
       images: [bytes.toString('base64')],
       temperature: 0,
       format: 'json',
-      timeoutMs: 30000,
+      timeoutMs: 180000,
     })
     const text = String(gate.answer || '').replace(/^```json|```$/g, '').trim()
     const parsed = JSON.parse(text)
@@ -573,9 +573,9 @@ export async function imageAnalyze(req, res) {
       images: [bytes.toString('base64')],
       temperature: 0.1,
       format: 'json',
-      // 视觉模型推理慢；warmup 后正常推理 5–20s，留 60s 给 8GB 显存的余量。
-      // 启动时已预热（server.js warmupVisionModel），首请求不再承担冷启动 30–60s。
-      timeoutMs: 60000,
+      // 视觉模型推理慢；warmup 后正常推理 5–20s，冷启动可能超过 2 分钟。
+      // 这里覆盖 E: 盘冷加载，避免首个真实识图被硬超时打成「无法识别」。
+      timeoutMs: 180000,
     })
     const text = generated.answer.replace(/^```json|```$/g, '').trim()
     let parsed = null
