@@ -312,10 +312,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ── 2 · 搜索条（全局搜索 45d 未上线，先占位）──────────────
+  // ── 2 · 搜索条（接入全局搜索 /search，#21）──────────────
   Widget _homeSearch() {
     return GestureDetector(
-      onTap: () => toast(context, '全局搜索即将上线'),
+      onTap: () => context.push('/search'),
       child: Container(
         height: 50,
         decoration: BoxDecoration(
