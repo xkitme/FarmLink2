@@ -46,9 +46,13 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
                 }
               },
             )
-          : const Center(
-              child:
-                  Icon(Icons.agriculture, color: AppColors.primary, size: 26),
+          : Center(
+              child: Image.asset(
+                'assets/images/farmlink-mark.png',
+                width: 30,
+                height: 30,
+                filterQuality: FilterQuality.medium,
+              ),
             ),
       title: const Text('田园通',
           maxLines: 1,
