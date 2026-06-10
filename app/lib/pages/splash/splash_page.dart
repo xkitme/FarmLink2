@@ -22,9 +22,12 @@ class _SplashPageState extends State<SplashPage> {
   bool _skip = false; // 已看过引导，跳过 onboarding
 
   static const _slides = [
-    _Slide('assets/images/_3_1.jpg', 'AI 智慧种田', '病虫害拍照识别、精细气象预警，田间难题随手解决'),
-    _Slide('assets/images/_4_1.jpg', '产销直通田间', '农产品直供集市、实时行情查询，好收成卖出好价钱'),
-    _Slide('assets/images/_7_1.jpg', '共建社区，乐享生活', '农产品直供，共享农机，助力乡村振兴'),
+    _Slide('assets/images/generated/smart-farming.jpg', 'AI 智慧种田',
+        '病虫害拍照识别、精细气象预警，田间难题随手解决'),
+    _Slide('assets/images/generated/farm-market.jpg', '产销直通田间',
+        '农产品直供集市、实时行情查询，好收成卖出好价钱'),
+    _Slide('assets/images/generated/rural-life.jpg', '共建社区，乐享生活',
+        '农产品直供，共享农机，助力乡村振兴'),
   ];
 
   @override

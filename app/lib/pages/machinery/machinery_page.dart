@@ -113,7 +113,8 @@ class _Machine {
     return _fallbackImageForType(type);
   }
 
-  static String _fallbackImageForType(String type) => 'assets/images/_5_2.jpg';
+  static String _fallbackImageForType(String type) =>
+      'assets/images/generated/machinery-sharing.jpg';
 
   static String _text(dynamic value) {
     final text = '$value'.trim();
@@ -123,16 +124,20 @@ class _Machine {
 
 Widget _machineImage(String image,
     {required double width, required double height, double iconSize = 36}) {
-  final source = image.trim().isEmpty ? 'assets/images/_5_2.jpg' : image.trim();
+  final source = image.trim().isEmpty
+      ? 'assets/images/generated/machinery-sharing.jpg'
+      : image.trim();
   final fallback = Container(
     width: width,
     height: height,
     color: AppColors.surfaceContainer,
     child: Icon(Icons.agriculture, color: AppColors.primary, size: iconSize),
   );
-  if (source.startsWith('http://') || source.startsWith('https://')) {
+  if (source.startsWith('http://') ||
+      source.startsWith('https://') ||
+      source.startsWith('/')) {
     return Image.network(
-      source,
+      ApiClient.resolveImageUrl(source),
       width: width,
       height: height,
       fit: BoxFit.cover,
@@ -173,7 +178,7 @@ class _MachineryPageState extends State<MachineryPage> {
 
   static const _fallback = [
     _Machine(
-      image: 'assets/images/_5_2.jpg',
+      image: 'assets/images/generated/machinery-sharing.jpg',
       name: '示例农机 · 资料更新中',
       type: '100 马力 · 轮式拖拉机',
       price: 150,
@@ -456,7 +461,7 @@ class _MachineryPageState extends State<MachineryPage> {
           children: [
             // 背景图（保留，后期接真实地图）
             Image.asset(
-              'assets/images/_5_1.jpg',
+              'assets/images/generated/farmland-map.jpg',
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) =>
                   const ColoredBox(color: Color(0xFF315A35)),

@@ -83,7 +83,7 @@ class _AccountPageState extends State<AccountPage> {
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
         children: [
           const SettingsImageBanner(
-            image: 'assets/images/_6_1.jpg',
+            image: 'assets/images/generated/auth-hero.jpg',
             title: '个人资料',
             subtitle: '完善昵称、真实姓名与联系方式，让村委与农技服务更好地联系到你。',
           ),

@@ -41,9 +41,12 @@ class _PolicyItem {
 
 class _PolicyPageState extends State<PolicyPage> {
   static const _tabs = ['惠农政策', '党建学习', '文明乡风'];
-  static const _policyFallbackImage = 'assets/images/_3_1.jpg';
-  static const _partyFallbackImage = 'assets/images/_3_2.jpg';
-  static const _honorFallbackImage = 'assets/images/_3_3.jpg';
+  static const _policyFallbackImage =
+      'assets/images/generated/policy-support.jpg';
+  static const _partyFallbackImage =
+      'assets/images/generated/community-learning.jpg';
+  static const _honorFallbackImage =
+      'assets/images/generated/village-honor.jpg';
 
   var _active = 0;
   final _loading = [true, true, true];
@@ -472,9 +475,11 @@ class _PolicyPageState extends State<PolicyPage> {
       child:
           const Icon(Icons.account_balance, color: AppColors.primary, size: 34),
     );
-    if (image.startsWith('http://') || image.startsWith('https://')) {
+    if (image.startsWith('http://') ||
+        image.startsWith('https://') ||
+        image.startsWith('/')) {
       return Image.network(
-        image,
+        ApiClient.resolveImageUrl(image),
         width: 104,
         height: 104,
         fit: BoxFit.cover,

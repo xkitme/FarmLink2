@@ -563,8 +563,8 @@ class _GalleryImage extends StatelessWidget {
           child:
               const Icon(Icons.storefront, color: AppColors.primary, size: 60),
         );
-    if (src.startsWith('http')) {
-      return Image.network(src,
+    if (src.startsWith('http') || src.startsWith('/')) {
+      return Image.network(ApiClient.resolveImageUrl(src),
           fit: BoxFit.cover, errorBuilder: (_, __, ___) => fallback());
     }
     return Image.asset(src,

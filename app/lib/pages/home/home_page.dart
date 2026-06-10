@@ -707,7 +707,7 @@ class _HomePageState extends State<HomePage> {
     return Column(
       children: [
         _bannerCard(
-          image: 'assets/images/_3_1.jpg',
+          image: 'assets/images/generated/smart-farming.jpg',
           icon: Icons.eco,
           title: '智慧种植',
           subtitle: '病虫害识别 · 农事建档 · 专家在线',
@@ -715,7 +715,7 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(height: 12),
         _bannerCard(
-          image: 'assets/images/_4_1.jpg',
+          image: 'assets/images/generated/farm-market.jpg',
           icon: Icons.storefront,
           title: '乡村集市',
           subtitle: '产地直发 · 溯源好物 · 一键下单',
@@ -723,7 +723,7 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(height: 12),
         _bannerCard(
-          image: 'assets/images/_5_2.jpg',
+          image: 'assets/images/generated/machinery-sharing.jpg',
           icon: Icons.agriculture,
           title: '农机共享',
           subtitle: '就近租用 · 真实预约 · 机主直联',

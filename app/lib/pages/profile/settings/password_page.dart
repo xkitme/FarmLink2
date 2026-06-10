@@ -68,7 +68,7 @@ class _PasswordPageState extends State<PasswordPage> {
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
         children: [
           const SettingsImageBanner(
-            image: 'assets/images/_6_1.jpg',
+            image: 'assets/images/generated/auth-hero.jpg',
             title: '账号安全中心',
             subtitle: '定期更新密码，保护账号与业务数据安全。',
           ),

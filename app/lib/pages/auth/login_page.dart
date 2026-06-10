@@ -61,7 +61,7 @@ class _LoginPageState extends State<LoginPage> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset('assets/images/_6_1.jpg',
+                Image.asset('assets/images/generated/auth-hero.jpg',
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) =>
                         const ColoredBox(color: Color(0xFF1F5E26))),

@@ -70,7 +70,7 @@ class _WeatherAlertPageState extends State<WeatherAlertPage> {
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
         children: [
           const SettingsImageBanner(
-            image: 'assets/images/_5_1.jpg',
+            image: 'assets/images/generated/weather-monitoring.jpg',
             title: '精准农业气象监测',
             subtitle: '配置预警类型与通知频率。',
           ),

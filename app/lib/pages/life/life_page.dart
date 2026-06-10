@@ -179,17 +179,20 @@ class _LifePageState extends State<LifePage> {
       {required double width,
       required double height,
       IconData icon = Icons.landscape}) {
-    final source =
-        image.trim().isEmpty ? 'assets/images/_7_1.jpg' : image.trim();
+    final source = image.trim().isEmpty
+        ? 'assets/images/generated/rural-tourism.jpg'
+        : image.trim();
     final fallback = Container(
       width: width,
       height: height,
       color: AppColors.surfaceContainer,
       child: Icon(icon, color: AppColors.primary),
     );
-    if (source.startsWith('http://') || source.startsWith('https://')) {
+    if (source.startsWith('http://') ||
+        source.startsWith('https://') ||
+        source.startsWith('/')) {
       return Image.network(
-        source,
+        ApiClient.resolveImageUrl(source),
         width: width,
         height: height,
         fit: BoxFit.cover,
@@ -325,7 +328,7 @@ class _LifePageState extends State<LifePage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset('assets/images/_7_1.jpg',
+          Image.asset('assets/images/generated/rural-life.jpg',
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) =>
                   const ColoredBox(color: AppColors.primaryContainer)),
@@ -558,7 +561,8 @@ class _LifePageState extends State<LifePage> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(R.md),
                     child: _lifeImage(
-                      _imageFromJson(t, 'assets/images/_7_1.jpg'),
+                      _imageFromJson(
+                          t, 'assets/images/generated/rural-tourism.jpg'),
                       width: 92,
                       height: 76,
                     ),

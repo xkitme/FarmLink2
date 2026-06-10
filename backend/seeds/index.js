@@ -451,12 +451,12 @@ async function main() {
   // ── 商品 ──────────────────────────────────────────
   await prisma.product.createMany({
     data: [
-      { sellerId: farmer.id,    title: '张大叔松华香米 10斤装',    category: '粮油', price: 58,  unit: '袋', stock: 180, soldCount: 96, traceCode: 'TRACE-SH-2026-RICE-ZDS', regionCode: VILLAGE, images: '["assets/images/_4_7.jpg"]', description: '东头水田当季新稻，现碾现卖，米香浓郁。' },
-      { sellerId: farmer.id,    title: '张大叔后山红心柑橘 10斤装', category: '水果', price: 46,  unit: '箱', stock: 130, soldCount: 54, traceCode: 'TRACE-SH-2026-CITRUS-ZDS', regionCode: VILLAGE, images: '["assets/images/_4_1.jpg"]', description: '后山橘园分批采收，皮薄汁多，甜酸平衡。' },
-      { sellerId: bigfarmer.id, title: '李大姐阳光番茄 5斤装',      category: '蔬菜', price: 32,  unit: '箱', stock: 160, soldCount: 78, traceCode: 'TRACE-SH-2026-TOMATO-LGL', regionCode: VILLAGE, images: '["assets/images/_4_5.jpg"]', description: '桂兰蔬菜棚标准化种植，果形饱满，适合家庭鲜食。' },
-      { sellerId: bigfarmer.id, title: '李大姐有机蔬菜礼盒',        category: '蔬菜', price: 68,  unit: '盒', stock: 60,  soldCount: 42, traceCode: 'TRACE-SH-2026-VEG-LGL', regionCode: VILLAGE, images: '["assets/images/_4_5.jpg"]', description: '当季8种蔬菜混装，田间采摘后统一分级包装。' },
-      { sellerId: farmer.id,    title: '农家自晒红薯干',            category: '其他', price: 25,  unit: '袋', stock: 60,  soldCount: 21, regionCode: VILLAGE, images: '["assets/images/_4_7.jpg"]', description: '传统工艺日晒，软糯香甜。' },
-      { sellerId: merchant.id,  title: '生态散养土鸡蛋（30枚）',    category: '畜禽', price: 45,  unit: '箱', stock: 80,  soldCount: 32, regionCode: VILLAGE, images: '["assets/images/_4_3.jpg"]', description: '自家散养土鸡所产，无添加，营养健康。' },
+      { sellerId: farmer.id,    title: '张大叔松华香米 10斤装',    category: '粮油', price: 58,  unit: '袋', stock: 180, soldCount: 96, traceCode: 'TRACE-SH-2026-RICE-ZDS', regionCode: VILLAGE, images: '["assets/images/generated/product-rice.jpg"]', description: '东头水田当季新稻，现碾现卖，米香浓郁。' },
+      { sellerId: farmer.id,    title: '张大叔后山红心柑橘 10斤装', category: '水果', price: 46,  unit: '箱', stock: 130, soldCount: 54, traceCode: 'TRACE-SH-2026-CITRUS-ZDS', regionCode: VILLAGE, images: '["assets/images/generated/product-citrus.jpg"]', description: '后山橘园分批采收，皮薄汁多，甜酸平衡。' },
+      { sellerId: bigfarmer.id, title: '李大姐阳光番茄 5斤装',      category: '蔬菜', price: 32,  unit: '箱', stock: 160, soldCount: 78, traceCode: 'TRACE-SH-2026-TOMATO-LGL', regionCode: VILLAGE, images: '["assets/images/generated/product-tomato.jpg"]', description: '桂兰蔬菜棚标准化种植，果形饱满，适合家庭鲜食。' },
+      { sellerId: bigfarmer.id, title: '李大姐有机蔬菜礼盒',        category: '蔬菜', price: 68,  unit: '盒', stock: 60,  soldCount: 42, traceCode: 'TRACE-SH-2026-VEG-LGL', regionCode: VILLAGE, images: '["assets/images/generated/product-vegetable-box.jpg"]', description: '当季8种蔬菜混装，田间采摘后统一分级包装。' },
+      { sellerId: farmer.id,    title: '农家自晒红薯干',            category: '其他', price: 25,  unit: '袋', stock: 60,  soldCount: 21, regionCode: VILLAGE, images: '["assets/images/generated/product-sweet-potato.jpg"]', description: '传统工艺日晒，软糯香甜。' },
+      { sellerId: merchant.id,  title: '生态散养土鸡蛋（30枚）',    category: '畜禽', price: 45,  unit: '箱', stock: 80,  soldCount: 32, regionCode: VILLAGE, images: '["assets/images/generated/product-eggs.jpg"]', description: '自家散养土鸡所产，无添加，营养健康。' },
     ],
   })
 
