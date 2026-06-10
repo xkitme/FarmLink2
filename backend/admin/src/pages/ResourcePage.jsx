@@ -24,8 +24,9 @@ import {
   Tag,
   Typography,
   message,
+  Spin,
 } from 'antd'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api/request.js'
 
 const VALUE_LABELS = {
@@ -159,7 +160,9 @@ function ResourceTable({ resourceKey, title }) {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
   const [editing, setEditing] = useState(null)
   const [viewing, setViewing] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
+  const detailRequestRef = useRef(0)
   const [form] = Form.useForm()
 
   async function loadConfig() {
@@ -179,8 +182,11 @@ function ResourceTable({ resourceKey, title }) {
   }
 
   useEffect(() => {
+    detailRequestRef.current += 1
     setConfig(null)
     setRows([])
+    setViewing(null)
+    setDetailLoading(false)
     setPagination({ current: 1, pageSize: 10, total: 0 })
     loadConfig().then(() => loadList(1, 10, ''))
   }, [resourceKey])
@@ -188,6 +194,25 @@ function ResourceTable({ resourceKey, title }) {
   const fields = config?.fields || []
   const listFields = config?.listFields || []
   const fieldMap = useMemo(() => Object.fromEntries(fields.map((field) => [field.name, field])), [fields])
+
+  async function openDetail(record) {
+    const requestId = detailRequestRef.current + 1
+    detailRequestRef.current = requestId
+    setViewing(record)
+    setDetailLoading(true)
+    try {
+      const data = await api.get(`/admin/resource/${resourceKey}/${record.id}`)
+      if (detailRequestRef.current === requestId) setViewing(data)
+    } finally {
+      if (detailRequestRef.current === requestId) setDetailLoading(false)
+    }
+  }
+
+  function closeDetail() {
+    detailRequestRef.current += 1
+    setDetailLoading(false)
+    setViewing(null)
+  }
 
   const columns = useMemo(() => {
     const cols = listFields.map((name) => ({
@@ -203,7 +228,7 @@ function ResourceTable({ resourceKey, title }) {
       fixed: 'right',
       render: (_, record) => (
         <Space size={6}>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => setViewing(record)}>查看</Button>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => openDetail(record)}>查看</Button>
           <Button
             size="small"
             icon={<EditOutlined />}
@@ -221,7 +246,7 @@ function ResourceTable({ resourceKey, title }) {
       ),
     })
     return cols
-  }, [fieldMap, listFields])
+  }, [fieldMap, listFields, resourceKey])
 
   function openCreate() {
     setEditing(null)
@@ -325,19 +350,21 @@ function ResourceTable({ resourceKey, title }) {
       <Drawer
         title="记录详情"
         open={Boolean(viewing)}
-        onClose={() => setViewing(null)}
+        onClose={closeDetail}
         width={720}
       >
         {viewing && (
-          <Descriptions bordered column={1} size="small">
-            {Object.entries(viewing).map(([key, value]) => (
-              <Descriptions.Item key={key} label={fieldMap[key]?.label || key}>
-                {typeof value === 'string' && value.length > 160
-                  ? <pre className="detail-pre">{value}</pre>
-                  : formatValue(value, fieldMap[key])}
-              </Descriptions.Item>
-            ))}
-          </Descriptions>
+          <Spin spinning={detailLoading}>
+            <Descriptions bordered column={1} size="small">
+              {Object.entries(viewing).map(([key, value]) => (
+                <Descriptions.Item key={key} label={fieldMap[key]?.label || key}>
+                  {typeof value === 'string' && value.length > 160
+                    ? <pre className="detail-pre">{value}</pre>
+                    : formatValue(value, fieldMap[key])}
+                </Descriptions.Item>
+              ))}
+            </Descriptions>
+          </Spin>
         )}
       </Drawer>
     </Card>
@@ -347,9 +374,13 @@ function ResourceTable({ resourceKey, title }) {
 export default function ResourcePage({ title, group, resources }) {
   const [active, setActive] = useState(resources[0])
   const [configs, setConfigs] = useState({})
+  const resourceSignature = resources.join(',')
+  const activeKey = resources.includes(active) ? active : resources[0]
 
   useEffect(() => {
     let mounted = true
+    setActive(resources[0])
+    setConfigs({})
     async function loadNames() {
       const result = {}
       for (const key of resources) {
@@ -359,7 +390,7 @@ export default function ResourcePage({ title, group, resources }) {
     }
     loadNames()
     return () => { mounted = false }
-  }, [resources.join(',')])
+  }, [resourceSignature])
 
   return (
     <Space direction="vertical" size={16} className="page-stack">
@@ -371,7 +402,7 @@ export default function ResourcePage({ title, group, resources }) {
         <Tag color="blue">{group}</Tag>
       </div>
       <Tabs
-        activeKey={active}
+        activeKey={activeKey}
         onChange={setActive}
         items={resources.map((key) => ({
           key,

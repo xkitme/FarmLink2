@@ -261,3 +261,9 @@ http://localhost:8000/admin/agri
 - 把 `/api-switch` 从占位页升级成开关管理页。
 - 把 `/logs` 从占位页升级成操作日志页。
 - 实现 `/api-debug` 在线调试器，可选择方法、路径、请求体并显示响应。
+
+## 2026-06-09 补充修复
+
+- 修复管理台业务数据分组切换后复用 `ResourcePage` 状态，导致旧 activeKey 不属于新分组、内容区不刷新或短暂空白的问题。
+- 修复通用资源详情抽屉只使用表格行快照的问题；点击“查看”时会重新请求 `GET /admin/resource/:resource/:id`，并用请求序号避免快速关闭或连续点击时旧响应覆盖新详情。
+- 验证：`npm run build --prefix admin` 通过；Vite 仍仅提示首包体积较大，不影响运行。
