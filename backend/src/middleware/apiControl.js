@@ -6,6 +6,15 @@ import { fail } from '../utils/response.js'
 
 const SWITCH_CACHE_KEY = 'api-switch:map'
 const SWITCH_CACHE_TTL = 10
+const ADMIN_READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+const RATE_LIMITS = {
+  global: { windowSec: 60, limit: 100 },
+  authLogin: { windowSec: 60, limit: 10 },
+  sms: { windowSec: 3600, limit: 5 },
+  upload: { windowSec: 3600, limit: 30 },
+  adminRead: { windowSec: 60, limit: 600 },
+  adminWrite: { windowSec: 60, limit: 120 },
+}
 
 const RULES = [
   { key: 'user_register', method: 'POST', pattern: /^\/auth\/register$/ },
@@ -55,14 +64,21 @@ function ratePlan(req) {
   const path = apiPath(req)
   const method = req.method.toUpperCase()
   if (path.startsWith('/auth/login')) {
-    return { name: 'auth-login', windowSec: 60, limit: 10, key: `ip:${clientIp(req)}` }
+    return { name: 'auth-login', ...RATE_LIMITS.authLogin, key: `ip:${clientIp(req)}` }
   }
   if (path.startsWith('/auth/sms')) {
-    return { name: 'sms', windowSec: 3600, limit: 5, key: `ip:${clientIp(req)}` }
+    return { name: 'sms', ...RATE_LIMITS.sms, key: `ip:${clientIp(req)}` }
   }
 
-  const payload = bearerPayload(req)
+  const payload = req.user || bearerPayload(req)
   const actor = payload?.id ? `user:${payload.id}` : `ip:${clientIp(req)}`
+  if (payload?.role === 'ADMIN' && path.startsWith('/admin/')) {
+    const plan = ADMIN_READ_METHODS.has(method)
+      ? { name: 'admin-read', ...RATE_LIMITS.adminRead }
+      : { name: 'admin-write', ...RATE_LIMITS.adminWrite }
+    return { ...plan, key: actor }
+  }
+
   const isAi = path.startsWith('/ai/')
     || path === '/policy/ai/ask'
     || path === '/policy/legal/ask'
@@ -78,9 +94,9 @@ function ratePlan(req) {
     || path.includes('/recognize')
     || path.includes('/report')
   )
-  if (isUpload) return { name: 'upload', windowSec: 3600, limit: 30, key: actor }
+  if (isUpload) return { name: 'upload', ...RATE_LIMITS.upload, key: actor }
 
-  return { name: 'global', windowSec: 60, limit: 100, key: `ip:${clientIp(req)}` }
+  return { name: 'global', ...RATE_LIMITS.global, key: `ip:${clientIp(req)}` }
 }
 
 function incrRate(plan) {
@@ -203,4 +219,16 @@ export function rateLimitSnapshot() {
     count: cache.get(key),
     ttl: cache.getTtl(key) ? Math.max(0, cache.getTtl(key) - Date.now()) : null,
   }))
+}
+
+export function rateLimitPolicies() {
+  return [
+    { name: 'global', ...RATE_LIMITS.global, scope: 'IP' },
+    { name: 'auth-login', ...RATE_LIMITS.authLogin, scope: 'IP' },
+    { name: 'sms', ...RATE_LIMITS.sms, scope: 'IP' },
+    { name: 'ai', windowSec: 3600, limit: config.aiRateLimit.perHour, scope: '用户或IP' },
+    { name: 'upload', ...RATE_LIMITS.upload, scope: '用户或IP' },
+    { name: 'admin-read', ...RATE_LIMITS.adminRead, scope: '管理员用户' },
+    { name: 'admin-write', ...RATE_LIMITS.adminWrite, scope: '管理员用户' },
+  ]
 }

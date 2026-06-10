@@ -47,6 +47,8 @@ operationLogMiddleware
 | `sms` | 5 次/小时 | IP |
 | `ai` | 20 次/小时 | 用户，未登录时按 IP |
 | `upload` | 30 次/小时 | 用户，未登录时按 IP |
+| `admin-read` | 600 次/分钟 | 管理员用户 |
+| `admin-write` | 120 次/分钟 | 管理员用户 |
 
 响应头会返回：
 
@@ -191,3 +193,9 @@ requireAuth + requireRole('ADMIN')
 - 接入后端登录。
 - 建立主布局、菜单、路由、请求封装。
 - 为后续数据 CRUD、API 开关管理、API 在线调试器打基础。
+
+## 2026-06-09 补充修复
+
+- 管理台资源页会在进入分组时批量读取多个 `/admin/resource/:resource/config`，当前 Tab 还会读取自身配置与列表；刷新、StrictMode 或连续切换 Tab 时容易把 IP 级 `global` 桶消耗完。
+- 已将已认证 ADMIN 的 `/api/v1/admin/**` 请求拆到独立限流桶：GET/HEAD/OPTIONS 使用 `admin-read`，其他方法使用 `admin-write`。
+- `/admin/rate-limit/status` 改为复用后端限流策略定义，避免策略生效与管理台展示不一致。

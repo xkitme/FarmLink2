@@ -1,7 +1,7 @@
 import { prisma } from '../../db.js'
 import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams, parseJson } from '../../utils/page.js'
-import { invalidateApiSwitchCache, rateLimitSnapshot } from '../../middleware/apiControl.js'
+import { invalidateApiSwitchCache, rateLimitPolicies, rateLimitSnapshot } from '../../middleware/apiControl.js'
 import { RESOURCE_CONFIGS, RESOURCE_GROUPS } from './resource.config.js'
 
 function switchWhere(query) {
@@ -98,13 +98,7 @@ export async function operationLogList(req, res) {
 /** 限流计数快照 */
 export async function rateLimitStatus(req, res) {
   ok(res, {
-    policies: [
-      { name: 'global', limit: 100, windowSec: 60, scope: 'IP' },
-      { name: 'auth-login', limit: 10, windowSec: 60, scope: 'IP' },
-      { name: 'sms', limit: 5, windowSec: 3600, scope: 'IP' },
-      { name: 'ai', limit: 20, windowSec: 3600, scope: '用户或IP' },
-      { name: 'upload', limit: 30, windowSec: 3600, scope: '用户或IP' },
-    ],
+    policies: rateLimitPolicies(),
     counters: rateLimitSnapshot(),
   })
 }
