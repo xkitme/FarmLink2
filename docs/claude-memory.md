@@ -5,6 +5,35 @@
 
 ---
 
+## 2026-06-11 · Claude 复验 0611 早间三连改 + 补提交品牌 Logo + 恢复大模型链路
+
+### 状态：本地/origin/main 同步在 `d7bbe655`。工作树仅原有未跟踪临时文件（disaster*.png/home.png/probe1.png/outputs/市赛PPT 等，非本会话产物，没动）。后端 8000(已由我重启,日志 `backend/.backend-out.log`) / web 5000(release) / admin 5173 / **ollama 11434 已起**。
+
+用户「继续优化项目」。交接簿之后还有一批 0611 早间会话的 commit（引导页登录态 f5c1c6a3、黛青次色 c889c612、关于页品牌名片 26cca231、去无据宣称 d23b5938、kAppVersion 1.8.0 d451f776）——全部"playwright 断连未实测"。本会话逐项补验 + 收尾：
+
+**1) 补提交品牌 Logo（commit `d7bbe655`，已 push）**：`backend/uploads/site/farmlink-mark.png` 工作树里是 62KB 高清绿拖拉机品牌标（关于页品牌名片那批经管理台上传落盘），但仓库里还是 1.6KB 小芽占位图——漏提交，比赛机拉库会拿旧图。已提交。
+
+**2) 浏览器复验全过（farmer token 注入 + SW/CacheStorage/CDP HTTP 缓存全清，release bundle 3.9MB 含 0611 全部 commit）**：
+- **引导页登录态逻辑 ✓**：未登录冷启动确定性出引导页（AI 智慧种田/下一步/跳过，渲染在 /splash 路由内）；注入登录态后冷启动直进 /#/home 不出引导。
+- **关于页品牌名片 ✓**：深绿面板+田垄纹理、白方块里新拖拉机 Logo（SiteImage 走后端加载成功）、v1.8.0 徽章、无"稳定版/云端服务运行中"、品牌主张黛青条、8/76/24 数据条、页脚 Logo 回声，0 控制台错误。
+- **黛青次色/首页 ✓**：首页正常，黄色预警卡琥珀金底（灾害预警按等级配色——docs/65 观察项3 已在早间会话修掉，`_alertColor` 红/橙/黄/蓝映射）。docs/65 观察项4（管理台识别记录 404）也已修（seed `imageUrl:''`）。
+
+**3) 大模型链路恢复**：发现 ollama 没起、后端走知识库兜底。起 ollama(0.30.0)→杀旧后端(pid 19052)→重起 `node src/server.js`（`✓ Ollama 在线`）→真实 /ai/chat 验证 `modelUsed: qwen2.5:3b-instruct-q4_K_M` 秒回。**问答主模型已是 3b**（docs/65 的 8G 缓解方案已被采纳）。
+
+### ⚠️ 本会话重要实测发现：3b 也救不了双模型常驻
+docs/65 假设"3b(~2G)+minicpm-v(4.9G)=6.9G<8G 可双驻"——**实测不成立**：3b 实际加载 2.4G（含 KV cache），warm 谁 `/api/ps` 就只剩谁，互踢依旧。但缓解了一半：文件页进 RAM 后重载只要 **~47s**（非 E: 冷加载 160s）。**demo 指导**：开演前把要用的模型预热（`keep_alive:"60m"`），文字问答↔识图切换仍有 ~47-60s 等待，脚本里别来回切；首次冷加载仍是 ~160s。
+
+### ⚠️ 环境坑（新踩）
+- bash 里 curl 直接 `-d '中文'` 会乱码进后端（question 变 `ˮ����`），要 `printf > file` + `--data-binary @file`；读响应也要落盘后 `encoding='utf-8'` 读，控制台 print 中文乱码只是显示问题。
+- 我重启的后端是裸 `node src/server.js`（非 nodemon），改后端要手动重启；stdout/err 在 `backend/.backend-out.log` / `.backend-err.log`（已 gitignore）。
+
+### 下一步建议
+1. open issue #18-#22 都已处理完且验证过，等用户拍板关闭。
+2. demo 前：预热要用的模型、确认 E: 在位、canvaskit 走 LOCAL、release 包。
+3. 0611 早间会话没写交接簿条目——若那批还有未验改动（除本会话已验 5 个 commit 外）由用户提。
+
+---
+
 ## 2026-06-10 · Claude 收尾 doc76 配图批 + 清 GitHub issue（release 真机逐页验证）
 
 ### 状态：本地/origin/main 同步在 `29c8f408`，工作树仅未跟踪临时文件（`.playwright-mcp/`、`design_assets/`、若干 *.png demo 截图、`市赛PPT/`、`outputs/`，均非本会话产物）。后端 8000 / web 5000(release) / admin 5173 / ollama 全程在跑。
