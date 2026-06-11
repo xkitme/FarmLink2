@@ -141,21 +141,9 @@ class AboutPage extends StatelessWidget {
                   const SizedBox(height: 20),
                   Container(height: 1, color: Colors.white.withValues(alpha: 0.16)),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _liveDot(),
-                      const SizedBox(width: 8),
-                      Text(
-                        '云端服务运行中',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.82),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      _checkUpdateButton(context),
-                    ],
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: _checkUpdateButton(context),
                   ),
                 ],
               ),
@@ -174,28 +162,13 @@ class AboutPage extends StatelessWidget {
           border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
         ),
         child: const Text(
-          'v1.0.0 稳定版',
+          'v1.0.0',
           style: TextStyle(
             color: Colors.white,
             fontSize: 11.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.4,
           ),
-        ),
-      );
-
-  Widget _liveDot() => Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: AppColors.primaryDim,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-                color: AppColors.primaryDim.withValues(alpha: 0.6),
-                blurRadius: 6,
-                spreadRadius: 1),
-          ],
         ),
       );
 
