@@ -8,6 +8,9 @@ const String kBaseUrl = String.fromEnvironment(
 );
 const String kApiPrefix = '/api/v1';
 
+// 应用版本（单一来源；与 pubspec.yaml version 保持一致）。
+const String kAppVersion = '1.8.0';
+
 /// 设计系统：Agro-Modernist Tech（参考 docs/设计参考.md）
 class AppColors {
   AppColors._();

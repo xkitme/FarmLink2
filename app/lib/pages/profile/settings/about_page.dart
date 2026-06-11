@@ -162,7 +162,7 @@ class AboutPage extends StatelessWidget {
           border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
         ),
         child: const Text(
-          'v1.0.0',
+          'v$kAppVersion',
           style: TextStyle(
             color: Colors.white,
             fontSize: 11.5,

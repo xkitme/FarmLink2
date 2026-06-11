@@ -125,7 +125,7 @@ class SettingsHomePage extends StatelessWidget {
                 SettingTile(
                   icon: Icons.info_outline,
                   label: '关于田园通',
-                  trailingText: 'v1.0.0',
+                  trailingText: 'v$kAppVersion',
                   onTap: () => context.push('/profile/settings/about'),
                 ),
               ],
