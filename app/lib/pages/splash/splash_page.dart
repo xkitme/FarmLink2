@@ -20,7 +20,7 @@ class _Slide {
 class _SplashPageState extends State<SplashPage> {
   final _pc = PageController();
   int _page = 0;
-  bool _skip = false; // 已看过引导，跳过 onboarding
+  bool _skip = false; // 已登录，跳过引导直接进首页
 
   static const _slides = [
     _Slide('assets/images/generated/smart-farming.jpg', 'AI 智慧种田',
@@ -34,8 +34,10 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    // auth 已在 main.dart 启动时初始化完成
-    if (context.read<AuthState>().onboardingSeen) {
+    // auth 已在 main.dart 启动时初始化完成。
+    // 已登录用户冷启动不看引导，直接进首页；未登录则必看引导页，
+    // 确保新用户/每次未登录冷启动都稳定展示（不再依赖一次性标记）。
+    if (context.read<AuthState>().isLoggedIn) {
       _skip = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _go());
     }

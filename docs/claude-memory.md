@@ -23,10 +23,26 @@
 - **#19 物联网设备联动（commit `2cb4ea98`，本会话新建特性，doc77）**：原 `/iot` 只有设备监测，缺「联动」。新建**设备联动**：后端 iot 模块加 5 条联动规则(墒情→滴灌/虫情→植保预警/棚温→通风/低温→保温/水位→排涝)+`GET /iot/linkage/rules`+`/logs`+`POST .../toggle`，实时读数判触发态，启用态内存 Map(重启回默认)，阈值留余量保证 demo 稳定(1触发+3待命+1停用)；前端 iot_page 设备监测下方加「设备联动」区(规则卡:状态徽章/触发条件/当前值/⚡动作/启用 Switch)+「联动记录」倒序表。**release 真机验过**：联动区/5规则卡/记录全渲染，API 停用虫情后重载→区头「3条已启用」/虫情「已停用」/记录按启用态过滤端到端联动正确。⚠️ canvas 上直接点 Switch 受 Playwright 命中精度限制没逐一点到(写端 curl 验过、onChanged 已接线、读端 toggle 后渲染已证)。⚠️ `Switch` 用 `activeColor`(开发机 3.32.1 无 `activeThumbColor`，3.44 仅 deprecated)。
 - **#21 已修可关；#22 建议真机再测后关。**
 
+### 续作（用户连续「继续」+ 配图/引导反馈）
+
+**4) 站点配图后端实时化 + 管理台配图管理（commit `f5cc2894`，doc78）**：用户要「所有图片资产可从后端实时更新」+「管理台要有改图入口」。
+- 前端 `core/site_images.dart` 新增 `SiteImage` 组件（后端 `/uploads/site/<名>` 网络优先 + `Image.asset` bundled 兜底），13 处 `Image.asset` 全替换；bundled 资产保留作离线兜底。
+- 后端 `platform/site.controller.js`：`GET /site/images` 清单 + `POST /site/images/:key`（管理员 multipart 上传替换，覆盖 `uploads/site/<key>`）。站点图入库 `backend/uploads/site/`(20张)随仓库发布（`.gitignore` 加 `!uploads/site/` 例外）。
+- 管理台新增「站点配图」页（`SiteImagePage.jsx`，系统治理菜单，PictureOutlined）：网格预览+上传替换+时间戳破缓存。
+- **实测**：admin 上传接口 200 且磁盘文件实际覆盖；release 浏览器换后端图后仅重载页面登录 hero 实时变新图（App 未重编）。
+- ⚠️ **顺带修真问题**：web build 默认从 gstatic CDN 拉 canvaskit/字体，**离线环境白屏**；改用 `flutter build web --no-web-resources-cdn` 自托管 canvaskit（已同步 `start-local.ps1`）。字体仍可能联网拉 Google Fonts，离线回落系统字体。**本机本会话后期 gstatic 不可达过**，清浏览器缓存会连带清掉 canvaskit 导致白屏——若遇白屏先确认 canvaskit 走 LOCAL。
+
+**5) 引导页首启不显示/随机（commit 见下，改 `splash_page.dart`）**：用户反馈"第一次打开 APP 不显示引导页、有时随机不显示"。排查：`onboarding_seen` 是**一次性持久标记**（看过永久为真，APK 升级/之前打开过都保留），代码层面首启必显示但该标记一旦置真就再不显示→表现为"首启不显示/随机"。修法：splash 判据由 `onboardingSeen` 改为 **`isLoggedIn`**——未登录冷启动一定显示引导、已登录直接进首页，确定性消除随机。⚠️ 没能浏览器实测（playwright 本会话后期断连），逻辑改动 + analyze 通过；待用户设备或 playwright 恢复后验。
+
+### ⚠️ 环境坑（本会话踩的，下次注意）
+- **服务会挂**：本会话后端 8000 + web 5000 中途双双挂掉（000），重启用 `node src/server.js`（backend）+ `python -m http.server 5000 --directory build/web`（app）。注意手动起的 node 非 nodemon，改后端要手动重启。
+- **playwright MCP 会断连**：断了就没法浏览器实测，靠 analyze + curl + 逻辑。
+- **gstatic 不可达 + 清缓存 = 白屏**：见上 #4。
+
 ### 下一步建议
-1. 用户拍板 #18/#19/#20/#21/#22 哪些可关（#21 已修、#22 已验不复现）。
-2. 若要继续：#19 IoT 联动 / #20 适老模式深化是有设计含量的特性活，适合先出工作单再拆 Claude+Codex 并行；纯 bug 清扫我自己带浏览器验更快。
-3. demo 前老规矩：预热 ollama 两个模型(冷加载 E: 盘 ~160s)、确认 E: 在位、release 包跑。
+1. 用户拍板 #18/#19/#20/#21/#22 哪些可关（#21 已修、#22 已验不复现、#19 已做）。
+2. 引导页/配图改动待真机或 playwright 恢复后浏览器复验。
+3. demo 前老规矩：预热 ollama 两个模型(冷加载 E: 盘 ~160s)、确认 E: 在位、release 包跑、确认 canvaskit 自托管(LOCAL)。
 
 ---
 
