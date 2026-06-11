@@ -18,8 +18,8 @@ class AppColors {
   static const primaryDim = Color(0xFF88D982);
   static const onPrimaryContainer = Color(0xFFCBFFC2);
 
-  // 次色 · 大地棕
-  static const secondary = Color(0xFF7A5649);
+  // 次色 · 黛青
+  static const secondary = Color(0xFF2E6E66);
   // 第三色 · 麦金
   static const tertiary = Color(0xFF734E00);
   static const gold = Color(0xFFFFBA38); // AI 卡边框 / 高亮
@@ -88,7 +88,7 @@ const List<Map<String, dynamic>> kSections = [
     'key': 'machinery',
     'label': '农机共享',
     'icon': Icons.agriculture,
-    'color': Color(0xFF7A5649)
+    'color': Color(0xFF2E6E66)
   },
   {
     'key': 'disaster',
