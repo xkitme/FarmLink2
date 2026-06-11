@@ -15,6 +15,7 @@ import {
   MedicineBoxOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  PictureOutlined,
   RobotOutlined,
   SearchOutlined,
   SettingOutlined,
@@ -63,6 +64,7 @@ const menuItems = [
     label: '系统治理',
     children: [
       { key: '/api-switch', icon: <ControlOutlined />, label: 'API 开关' },
+      { key: '/site-images', icon: <PictureOutlined />, label: '站点配图' },
       { key: '/seed-data', icon: <DatabaseOutlined />, label: '初始化数据' },
       { key: '/logs', icon: <SearchOutlined />, label: '操作日志' },
     ],

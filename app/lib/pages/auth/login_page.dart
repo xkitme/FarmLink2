@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
+import '../../core/site_images.dart';
 import '../../widgets/common.dart';
 
 /// 登录页 — 1:1 复刻设计稿 _6
@@ -58,15 +59,14 @@ class _LoginPageState extends State<LoginPage> {
           // 顶部图片区 60%
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
-            child: Stack(
+            child: const Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset('assets/images/generated/auth-hero.jpg',
+                SiteImage('assets/images/generated/auth-hero.jpg',
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
-                        const ColoredBox(color: Color(0xFF1F5E26))),
+                    errorFallback: ColoredBox(color: Color(0xFF1F5E26))),
                 // 顶部深色渐隐，保证品牌文字可读
-                const DecoratedBox(
+                DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -76,7 +76,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 // 顶部品牌
-                const Positioned(
+                Positioned(
                   top: 48,
                   left: 20,
                   child: Row(

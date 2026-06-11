@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { requireAuth, optionalAuth, requireRole } from '../../middleware/auth.js'
 import { wrap } from '../../middleware/error.js'
+import { upload } from '../../middleware/upload.js'
 import * as auth from './auth.controller.js'
 import * as user from './user.controller.js'
 import * as noti from './notification.controller.js'
@@ -8,8 +9,14 @@ import * as fb from './feedback.controller.js'
 import * as search from './search.controller.js'
 import * as admin from './admin.controller.js'
 import * as resource from './resource.controller.js'
+import * as site from './site.controller.js'
 
 const router = Router()
+
+// ── 站点配图（清单公开；上传替换需管理员，覆盖即实时更新前端配图）─
+router.get('/site/images', optionalAuth, wrap(site.listSiteImages))
+router.post('/site/images/:key', requireAuth, requireRole('ADMIN'),
+  upload.single('file'), wrap(site.uploadSiteImage))
 
 // ── 认证（仅账号密码，后端校验） ─────────────
 router.post('/auth/register',  wrap(auth.register))

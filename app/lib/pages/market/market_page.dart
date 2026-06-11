@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/site_images.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 import '../../widgets/section_tool_chips.dart';
@@ -566,10 +567,10 @@ class _MarketPageState extends State<MarketPage> {
         errorBuilder: (_, __, ___) => fallback(),
       );
     }
-    return Image.asset(
+    return SiteImage(
       source,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => fallback(),
+      errorFallback: fallback(),
     );
   }
 

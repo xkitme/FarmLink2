@@ -5,6 +5,7 @@ import '../common/form_scaffold_page.dart';
 import '../common/info_detail_page.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/site_images.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
@@ -199,12 +200,12 @@ class _LifePageState extends State<LifePage> {
         errorBuilder: (_, __, ___) => fallback,
       );
     }
-    return Image.asset(
+    return SiteImage(
       source,
       width: width,
       height: height,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => fallback,
+      errorFallback: fallback,
     );
   }
 
@@ -328,10 +329,9 @@ class _LifePageState extends State<LifePage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset('assets/images/generated/rural-life.jpg',
+          const SiteImage('assets/images/generated/rural-life.jpg',
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  const ColoredBox(color: AppColors.primaryContainer)),
+              errorFallback: ColoredBox(color: AppColors.primaryContainer)),
           const ColoredBox(color: Color(0x991A1C1C)),
           Padding(
             padding: const EdgeInsets.all(18),

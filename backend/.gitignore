@@ -9,6 +9,9 @@ _test_*.mjs
 _verify.mjs
 uploads/*
 !uploads/.gitkeep
+# 站点配图随仓库发布（离线自包含），用户上传文件仍忽略
+!uploads/site/
+!uploads/site/**
 data/*.db
 data/*.db-journal
 data/*.db-wal

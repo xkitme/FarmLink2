@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/site_images.dart';
 import '../../widgets/common.dart';
 
 /// 列表已有的轻量信息，push 时通过 `extra` 传入，详情加载前先铺底避免白屏。
@@ -567,8 +568,7 @@ class _GalleryImage extends StatelessWidget {
       return Image.network(ApiClient.resolveImageUrl(src),
           fit: BoxFit.cover, errorBuilder: (_, __, ___) => fallback());
     }
-    return Image.asset(src,
-        fit: BoxFit.cover, errorBuilder: (_, __, ___) => fallback());
+    return SiteImage(src, fit: BoxFit.cover, errorFallback: fallback());
   }
 }
 

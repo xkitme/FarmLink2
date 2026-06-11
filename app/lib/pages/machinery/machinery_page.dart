@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/site_images.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 import '../../widgets/section_tool_chips.dart';
@@ -144,12 +145,12 @@ Widget _machineImage(String image,
       errorBuilder: (_, __, ___) => fallback,
     );
   }
-  return Image.asset(
+  return SiteImage(
     source,
     width: width,
     height: height,
     fit: BoxFit.cover,
-    errorBuilder: (_, __, ___) => fallback,
+    errorFallback: fallback,
   );
 }
 
@@ -460,11 +461,10 @@ class _MachineryPageState extends State<MachineryPage> {
           fit: StackFit.expand,
           children: [
             // 背景图（保留，后期接真实地图）
-            Image.asset(
+            const SiteImage(
               'assets/images/generated/farmland-map.jpg',
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  const ColoredBox(color: Color(0xFF315A35)),
+              errorFallback: ColoredBox(color: Color(0xFF315A35)),
             ),
             // 装饰性地图浮层（轻深色，无半透明白浮层）
             const ColoredBox(color: Color(0x1A1A1C1C)),

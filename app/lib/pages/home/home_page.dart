@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/site_images.dart';
 import '../../core/feature_catalog.dart';
 import '../../core/notification_state.dart';
 import '../../core/offline_cache.dart';
@@ -752,11 +753,10 @@ class _HomePageState extends State<HomePage> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
+            SiteImage(
               image,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  Container(color: AppColors.primaryContainer),
+              errorFallback: Container(color: AppColors.primaryContainer),
             ),
             // 仅为文字可读的黑色压暗层（非装饰渐变）
             const DecoratedBox(

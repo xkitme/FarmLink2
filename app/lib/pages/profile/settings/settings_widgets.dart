@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/site_images.dart';
 import '../../../widgets/common.dart';
 
 class SettingsPageAppBar extends StatelessWidget
@@ -190,7 +191,7 @@ class SettingsImageBanner extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 16 / 7,
-              child: Image.asset(image, fit: BoxFit.cover),
+              child: SiteImage(image, fit: BoxFit.cover),
             ),
             Positioned.fill(
               child: DecoratedBox(

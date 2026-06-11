@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/site_images.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 import '../../widgets/section_tool_chips.dart';
@@ -486,12 +487,12 @@ class _PolicyPageState extends State<PolicyPage> {
         errorBuilder: (_, __, ___) => fallback,
       );
     }
-    return Image.asset(
+    return SiteImage(
       image,
       width: 104,
       height: 104,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => fallback,
+      errorFallback: fallback,
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
+import '../../core/site_images.dart';
 import '../../widgets/common.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -117,10 +118,9 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset('assets/images/generated/auth-hero.jpg',
+                const SiteImage('assets/images/generated/auth-hero.jpg',
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
-                        const ColoredBox(color: Color(0xFF1F5E26))),
+                    errorFallback: ColoredBox(color: Color(0xFF1F5E26))),
                 const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(

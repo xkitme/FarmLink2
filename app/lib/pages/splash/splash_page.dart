@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
+import '../../core/site_images.dart';
 
 /// 引导页 — 3 页可滑动 onboarding（样式复刻设计稿 _7）
 class SplashPage extends StatefulWidget {
@@ -163,10 +164,9 @@ class _SlideView extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.asset(slide.image,
+              SiteImage(slide.image,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      const ColoredBox(color: Color(0xFF2E7D32))),
+                  errorFallback: const ColoredBox(color: Color(0xFF2E7D32))),
               const Align(
                 alignment: Alignment.bottomCenter,
                 child: SizedBox(

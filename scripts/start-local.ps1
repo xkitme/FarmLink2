@@ -94,7 +94,8 @@ $mobileProcess = $null
 if (-not $SkipMobile -and -not $SkipWebBuild) {
   Push-Location $AppDir
   try {
-    & $Flutter build web --pwa-strategy=none --dart-define=FARMLINK_API_BASE_URL=http://localhost:$BackendPort
+    # --no-web-resources-cdn：自托管 canvaskit，离线环境也能渲染（不依赖 gstatic CDN）
+    & $Flutter build web --pwa-strategy=none --no-web-resources-cdn --dart-define=FARMLINK_API_BASE_URL=http://localhost:$BackendPort
   } finally {
     Pop-Location
   }
