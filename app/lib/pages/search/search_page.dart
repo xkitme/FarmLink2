@@ -224,7 +224,8 @@ class _SearchPageState extends State<SearchPage> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: AppColors.surfaceLow,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(R.sm),
+            border: Border.all(color: AppColors.outlineVariant, width: 1.5),
           ),
           child: Row(
             children: [
@@ -270,13 +271,7 @@ class _SearchPageState extends State<SearchPage> {
             ],
           ),
         ),
-        actions: [
-          IconButton(
-            tooltip: '搜索',
-            onPressed: _searchContent,
-            icon: const Icon(Icons.search, color: AppColors.onSurfaceVariant),
-          ),
-        ],
+        actions: const [SizedBox(width: 4)],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),

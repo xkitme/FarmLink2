@@ -15,16 +15,6 @@ class ShellPage extends StatefulWidget {
 class _ShellPageState extends State<ShellPage> {
   String? _lastLocation;
 
-  static const _tabPaths = {
-    '/home',
-    '/all',
-    '/search',
-    '/ai',
-    '/publish',
-    '/messages',
-    '/profile',
-  };
-
   static const _tabs = [
     (path: '/home', icon: Icons.home_rounded, label: '首页'),
     (path: '/ai', icon: Icons.smart_toy_rounded, label: 'AI 农技'),
@@ -62,16 +52,13 @@ class _ShellPageState extends State<ShellPage> {
     return -1;
   }
 
-  bool _isTopLevelTab(String loc) => _tabPaths.contains(loc);
-
   @override
   Widget build(BuildContext context) {
-    final loc = widget.location;
-    final showBar = _isTopLevelTab(loc);
-    final idx = _index(loc);
+    // 底栏只在精确等于 5 个一级 tab 的路径显示；二级页（/search /all /market…）不展示。
+    final idx = _index(widget.location);
     return Scaffold(
       body: widget.child,
-      bottomNavigationBar: showBar ? _navBar(idx) : null,
+      bottomNavigationBar: idx >= 0 ? _navBar(idx) : null,
     );
   }
 
