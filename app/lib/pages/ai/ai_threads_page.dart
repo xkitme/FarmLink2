@@ -167,7 +167,7 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
     final grouped = _grouped(filtered);
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(),
+      appBar: const FarmAppBar(title: 'AI 农技'),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/ai/chat/new'),
         backgroundColor: AppColors.primary,

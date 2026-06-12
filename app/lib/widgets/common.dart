@@ -15,6 +15,7 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showBack;
   final bool showSearch;
   final String backFallback;
+  final String title;
   const FarmAppBar({
     super.key,
     this.actions,
@@ -22,6 +23,7 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showBack = false,
     this.showSearch = true,
     this.backFallback = '/home',
+    this.title = '田园通',
   });
 
   @override
@@ -55,10 +57,10 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
                 filterQuality: FilterQuality.medium,
               ),
             ),
-      title: const Text('田园通',
+      title: Text(title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+          style: const TextStyle(
               color: AppColors.primary,
               fontSize: 22,
               fontWeight: FontWeight.w700,

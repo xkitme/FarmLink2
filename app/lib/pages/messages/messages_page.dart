@@ -139,6 +139,7 @@ class _MessagesPageState extends State<MessagesPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: FarmAppBar(
+        title: '消息',
         actions: [
           IconButton(
             onPressed: _loading ? null : _reload,

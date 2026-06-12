@@ -188,7 +188,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(),
+      appBar: const FarmAppBar(title: '首页'),
       body: _loading
           ? const Loading(text: '正在加载首页...')
           : RefreshIndicator(

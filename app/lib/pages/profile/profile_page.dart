@@ -94,7 +94,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(),
+      appBar: const FarmAppBar(title: '我的'),
       body: _loading
           ? const Loading(text: '正在读取个人数据')
           // 只有在「无缓存用户、也无任何数据」时才整屏报错；

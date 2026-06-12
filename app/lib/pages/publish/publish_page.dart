@@ -77,6 +77,7 @@ class _PublishPageState extends State<PublishPage> {
       backgroundColor: AppColors.background,
       // 发布入口改为 AppBar 右上「+」，避免 FAB 被底栏（ShellPage bottomNav）遮挡
       appBar: FarmAppBar(
+        title: '发布',
         actions: [
           IconButton(
             tooltip: '发布动态',
