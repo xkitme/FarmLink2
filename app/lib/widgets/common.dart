@@ -49,13 +49,9 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
               },
             )
           : const Center(
-              // 顶栏左上固定为拖拉机站标(bundled 资产)，不随后端品牌图替换而变。
-              child: Image(
-                image: AssetImage('assets/images/farmlink-mark.png'),
-                width: 30,
-                height: 30,
-                filterQuality: FilterQuality.medium,
-              ),
+              // 顶栏左上固定为拖拉机图标(与登录页品牌标一致的 Icons.agriculture)，
+              // 不随后端品牌图替换而变。
+              child: Icon(Icons.agriculture, color: AppColors.primary, size: 30),
             ),
       title: Text(title,
           maxLines: 1,
