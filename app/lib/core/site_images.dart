@@ -72,3 +72,30 @@ class SiteImage extends StatelessWidget {
     );
   }
 }
+
+class BrandLogo extends StatelessWidget {
+  const BrandLogo({
+    super.key,
+    this.width = 40,
+    this.height = 40,
+    this.borderRadius = 8,
+  });
+
+  final double width;
+  final double height;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: SiteImage(
+        'assets/images/farmlink-mark.png',
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
+      ),
+    );
+  }
+}
