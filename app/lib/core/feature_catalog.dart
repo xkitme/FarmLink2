@@ -101,6 +101,18 @@ const kFeatureCatalog = <FeatureItem>[
       icon: Icons.co2,
       section: 'agri'),
   FeatureItem(
+      name: '智能物联',
+      keywords: ['物联', '物联网', 'IoT', '传感器', '设备监测', '智能监测', '田间监测'],
+      route: '/iot',
+      icon: Icons.sensors_rounded,
+      section: 'agri'),
+  FeatureItem(
+      name: '设备联动',
+      keywords: ['设备联动', '联动', '联动规则', '自动灌溉', '智能联动', '物联联动'],
+      route: '/iot',
+      icon: Icons.bolt_rounded,
+      section: 'agri'),
+  FeatureItem(
       name: '实时行情',
       keywords: ['行情', '价格', '报价'],
       route: '/market',
