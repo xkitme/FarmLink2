@@ -352,6 +352,8 @@ class _ProfilePageState extends State<ProfilePage> {
           _menu(context, Icons.assignment_turned_in_outlined, '政策申请',
               '/policy/service'),
           _line(),
+          _menu(context, Icons.insights_outlined, '数据看板', '/data'),
+          _line(),
           _menu(context, Icons.notifications_none_rounded, '消息通知', '/messages'),
           _line(),
           _menu(context, Icons.settings_outlined, '设置', '/profile/settings'),

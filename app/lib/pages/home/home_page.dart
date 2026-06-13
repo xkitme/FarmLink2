@@ -655,10 +655,21 @@ class _HomePageState extends State<HomePage> {
 
   // ── 4 · 核心服务宫格 ─────────────────────────────────
   Widget _serviceGrid(BuildContext context) {
+    // 首页核心服务宫格：用「智能物联」替换「数据管理」入口
+    //（数据看板已移到「我的」页二级菜单，物联网提到首页快捷直达）。
+    final sections = [
+      for (final s in kSections)
+        if (s['key'] != 'data') s,
+    ]..insert(6, const {
+        'key': 'iot',
+        'label': '智能物联',
+        'icon': Icons.sensors_rounded,
+        'color': Color(0xFF2E6E66),
+      });
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: kSections.length,
+      itemCount: sections.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         mainAxisSpacing: 10,
@@ -666,7 +677,7 @@ class _HomePageState extends State<HomePage> {
         childAspectRatio: 0.85,
       ),
       itemBuilder: (context, index) {
-        final item = kSections[index];
+        final item = sections[index];
         final color = item['color'] as Color;
         return AppCard(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
@@ -1007,6 +1018,8 @@ class _HomePageState extends State<HomePage> {
         context.push('/life');
       case 'data':
         context.push('/data');
+      case 'iot':
+        context.push('/iot');
       case 'disaster':
         context.push('/disaster');
       default:

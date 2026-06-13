@@ -144,8 +144,12 @@ class _SearchPageState extends State<SearchPage> {
                   textInputAction: TextInputAction.search,
                   decoration: const InputDecoration(
                     hintText: '搜索功能、政策、农技、商品...',
+                    filled: false,
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
                     isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 10),
                   ),
                   style: const TextStyle(
                     fontSize: 15,
