@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'auth_state.dart';
 import 'constants.dart';
+import '../pages/ad/startup_ad_page.dart';
 import '../pages/splash/splash_page.dart';
 import '../pages/auth/login_page.dart';
+import '../pages/auth/forgot_password_page.dart';
 import '../pages/auth/register_page.dart';
 import '../pages/home/shell_page.dart';
 import '../pages/home/home_page.dart';
@@ -46,19 +48,24 @@ final _shellKey = GlobalKey<NavigatorState>();
 
 GoRouter buildRouter(AuthState auth) => GoRouter(
       navigatorKey: _rootKey,
-      initialLocation: '/splash',
+      initialLocation: '/ad',
+      overridePlatformDefaultLocation: true,
       refreshListenable: auth,
       redirect: (ctx, state) {
         if (auth.loading) return null;
         final loc = state.uri.path;
         final loggedIn = auth.isLoggedIn;
-        if (loc == '/splash') return null;
+        if (loc == '/ad' || loc == '/splash') return null;
         if (!loggedIn && !loc.startsWith('/auth')) return '/auth/login';
         if (loggedIn && loc.startsWith('/auth')) return '/home';
         return null;
       },
       routes: [
         GoRoute(path: '/splash', builder: (_, __) => const SplashPage()),
+        GoRoute(path: '/ad', builder: (_, __) => const StartupAdPage()),
+        GoRoute(
+            path: '/auth/forgot-password',
+            builder: (_, __) => const ForgotPasswordPage()),
         GoRoute(
           path: '/auth/login',
           builder: (_, __) => const LoginPage(),

@@ -100,8 +100,14 @@ class _PasswordPageState extends State<PasswordPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () => toast(context, '请联系村委或管理员重置密码'),
-                    child: const Text('忘记密码？'),
+                    onPressed: () async {
+                      final auth = context.read<AuthState>();
+                      final router = GoRouter.of(context);
+                      await auth.logout();
+                      if (!mounted) return;
+                      router.go('/auth/forgot-password');
+                    },
+                    child: const Text('忘记当前密码？'),
                   ),
                 ),
                 const SizedBox(height: 4),
