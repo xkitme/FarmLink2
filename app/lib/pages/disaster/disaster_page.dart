@@ -27,6 +27,7 @@ class _DisasterPageState extends State<DisasterPage>
 
   List<Map<String, dynamic>> _alerts = [];
   List<Map<String, dynamic>> _guides = [];
+  bool _guidesExpanded = false; // 应急预案默认折叠，点头展开
   Map<String, dynamic> _fire = {};
   Map<String, dynamic> _drought = {};
   Map<String, dynamic> _frost = {};
@@ -138,13 +139,7 @@ class _DisasterPageState extends State<DisasterPage>
                             ],
                             const SectionTitle('冻害防护'),
                             _frostCard(),
-                            const SectionTitle('应急预案'),
-                            ..._guides.map(_guideTile),
-                            if (_guides.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: EmptyView('暂无应急预案'),
-                              ),
+                            _emergencyGuidesSection(),
                             const SectionTitle('上报与求助'),
                             _actionGrid(),
                           ],
@@ -499,7 +494,54 @@ class _DisasterPageState extends State<DisasterPage>
     );
   }
 
-  // ── 应急预案 ──────────────────────────────
+  // ── 应急预案（默认显示前几条，其余折叠在「查看全部」里）──────────
+  static const int _guidesPreview = 3;
+  Widget _emergencyGuidesSection() {
+    final count = _guides.length;
+    final showAll = _guidesExpanded || count <= _guidesPreview;
+    final visible = showAll ? _guides : _guides.take(_guidesPreview).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionTitle('应急预案'),
+        if (count == 0)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: EmptyView('暂无应急预案'),
+          )
+        else ...[
+          ...visible.map(_guideTile),
+          if (count > _guidesPreview)
+            InkWell(
+              onTap: () =>
+                  setState(() => _guidesExpanded = !_guidesExpanded),
+              borderRadius: BorderRadius.circular(R.sm),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(_guidesExpanded ? '收起' : '查看全部 $count 项',
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary)),
+                    const SizedBox(width: 4),
+                    AnimatedRotation(
+                      turns: _guidesExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      child: const Icon(Icons.expand_more,
+                          size: 20, color: AppColors.primary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
   Widget _guideTile(Map<String, dynamic> g) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
