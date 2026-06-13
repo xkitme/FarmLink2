@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../common/info_detail_page.dart';
 import '../../../core/constants.dart';
+import '../../../core/legal_documents.dart';
 import '../../../core/site_images.dart';
 import '../../../widgets/common.dart';
 import 'settings_widgets.dart';
@@ -36,13 +37,21 @@ class AboutPage extends StatelessWidget {
                 SettingTile(
                   icon: Icons.description_outlined,
                   label: '服务协议',
-                  onTap: () => _openTextDetail(context, '服务协议'),
+                  onTap: () => _openLegalDoc(
+                    context,
+                    kServiceAgreementTitle,
+                    kServiceAgreementSections,
+                  ),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
                   icon: Icons.privacy_tip_outlined,
                   label: '隐私政策',
-                  onTap: () => _openTextDetail(context, '隐私政策'),
+                  onTap: () => _openLegalDoc(
+                    context,
+                    kPrivacyPolicyTitle,
+                    kPrivacyPolicySections,
+                  ),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
@@ -86,20 +95,10 @@ class AboutPage extends StatelessWidget {
                   Row(
                     children: [
                       // 真实品牌标识（后端可换）
-                      Container(
+                      const BrandLogo(
                         width: 56,
                         height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(R.sm),
-                          boxShadow: AppColors.ambientShadow,
-                        ),
-                        padding: const EdgeInsets.all(9),
-                        child: const SiteImage(
-                          'assets/images/farmlink-mark.png',
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.medium,
-                        ),
+                        borderRadius: R.sm,
                       ),
                       const Spacer(),
                       _versionPill(),
@@ -139,7 +138,8 @@ class AboutPage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  Container(height: 1, color: Colors.white.withValues(alpha: 0.16)),
+                  Container(
+                      height: 1, color: Colors.white.withValues(alpha: 0.16)),
                   const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
@@ -291,11 +291,10 @@ class AboutPage extends StatelessWidget {
               children: [
                 Opacity(
                   opacity: 0.5,
-                  child: SiteImage(
-                    'assets/images/farmlink-mark.png',
+                  child: BrandLogo(
                     width: 18,
                     height: 18,
-                    fit: BoxFit.contain,
+                    borderRadius: 4,
                   ),
                 ),
                 SizedBox(width: 8),
@@ -313,7 +312,8 @@ class AboutPage extends StatelessWidget {
             SizedBox(height: 12),
             Text(
               '© 2026 WebClass 2 team 版权所有',
-              style: TextStyle(fontSize: 11.5, color: AppColors.onSurfaceVariant),
+              style:
+                  TextStyle(fontSize: 11.5, color: AppColors.onSurfaceVariant),
             ),
             SizedBox(height: 3),
             Text(
@@ -324,23 +324,20 @@ class AboutPage extends StatelessWidget {
         ),
       );
 
-  void _openTextDetail(BuildContext context, String title) {
+  void _openLegalDoc(
+    BuildContext context,
+    String title,
+    List<LegalSection> sections,
+  ) {
     context.push('/detail/info',
         extra: InfoDetailData(
           title: title,
           sections: [
-            for (final text in _sheetParagraphs) InfoSection(body: text),
+            for (final section in sections)
+              InfoSection(subtitle: section.title, body: section.body),
           ],
         ));
   }
-
-  static const _sheetParagraphs = [
-    '田园通为农业生产、流通销售、农机共享、政策服务与乡村生活提供一体化数字服务。',
-    '平台会根据您提交的业务信息提供对应服务，并以必要、最小化原则处理相关数据。',
-    '您可以在账号设置中管理通知、隐私偏好与反馈信息。',
-    '平台将持续完善安全、稳定与可用性能力，保障生产经营过程中的关键数据。',
-    '如需帮助，请通过帮助与反馈页面联系平台支持团队。',
-  ];
 }
 
 // ── 招牌能力标签（深绿面板上的描边胶囊）──────────────────
@@ -424,7 +421,8 @@ class _FurrowPainter extends CustomPainter {
       final path = Path();
       final amp = 10 + t * 14;
       for (var x = 0.0; x <= size.width; x += 6) {
-        final y = baseY + math.sin((x / size.width) * math.pi * 2 + t * 1.4) * amp;
+        final y =
+            baseY + math.sin((x / size.width) * math.pi * 2 + t * 1.4) * amp;
         if (x == 0) {
           path.moveTo(x, y);
         } else {

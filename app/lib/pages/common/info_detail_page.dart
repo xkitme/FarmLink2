@@ -60,81 +60,85 @@ class InfoDetailPage extends StatelessWidget {
         ),
         backgroundColor: AppColors.surface,
       ),
-      body: ListView(
+      // 全量布局、总高度恒定：避免 ListView 惰性估算导致的滚动卡顿/滚动条乱跳。
+      body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-        children: [
-          if (data.imageBytes != null) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(R.md),
-              child: Image.memory(
-                data.imageBytes!,
-                height: 160,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (data.body != null)
-            Text(
-              data.body!,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.7,
-                color: AppColors.onSurface,
-              ),
-            ),
-          if (data.sections != null)
-            for (final section in data.sections!) ...[
-              if (section.subtitle != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  section.subtitle!,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.onSurface,
-                  ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (data.imageBytes != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(R.md),
+                child: Image.memory(
+                  data.imageBytes!,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
                 ),
-                const SizedBox(height: 8),
-              ],
-              if (section.body != null)
-                Text(
-                  section.body!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.6,
-                    color: AppColors.onSurface,
-                  ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (data.body != null)
+              Text(
+                data.body!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.7,
+                  color: AppColors.onSurface,
                 ),
-              if (section.items != null)
-                for (final item in section.items!)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(
-                      '· $item',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 1.5,
-                        color: AppColors.onSurface,
-                      ),
+              ),
+            if (data.sections != null)
+              for (final section in data.sections!) ...[
+                if (section.subtitle != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    section.subtitle!,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.onSurface,
                     ),
                   ),
-            ],
-          if (data.actionLabel != null && data.onAction != null) ...[
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (context.canPop()) context.pop();
-                  data.onAction!.call();
-                },
-                child: Text(data.actionLabel!),
+                  const SizedBox(height: 8),
+                ],
+                if (section.body != null)
+                  Text(
+                    section.body!,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                if (section.items != null)
+                  for (final item in section.items!)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        '· $item',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                    ),
+              ],
+            if (data.actionLabel != null && data.onAction != null) ...[
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (context.canPop()) context.pop();
+                    data.onAction!.call();
+                  },
+                  child: Text(data.actionLabel!),
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
