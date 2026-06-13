@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-06-13 · Claude 并行 3 轨清 open issue #18/#19/#20/#21(2 worktree agent + 主线程)
+
+### 状态：本地/origin/main 同步在 `b456ac72`(已 push)。后端 8000(`node src/server.js`,日志 `backend/.backend-out.log`)/web 5000(release,build/web 重编于 05:04 含本批)/ollama 11434(在线但模型冷,未预热)在跑。admin 5173 未起。工作树仅原有未跟踪临时文件,没动。
+
+用户「继续写,加快,多开子代理,前后端没弄全」。**先查实**:后端 10 模块 50 路由零 TODO/桩、app 占位极少——代码其实很成熟,用户实感「没弄好」=未真机验 + 几个 open issue。读 5 个 open issue,#21/#19 是 06-12(昨天)二次反馈。逐条定位真缺口后开 **3 轨并行**(2 个 worktree agent + 我):
+
+**轨A(worktree agent, 已合 `22f9eb52`)#18 真语音 + #20 适老模式 + AI回答TTS**:
+- #18 发现**「语音输入」是假的**——`ai_chat_page.dart` 旧代码是 `enabled:false`+「准备中」占位 ListTile,publish/search 的语音是方言mock调 `/ai/voice/recognize` 返套话 + 用了**脉冲光 `_VoicePulseIcon`**(违反「禁脉冲光」)。新建 `core/voice_input.dart`(`VoiceInput.listen`,真 `speech_to_text ^7.4.0`,不可用优雅降级)替换 ai_chat/publish 占位;**主线程顺手把 search_page 的 mock+脉冲也清了**(commit `b456ac72`)。
+- #20 旧只是设置里内联开关。新建 `core/tts_service.dart`(`flutter_tts ^4.2.5`,zh-CN 慢速) + `pages/profile/settings/elder_mode_page.dart`(介绍页:Hero+三功能+底部启用开关);settings_home 内联开关改为行项→push 介绍页;适老模式开启时 AI 文本回答气泡可点朗读(再点停)+「点按朗读」提示。主线程在 router.dart 注册 `/profile/settings/elder→ElderModePage`。
+- ⚠️ **web 语音 STT 依赖浏览器 Web Speech API(多数走云端,离线/无网 initialize 返 false 走降级提示,不崩)**——Playwright 无头测不到真识别是预期,真识别要 APK/在线。TTS(flutter_tts)web 走浏览器 SpeechSynthesis 离线可用。原生麦克风权限(Android RECORD_AUDIO 等)agent 没补 manifest,上 APK 要补。
+
+**轨B(worktree agent, 已合 `97e59acf`)#19 IoT 联动可发现性**:用户「我没找到在哪里」根因=联动埋三层(首页→数据看板→物联网→下滚)。agri 页加「智能物联·设备联动」入口卡(仿 `_photoFlowEntry`)直达 `/iot`;iot_page 顶部加「设备联动」快捷跳转锚点卡(`Scrollable.ensureVisible`);feature_catalog 补「智能物联」「设备联动」两条(route `/iot`,全局搜索/全部服务/板块chip 可搜)。home 没合适位没硬塞。
+
+**轨C(主线程)#21 二次反馈**:用户 06-12 评论抱怨「顶部搜索框分层 / 底栏无指示 / 二级页该去底栏」。**浏览器实测发现这些早被 `be5988eb` 修了**——评论是修复前发的。现状(release 真机截图验):搜索页=单一利落搜索框无分层、**无底栏**(二级页 idx=-1 不显示);首页底栏「首页」**明确高亮**(绿+容器底+加粗)、消息带未读角标。#21 视为已解决,待用户拍板关。
+
+### 已浏览器真机验(farmer token 注入 + 清SW/缓存 + about:blank 硬重载,新 bundle 3.93MB 05:04)
+- #20 适老介绍页 ✓(深绿 Hero+放大字号/朗读AI回答/更大点击区 三卡+启用开关+诚实说明,0 错)
+- #20 设置页适老行 ✓(行项「未开启」+箭头,副标题含「朗读 AI 回答」)
+- #19 iot 页「设备联动」快捷卡 ✓(进 /iot 即见「1条规则已触发,点击查看联动详情」)
+- #21 搜索页/首页底栏 ✓(见上)
+- #18 语音/适老TTS:代码接线全确认(准备中已消失、VoiceInput/TtsService 已接、analyze 干净、web 编译过),但**音频/麦克风交互无头测不了**——诚实结论:实现完成且编译通过,真识别/朗读需 APK 或在线环境实跑。
+
+### 坑/备注
+- iot 页顶栏标题还是泛用「田园通」(非「智能物联」),pre-existing 小不一致,本批没改,可后续给 FarmAppBar 传 title。
+- 2 个 worktree(.claude/worktrees/agent-*)被 agent 进程锁着没删成,留 harness 自动清,分支已合并进 main。
+- 适老介绍页三功能 icon 显示为浅绿空圈(浅绿底上浅绿icon 偏淡),极小视觉,未改。
+
+### 下一步建议
+1. 用户拍板关 #18/#19/#20/#21(都已处理+大部分浏览器验);#22 兑换积分 web 早证不复现,待 APK 复测。
+2. 真机/APK 跑一遍语音输入(STT)与适老 TTS 朗读(无头测不到的就这两条)。
+3. demo 前老规矩:预热 ollama(冷载 ~160s)、确认 E: 在位、release 包、canvaskit 自托管(LOCAL)。
+
+---
+
 ## 2026-06-11 · Claude 复验 0611 早间三连改 + 补提交品牌 Logo + 恢复大模型链路
 
 ### 状态：本地/origin/main 同步在 `d7bbe655`。工作树仅原有未跟踪临时文件（disaster*.png/home.png/probe1.png/outputs/市赛PPT 等，非本会话产物，没动）。后端 8000(已由我重启,日志 `backend/.backend-out.log`) / web 5000(release) / admin 5173 / **ollama 11434 已起**。
