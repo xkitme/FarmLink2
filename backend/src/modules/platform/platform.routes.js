@@ -15,12 +15,14 @@ const router = Router()
 
 // ── 站点配图（清单公开；上传替换需管理员，覆盖即实时更新前端配图）─
 router.get('/site/images', optionalAuth, wrap(site.listSiteImages))
+router.get('/site/startup-ad', optionalAuth, wrap(site.getStartupAd))
 router.post('/site/images/:key', requireAuth, requireRole('ADMIN'),
   upload.single('file'), wrap(site.uploadSiteImage))
 
 // ── 认证（仅账号密码，后端校验） ─────────────
 router.post('/auth/register',  wrap(auth.register))
 router.post('/auth/login',     wrap(auth.login))
+router.post('/auth/reset-password', wrap(auth.resetPassword))
 router.post('/auth/refresh',   wrap(auth.refresh))
 router.post('/auth/logout',    requireAuth, wrap(auth.logout))
 
@@ -54,6 +56,8 @@ router.delete('/admin/api-switch/:id',     requireAuth, requireRole('ADMIN'), wr
 router.get('/admin/operation-log/list',    requireAuth, requireRole('ADMIN'), wrap(admin.operationLogList))
 router.get('/admin/rate-limit/status',     requireAuth, requireRole('ADMIN'), wrap(admin.rateLimitStatus))
 router.get('/admin/seed/summary',          requireAuth, requireRole('ADMIN'), wrap(admin.seedDataSummary))
+router.get('/admin/site/startup-ad',       requireAuth, requireRole('ADMIN'), wrap(site.adminGetStartupAd))
+router.put('/admin/site/startup-ad',       requireAuth, requireRole('ADMIN'), wrap(site.adminUpdateStartupAd))
 router.get('/admin/resource/index',        requireAuth, requireRole('ADMIN'), wrap(resource.resourceIndex))
 router.get('/admin/resource/:resource/config', requireAuth, requireRole('ADMIN'), wrap(resource.resourceConfig))
 router.get('/admin/resource/:resource/list',   requireAuth, requireRole('ADMIN'), wrap(resource.resourceList))

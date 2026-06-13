@@ -63,7 +63,7 @@ function bearerPayload(req) {
 function ratePlan(req) {
   const path = apiPath(req)
   const method = req.method.toUpperCase()
-  if (path.startsWith('/auth/login')) {
+  if (path.startsWith('/auth/login') || path.startsWith('/auth/reset-password')) {
     return { name: 'auth-login', ...RATE_LIMITS.authLogin, key: `ip:${clientIp(req)}` }
   }
   if (path.startsWith('/auth/sms')) {

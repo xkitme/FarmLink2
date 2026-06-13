@@ -75,6 +75,33 @@ export async function login(req, res) {
   ok(res, buildSession(user), '登录成功')
 }
 
+/** 忘记密码：用账号 + 绑定手机号校验后重置密码 */
+export async function resetPassword(req, res) {
+  const username = `${req.body.username || ''}`.trim()
+  const phone = `${req.body.phone || ''}`.trim()
+  const newPassword = `${req.body.newPassword || ''}`
+
+  if (!username || !phone || !newPassword) throw errors.param('账号、手机号和新密码必填')
+  if (!/^1\d{10}$/.test(phone)) throw errors.param('请输入正确的手机号')
+  if (newPassword.length < 6) throw errors.param('密码至少 6 位')
+
+  const user = await prisma.user.findUnique({ where: { username } })
+  const matchedPhone = user?.phone === phone || (!user?.phone && user?.username === phone)
+  if (!user || user.status !== 1 || !matchedPhone) {
+    throw errors.param('账号或绑定手机号不匹配')
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10)
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash,
+      passwordChangedAt: new Date(),
+    },
+  })
+  ok(res, null, '密码已重置，请使用新密码登录')
+}
+
 /** 刷新 Token */
 export async function refresh(req, res) {
   const { refreshToken } = req.body

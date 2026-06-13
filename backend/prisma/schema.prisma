@@ -137,6 +137,18 @@ model ApiSwitch {
   @@map("t_api_switch")
 }
 
+/// 站点级配置（启动广告、运营开关等轻量配置）
+model SiteSetting {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("t_site_setting")
+}
+
 /// 行政区划
 model Region {
   id         Int      @id @default(autoincrement())
