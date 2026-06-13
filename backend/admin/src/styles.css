@@ -33,7 +33,7 @@ body {
 }
 
 .login-page::before {
-  background: url('./assets/backend-login-bg.png');
+  background-image: var(--admin-login-bg, url('./assets/backend-login-bg.png'));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -157,15 +157,40 @@ body {
 }
 
 .admin-shell {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .admin-sider {
-  min-height: 100vh;
+  height: 100vh;
+  flex: 0 0 auto;
   border-right: 1px solid #e6ece9;
+  overflow: hidden;
+}
+
+.admin-sider .ant-layout-sider-children {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.admin-sider .ant-menu {
+  min-height: 0;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.admin-main {
+  height: 100vh;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .brand {
+  flex: 0 0 64px;
   height: 64px;
   display: flex;
   align-items: center;
@@ -178,10 +203,20 @@ body {
 .brand-icon {
   width: 36px;
   height: 36px;
+  flex: 0 0 36px;
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: #167d5b;
+  background: #e9f5f0;
+  color: #167d5b;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.brand-icon img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
 }
 
 .brand-text {
@@ -197,6 +232,7 @@ body {
 }
 
 .admin-header {
+  flex: 0 0 64px;
   height: 64px;
   padding: 0 20px;
   display: flex;
@@ -221,7 +257,8 @@ body {
 
 .admin-content {
   padding: 20px;
-  min-height: calc(100vh - 64px);
+  min-height: 0;
+  overflow: auto;
 }
 
 .page-stack {

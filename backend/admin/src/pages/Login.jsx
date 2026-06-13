@@ -1,11 +1,30 @@
 import { LockOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Card, Form, Input, Typography, message } from 'antd'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../api/request.js'
+import { API_BASE, api } from '../api/request.js'
 import { saveSession } from '../api/auth.js'
+
+function resolveUrl(imageUrl) {
+  if (!imageUrl) return ''
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl
+  const apiOrigin = new URL(API_BASE, window.location.origin).origin
+  const path = String(imageUrl).startsWith('/') ? imageUrl : `/${imageUrl}`
+  return `${apiOrigin}${path}`
+}
 
 export default function Login() {
   const navigate = useNavigate()
+  const [backgroundUrl, setBackgroundUrl] = useState('')
+
+  useEffect(() => {
+    api.get('/site/images')
+      .then((data) => {
+        const url = resolveUrl(data?.images?.['admin-login-bg'])
+        if (url) setBackgroundUrl(`${url}?t=${Date.now()}`)
+      })
+      .catch(() => {})
+  }, [])
 
   async function onFinish(values) {
     const session = await api.post('/auth/login', values)
@@ -19,7 +38,10 @@ export default function Login() {
   }
 
   return (
-    <div className="login-page">
+    <div
+      className="login-page"
+      style={backgroundUrl ? { '--admin-login-bg': `url("${backgroundUrl}")` } : undefined}
+    >
       <div className="login-visual">
         <div className="field-map">
           {Array.from({ length: 36 }).map((_, index) => <span key={index} />)}

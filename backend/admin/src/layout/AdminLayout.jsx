@@ -10,7 +10,6 @@ import {
   DashboardOutlined,
   DatabaseOutlined,
   ExperimentOutlined,
-  HomeOutlined,
   LogoutOutlined,
   MedicineBoxOutlined,
   MenuFoldOutlined,
@@ -25,9 +24,10 @@ import {
   TruckOutlined,
 } from '@ant-design/icons'
 import { Avatar, Button, Dropdown, Layout, Menu, Space, Tag, Typography } from 'antd'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { clearSession, getCurrentUser } from '../api/auth.js'
+import { API_BASE, api } from '../api/request.js'
 
 const { Header, Sider, Content } = Layout
 
@@ -75,11 +75,29 @@ function selectedKeys(pathname) {
   return [pathname === '/' ? '/dashboard' : pathname]
 }
 
+function resolveUrl(imageUrl) {
+  if (!imageUrl) return ''
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl
+  const apiOrigin = new URL(API_BASE, window.location.origin).origin
+  const path = String(imageUrl).startsWith('/') ? imageUrl : `/${imageUrl}`
+  return `${apiOrigin}${path}`
+}
+
 export default function AdminLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const user = getCurrentUser()
   const [collapsed, setCollapsed] = useState(false)
+  const [brandLogo, setBrandLogo] = useState('')
+
+  useEffect(() => {
+    api.get('/site/images')
+      .then((data) => {
+        const url = resolveUrl(data?.images?.['farmlink-mark'])
+        if (url) setBrandLogo(`${url}?t=${Date.now()}`)
+      })
+      .catch(() => {})
+  }, [])
 
   const dropdownItems = [
     {
@@ -104,7 +122,9 @@ export default function AdminLayout() {
         className="admin-sider"
       >
         <div className="brand">
-          <div className="brand-icon"><HomeOutlined /></div>
+          <div className="brand-icon">
+            {brandLogo ? <img src={brandLogo} alt="田园通品牌标识" /> : <span>田</span>}
+          </div>
           {!collapsed && (
             <div className="brand-text">
               <strong>田园通</strong>
@@ -123,7 +143,7 @@ export default function AdminLayout() {
           }}
         />
       </Sider>
-      <Layout>
+      <Layout className="admin-main">
         <Header className="admin-header">
           <Space size={12}>
             <Button
