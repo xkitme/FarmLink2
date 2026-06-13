@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../core/api_client.dart';
 import '../../../core/auth_state.dart';
 import '../../../core/constants.dart';
 import '../../../core/elder_mode.dart';
@@ -70,17 +69,12 @@ class SettingsHomePage extends StatelessWidget {
                   onTap: () => context.push('/profile/settings/weather'),
                 ),
                 const Divider(height: 1, indent: 56),
-                SwitchListTile(
-                  value: elderMode,
-                  onChanged: (value) => _setElderMode(context, value),
-                  secondary: const Icon(
-                    Icons.elderly_outlined,
-                    color: AppColors.primary,
-                    size: 22,
-                  ),
-                  title: const Text('适老模式'),
-                  subtitle: const Text('放大字号，方便长辈使用'),
-                  activeColor: AppColors.primary,
+                SettingTile(
+                  icon: Icons.elderly_outlined,
+                  label: '适老模式',
+                  subtitle: '放大字号、朗读 AI 回答，方便长辈使用',
+                  trailingText: elderMode ? '已开启' : '未开启',
+                  onTap: () => context.push('/profile/settings/elder'),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(
@@ -163,15 +157,6 @@ class SettingsHomePage extends StatelessWidget {
   static String _maskPhone(String? phone) {
     if (phone == null || phone.length < 7) return '未绑定';
     return '${phone.substring(0, 3)}****${phone.substring(phone.length - 4)}';
-  }
-
-  static Future<void> _setElderMode(BuildContext context, bool value) async {
-    await context.read<ElderModeState>().setEnabled(value);
-    try {
-      await ApiClient.put('/user/profile', body: {'isElderMode': value});
-    } catch (_) {
-      // The backend may not accept this field yet; local persistence is enough.
-    }
   }
 
   static Future<void> _clearCache(BuildContext context) async {

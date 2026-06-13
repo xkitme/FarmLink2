@@ -6,6 +6,7 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
+import '../../core/voice_input.dart';
 import '../../widgets/common.dart';
 
 const _helpPublishTypes = ['互助求助', '招工', '分享见闻', '失物招领'];
@@ -21,7 +22,6 @@ class PublishPage extends StatefulWidget {
 
 class _PublishPageState extends State<PublishPage> {
   static const _cacheKey = 'life:help';
-  static const _voiceDialects = ['普通话', '四川话', '客家话', '粤语'];
 
   bool _loading = true;
   bool _fromCache = false;
@@ -330,100 +330,6 @@ class _PublishPageState extends State<PublishPage> {
     if (result == true && mounted) _load();
   }
 
-  Future<String?> _recognizeVoice(BuildContext sheetContext) async {
-    final dialect = await showModalBottomSheet<String>(
-      context: sheetContext,
-      useRootNavigator: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sm)),
-      ),
-      builder: (listenCtx) {
-        var selectedDialect = _voiceDialects.first;
-        return StatefulBuilder(
-          builder: (ctx, setSheet) => Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final dialect in _voiceDialects)
-                      ChoiceChip(
-                        label: Text(dialect),
-                        selected: selectedDialect == dialect,
-                        onSelected: (_) =>
-                            setSheet(() => selectedDialect = dialect),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 22),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const _VoicePulseIcon(),
-                      const SizedBox(height: 16),
-                      Text(
-                        '正在以$selectedDialect聆听...',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        '语音将转换为动态正文',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 46,
-                        child: ElevatedButton.icon(
-                          onPressed: () =>
-                              Navigator.pop(listenCtx, selectedDialect),
-                          icon:
-                              const Icon(Icons.stop_circle_outlined, size: 18),
-                          label: const Text('松开/点击结束'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    if (dialect == null || !mounted) return null;
-    try {
-      final data = await ApiClient.post('/ai/voice/recognize', body: {
-        'text': '',
-        'scene': 'publish',
-        'dialect': dialect,
-      });
-      final transcript =
-          data is Map ? '${data['transcript'] ?? ''}'.trim() : '';
-      if (transcript.isEmpty) {
-        if (mounted) toast(context, '未识别到语音内容', error: true);
-        return null;
-      }
-      return transcript;
-    } catch (e) {
-      if (mounted) toast(context, serviceErrorMessage(e), error: true);
-      return null;
-    }
-  }
-
   void _appendVoiceText(TextEditingController controller, String transcript) {
     final current = controller.text.trimRight();
     final next = current.isEmpty ? transcript : '$current\n$transcript';
@@ -546,8 +452,12 @@ class _PublishPageState extends State<PublishPage> {
                         suffixIcon: IconButton(
                           tooltip: '语音输入',
                           onPressed: () async {
-                            final transcript = await _recognizeVoice(ctx);
-                            if (transcript == null || !ctx.mounted) return;
+                            final transcript = await VoiceInput.listen(ctx);
+                            if (transcript == null ||
+                                transcript.isEmpty ||
+                                !ctx.mounted) {
+                              return;
+                            }
                             _appendVoiceText(contentC, transcript);
                           },
                           icon: const Icon(Icons.mic_none),
@@ -676,54 +586,6 @@ class _PublishPageState extends State<PublishPage> {
     if (text.length >= 16) return text.substring(0, 16).replaceAll('T', ' ');
     if (text.length >= 10) return text.substring(0, 10);
     return '近期';
-  }
-}
-
-class _VoicePulseIcon extends StatefulWidget {
-  const _VoicePulseIcon();
-
-  @override
-  State<_VoicePulseIcon> createState() => _VoicePulseIconState();
-}
-
-class _VoicePulseIconState extends State<_VoicePulseIcon>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 820),
-    )..repeat(reverse: true);
-    _scale = Tween<double>(begin: 0.94, end: 1.08).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scale,
-      child: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          color: AppColors.primaryContainer.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(R.sm),
-          border: Border.all(color: AppColors.primaryContainer),
-        ),
-        child: const Icon(Icons.mic_none, color: AppColors.primary, size: 32),
-      ),
-    );
   }
 }
 
