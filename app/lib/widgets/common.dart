@@ -34,6 +34,7 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
       toolbarHeight: 64,
       automaticallyImplyLeading: false,
       titleSpacing: 0,
+      leadingWidth: showBack ? 56 : 64,
       leading: showBack
           ? IconButton(
               tooltip: '返回',
@@ -51,7 +52,7 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
           : const Center(
               // 顶栏左上固定为拖拉机图标(与登录页品牌标一致的 Icons.agriculture)，
               // 不随后端品牌图替换而变。
-              child: Icon(Icons.agriculture, color: AppColors.primary, size: 30),
+              child: Icon(Icons.agriculture, color: AppColors.primary, size: 42),
             ),
       title: Text(title,
           maxLines: 1,
