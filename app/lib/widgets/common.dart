@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../core/api_client.dart';
 import '../core/constants.dart';
-import '../core/site_images.dart';
 
 /// 品牌顶栏：白底 h64，左农机图标（或返回箭头）、居中「田园通」粗体绿、右搜索/铃铛
 ///
@@ -50,8 +49,9 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
               },
             )
           : const Center(
-              child: SiteImage(
-                'assets/images/farmlink-mark.png',
+              // 顶栏左上固定为拖拉机站标(bundled 资产)，不随后端品牌图替换而变。
+              child: Image(
+                image: AssetImage('assets/images/farmlink-mark.png'),
                 width: 30,
                 height: 30,
                 filterQuality: FilterQuality.medium,
