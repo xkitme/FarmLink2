@@ -21,14 +21,25 @@ Future<bool?> showAgreementDialog(
     barrierDismissible: !consentMode,
     barrierLabel: title,
     barrierColor: Colors.black.withValues(alpha: 0.62),
-    // 入场交给 CRT 开机动效自行驱动，弹窗本体不做缩放/淡入，只让遮罩淡入。
-    transitionDuration: const Duration(milliseconds: 240),
+    // 入场交给 CRT 开机动效自行驱动（本体不淡入/缩放，让白线"突然闪出"）；
+    // 关闭(reverse)时补一段淡出 + 轻微缩小，避免"啪"一下消失的生硬感。
+    transitionDuration: const Duration(milliseconds: 260),
     pageBuilder: (_, __, ___) => AgreementDialog(
       title: title,
       sections: sections,
       consentMode: consentMode,
     ),
-    transitionBuilder: (_, __, ___, child) => child,
+    transitionBuilder: (_, animation, __, child) {
+      if (animation.status != AnimationStatus.reverse) return child;
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.94, end: 1).animate(curved),
+          child: child,
+        ),
+      );
+    },
   );
 }
 
@@ -310,16 +321,15 @@ class _AgreementDialogState extends State<AgreementDialog>
     double boxHeight,
     Widget scrollContent,
   ) {
-    return Material(
-      color: AppColors.surface,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-            child: Stack(
-              alignment: Alignment.topCenter,
-              children: [
-                Column(
+    return Stack(
+      children: [
+        Material(
+          color: AppColors.surface,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _logo(boxHeight),
@@ -337,72 +347,75 @@ class _AgreementDialogState extends State<AgreementDialog>
                     ),
                   ],
                 ),
-                // 查看模式：右上角关闭按钮。
-                if (!widget.consentMode)
-                  Positioned(
-                    top: -6,
-                    right: -6,
-                    child: _reveal(
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close),
-                        color: AppColors.onSurfaceVariant,
-                        visualDensity: VisualDensity.compact,
-                        tooltip: '关闭',
-                      ),
+              ),
+              _reveal(const Divider(height: 1)),
+              Expanded(child: _reveal(scrollContent)),
+              // 同意模式才有底部「退出 / 同意并继续」操作条。
+              if (widget.consentMode) ...[
+                _reveal(const Divider(height: 1)),
+                _reveal(
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                              foregroundColor: AppColors.onSurfaceVariant,
+                            ),
+                            child: const Text('退出'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: _hasReadToEnd
+                                ? () => Navigator.of(context).pop(true)
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: AppColors.outlineVariant,
+                              disabledForegroundColor:
+                                  AppColors.onSurfaceVariant,
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              '同意并继续',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-              ],
-            ),
-          ),
-          _reveal(const Divider(height: 1)),
-          Expanded(child: _reveal(scrollContent)),
-          // 同意模式才有底部「退出 / 同意并继续」操作条。
-          if (widget.consentMode) ...[
-            _reveal(const Divider(height: 1)),
-            _reveal(
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          foregroundColor: AppColors.onSurfaceVariant,
-                        ),
-                        child: const Text('退出'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: _hasReadToEnd
-                            ? () => Navigator.of(context).pop(true)
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: AppColors.outlineVariant,
-                          disabledForegroundColor: AppColors.onSurfaceVariant,
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          '同意并继续',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
+              ],
+            ],
+          ),
+        ),
+        // 查看模式：右上角紧贴盒角的关闭按钮。
+        if (!widget.consentMode)
+          Positioned(
+            top: 6,
+            right: 6,
+            child: _reveal(
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close, size: 22),
+                color: AppColors.onSurfaceVariant,
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                tooltip: '关闭',
               ),
             ),
-          ],
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
