@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -5,7 +6,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
+import '../../core/legal_documents.dart';
 import '../../core/site_images.dart';
+import '../../widgets/agreement_dialog.dart';
 import '../../widgets/common.dart';
 
 class LoginPage extends StatefulWidget {
@@ -20,12 +23,35 @@ class _LoginPageState extends State<LoginPage> {
   final _password = TextEditingController();
   bool _loading = false;
   bool _obscure = true;
+  bool _agreed = false;
   String? _error;
+
+  late final TapGestureRecognizer _tapService;
+  late final TapGestureRecognizer _tapPrivacy;
+
+  @override
+  void initState() {
+    super.initState();
+    _tapService = TapGestureRecognizer()
+      ..onTap = () => showAgreementDialog(
+            context,
+            title: kServiceAgreementTitle,
+            sections: kServiceAgreementSections,
+          );
+    _tapPrivacy = TapGestureRecognizer()
+      ..onTap = () => showAgreementDialog(
+            context,
+            title: kPrivacyPolicyTitle,
+            sections: kPrivacyPolicySections,
+          );
+  }
 
   @override
   void dispose() {
     _username.dispose();
     _password.dispose();
+    _tapService.dispose();
+    _tapPrivacy.dispose();
     super.dispose();
   }
 
@@ -34,6 +60,10 @@ class _LoginPageState extends State<LoginPage> {
     final p = _password.text;
     if (u.isEmpty || p.isEmpty) {
       setState(() => _error = '请输入用户名和密码');
+      return;
+    }
+    if (!_agreed) {
+      setState(() => _error = '请先阅读并勾选同意《用户协议》与《隐私政策》');
       return;
     }
     setState(() {
@@ -162,18 +192,24 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () => context.go('/auth/forgot-password'),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(child: _agreementRow()),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () => context.go('/auth/forgot-password'),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            '忘记密码？',
+                            style: TextStyle(fontSize: 12),
+                          ),
                         ),
-                        child: const Text(
-                          '忘记密码？',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
+                      ],
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 4),
@@ -233,6 +269,64 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ],
       ),
+    );
+  }
+
+  /// 「已阅读并同意《用户协议》与《隐私政策》」勾选 + 可点协议链接。
+  Widget _agreementRow() {
+    const linkStyle = TextStyle(
+      fontSize: 11.5,
+      color: AppColors.primary,
+      fontWeight: FontWeight.w600,
+    );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 22,
+          height: 22,
+          child: Checkbox(
+            value: _agreed,
+            onChanged: (v) => setState(() {
+              _agreed = v ?? false;
+              if (_agreed) _error = null;
+            }),
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            activeColor: AppColors.primary,
+            side: const BorderSide(color: AppColors.outline, width: 1.5),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Text.rich(
+              TextSpan(
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  height: 1.4,
+                  color: AppColors.onSurfaceVariant,
+                ),
+                children: [
+                  const TextSpan(text: '已阅读并同意'),
+                  TextSpan(
+                    text: '《用户协议》',
+                    style: linkStyle,
+                    recognizer: _tapService,
+                  ),
+                  const TextSpan(text: '与'),
+                  TextSpan(
+                    text: '《隐私政策》',
+                    style: linkStyle,
+                    recognizer: _tapPrivacy,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
