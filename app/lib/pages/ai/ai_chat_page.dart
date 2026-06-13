@@ -6,9 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/elder_mode.dart';
+import '../../core/tts_service.dart';
+import '../../core/voice_input.dart';
 import '../../widgets/common.dart';
 
 class AiChatPage extends StatefulWidget {
@@ -53,6 +57,7 @@ class _AiChatPageState extends State<AiChatPage> {
     _input.dispose();
     _inputFocus.dispose();
     _scrollCtrl.dispose();
+    TtsService.stop();
     super.dispose();
   }
 
@@ -297,17 +302,42 @@ class _AiChatPageState extends State<AiChatPage> {
                 _pickAndDetect(ImageSource.gallery);
               },
             ),
-            const ListTile(
-              enabled: false,
-              leading: Icon(Icons.mic_none_outlined, color: AppColors.outline),
-              title: Text('语音输入'),
-              subtitle: Text('准备中'),
+            ListTile(
+              leading: const Icon(Icons.mic_none_outlined,
+                  color: AppColors.tertiary),
+              title: const Text('语音输入'),
+              subtitle: const Text('说出问题，自动转写到输入框'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _startVoiceInput();
+              },
             ),
             const SizedBox(height: 8),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _startVoiceInput() async {
+    final text = await VoiceInput.listen(context);
+    if (text == null || text.isEmpty || !mounted) return;
+    // 回填到输入框，由用户确认后再发送（不自动发送）。
+    final existing = _input.text.trimRight();
+    final next = existing.isEmpty ? text : '$existing $text';
+    _input.text = next;
+    _input.selection = TextSelection.collapsed(offset: next.length);
+    _requestInputFocus();
+  }
+
+  Future<void> _toggleSpeak(String id, String text) async {
+    if (TtsService.speakingId == id) {
+      await TtsService.stop();
+      if (mounted) setState(() {});
+      return;
+    }
+    await TtsService.speak(text, id: id);
+    if (mounted) setState(() {});
   }
 
   Future<void> _pickAndDetect(ImageSource source) async {
@@ -534,7 +564,7 @@ class _AiChatPageState extends State<AiChatPage> {
                           padding: const EdgeInsets.only(bottom: 14),
                           child: _messages[i].fromUser
                               ? _userBubble(_messages[i])
-                              : _botBubble(_messages[i]),
+                              : _botBubble(_messages[i], i),
                         ),
                       ),
           ),
@@ -661,7 +691,7 @@ class _AiChatPageState extends State<AiChatPage> {
     );
   }
 
-  Widget _botBubble(_ChatMessage msg) {
+  Widget _botBubble(_ChatMessage msg, int index) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -677,14 +707,29 @@ class _AiChatPageState extends State<AiChatPage> {
         const SizedBox(width: 8),
         Flexible(
           child: msg.detect == null
-              ? _textBotBubble(msg)
+              ? _textBotBubble(msg, index)
               : _detectReportCard(msg.detect!),
         ),
       ],
     );
   }
 
-  Widget _textBotBubble(_ChatMessage msg) {
+  Widget _textBotBubble(_ChatMessage msg, int index) {
+    // 适老模式下：点击 AI 文本回答气泡朗读，再次点击停止（非适老模式不变）。
+    final elderMode = context.watch<ElderModeState>().enabled;
+    final speakable =
+        elderMode && !msg.streaming && msg.text.trim().isNotEmpty;
+    final ttsId = 'bot_$index';
+    final bubble = _textBotBubbleBody(msg, speakable, ttsId);
+    if (!speakable) return bubble;
+    return GestureDetector(
+      onTap: () => _toggleSpeak(ttsId, msg.text),
+      child: bubble,
+    );
+  }
+
+  Widget _textBotBubbleBody(_ChatMessage msg, bool speakable, String ttsId) {
+    final speaking = speakable && TtsService.speakingId == ttsId;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
@@ -732,9 +777,30 @@ class _AiChatPageState extends State<AiChatPage> {
             ),
           ],
           const SizedBox(height: 8),
-          Text(
-            _time(msg.createdAt),
-            style: const TextStyle(color: AppColors.outline, fontSize: 11),
+          Row(
+            children: [
+              Text(
+                _time(msg.createdAt),
+                style: const TextStyle(color: AppColors.outline, fontSize: 11),
+              ),
+              if (speakable) ...[
+                const Spacer(),
+                Icon(
+                  speaking ? Icons.stop_circle_outlined : Icons.volume_up_outlined,
+                  size: 15,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  speaking ? '点按停止' : '点按朗读',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
