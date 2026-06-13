@@ -114,6 +114,7 @@ class _AgriPageState extends State<AgriPage> {
                       _plotSection(),
                       _recordSection(),
                       _photoFlowEntry(),
+                      _iotLinkageEntry(),
                       const SectionTitle('AI 田间识别'),
                       _detectGrid(),
                       const SectionTitle('智能农事建议'),
@@ -324,6 +325,62 @@ class _AgriPageState extends State<AgriPage> {
                   SizedBox(height: 3),
                   Text(
                     '拍叶片识病，生成用药建议并排程复查',
+                    style: TextStyle(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.primary,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 智能物联 · 设备联动入口（直达 /iot，提升可发现性）
+  Widget _iotLinkageEntry() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 8),
+      child: _flatBox(
+        onTap: () => context.push('/iot'),
+        Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(R.md),
+              ),
+              child: const Icon(
+                Icons.sensors_rounded,
+                color: AppColors.primary,
+                size: 27,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '智能物联 · 设备联动',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    '查看田间传感器读数，配置自动灌溉/通风等联动规则',
                     style: TextStyle(
                       color: AppColors.onSurfaceVariant,
                       fontSize: 12,

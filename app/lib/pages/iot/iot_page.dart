@@ -22,6 +22,20 @@ class _IotPageState extends State<IotPage> {
   List<Map<String, dynamic>> _logs = [];
   final Set<String> _togglingIds = {};
 
+  // 「设备联动」区锚点：进页面点顶部快捷跳转即可直达，无需手动下滚
+  final GlobalKey _linkageKey = GlobalKey();
+
+  void _scrollToLinkage() {
+    final ctx = _linkageKey.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOut,
+      alignment: 0.02,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -122,6 +136,7 @@ class _IotPageState extends State<IotPage> {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                     children: [
                       _summaryCard(),
+                      if (_rules.isNotEmpty) _linkageQuickJump(),
                       const SectionTitle('设备监测'),
                       if (_devices.isEmpty)
                         const AppCard(child: Text('暂无设备数据'))
@@ -135,6 +150,77 @@ class _IotPageState extends State<IotPage> {
                     ],
                   ),
                 ),
+    );
+  }
+
+  // 顶部快捷跳转：进页面一眼可见「设备联动」，点击直达联动区
+  Widget _linkageQuickJump() {
+    final triggered =
+        _rules.where((r) => _text(r['status']) == 'triggered').length;
+    final active = _rules.where((r) => _bool(r['enabled'])).length;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _scrollToLinkage,
+          borderRadius: BorderRadius.circular(R.sm),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(R.sm),
+              border: Border.all(color: AppColors.outlineVariant, width: 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(R.md),
+                  ),
+                  child:
+                      const Icon(Icons.bolt_rounded, color: AppColors.primary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '设备联动',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        triggered > 0
+                            ? '$triggered 条规则已触发，点击查看联动详情'
+                            : '$active 条联动规则已启用，点击配置自动响应',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.primary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -384,6 +470,7 @@ class _IotPageState extends State<IotPage> {
     return [
       const SizedBox(height: 4),
       Row(
+        key: _linkageKey,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Expanded(child: SectionTitle('设备联动')),
