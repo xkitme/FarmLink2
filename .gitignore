@@ -6,7 +6,33 @@ dist/
 .claude/settings.json
 .claude/settings.local.json
 
-# 宣传片生成项目的大二进制产物（字体/渲染视频）不进主库
+# 宣传片生成项目的大二进制产物（字体/渲染视频/缩略图缓存）不进主库
 promo-video/node_modules/
 promo-video/renders/
 promo-video/assets/fonts/
+promo-video/.thumbnails/
+
+# ── 上传策略：GitHub 仓库只放 docs 与开发相关源码 ──
+# 临时验证截图 / 探针图（根目录散落的 png 一律不进库）
+/*.png
+
+# Claude / 工具链本机产物（机器相关，不进库）
+.agents/
+.cdp/
+.claude/
+.playwright-mcp/
+skills-lock.json
+/package.json
+
+# 工作脚本与中间产物
+outputs/
+
+# 原型 / 设计素材（产品图、图标导出，不上传）
+design_assets/
+icons_svg/
+icons_svg.zip
+app/assets/images.zip
+
+# 比赛 PPT / 路演材料（本地保留，不上传）
+市赛PPT/
+市赛路演-全新/
