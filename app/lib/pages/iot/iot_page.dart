@@ -115,6 +115,7 @@ class _IotPageState extends State<IotPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: FarmAppBar(
+        title: '智能物联',
         showBack: true,
         backFallback: '/data',
         actions: [

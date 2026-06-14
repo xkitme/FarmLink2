@@ -119,8 +119,8 @@ class _FeatureRow extends StatelessWidget {
   Widget build(BuildContext context) => ListTile(
         leading: CircleAvatar(
           radius: 20,
-          backgroundColor: AppColors.primaryContainer.withValues(alpha: 0.16),
-          child: Icon(icon, color: AppColors.primary, size: 22),
+          backgroundColor: AppColors.primary,
+          child: Icon(icon, color: Colors.white, size: 22),
         ),
         title: Text(
           title,
