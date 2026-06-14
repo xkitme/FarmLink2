@@ -5,6 +5,34 @@
 
 ---
 
+## 2026-06-15 · Claude+Codex 并行赶工:广告模态卡顿 + 登录页 Pixel2 布局 + #18-21 收尾 + git 规范
+
+### 状态：origin/main 同步在 `2aa50f12`(已 push)。后端 8000/web 5000(release 重编含本批,06-15 夜)在跑;ollama 11434 **down**(本轮未用到);admin 5173 未起。工作树干净。
+
+赛前赶工。用户要「和 codex 一起开 subagent 超速赶工」,本轮 **3 轨并行**(我主线程 + 1 Claude worktree agent + 1 Codex):
+
+**轨②(我, 主线程)当前批 bug/打磨**:
+- **广告页模态框卡顿**(用户:广告页模态卡、登录页不卡)。根因=协议弹窗遮罩半透明(`barrierColor black0.62`)+CRT 动画每帧重绘,广告页背后是**全屏 `Image.network` 大图未隔离层**→每帧透遮罩重采样大图(web/CanvasKit 尤贵);登录页背景简单故不卡。修法:`startup_ad_page.dart` 把背景 Image+渐变包 `RepaintBoundary` 合成缓存层(commit `28b20ed0`)。零视觉变化,浏览器验弹窗渲染无回归。
+- **登录页 Pixel2(411×731) 一屏装不下**(用户报)。`login_page.dart` 46% 大 hero 仅 ~820+ 高屏放得下表单,731 一类中等机型底部「注册账号」按钮被挤出需滚。修法:`compact` 阈值 `680→820`,该 band 改 34% 矮 hero(commit `2aa50f12`)。411×731 浏览器实测:注册按钮完整可见+底部留余量,一屏装下。
+- login/forgot/ai_chat/machinery 做了异步&释放类 bug 扫描,mounted/dispose/controller 均到位,无硬 bug。
+- 另:`28b20ed0` 含当前批 WIP 检查点(忘记密码/登录/AI聊天/农机改造 + serve_web.mjs 路径穿越加固),analyze 干净。
+
+**轨③(Claude worktree agent, 已合 `704da7b2`)#18-21 关闭前收尾**:四 issue 接线代码级全核验到位(file:行号见 git log),建议可关;两小修:`iot_page.dart` FarmAppBar 传 `title:'智能物联'`(组件本就支持 title 形参)、`elder_mode_page.dart` 三功能 icon 圈改实心深绿底+白 icon(原浅绿0.16偏淡)。
+
+**轨①(Codex gpt-5.5)#16 操作型弹层迁独立页 轨B**:Codex 核验后发现 `data_service`(_openStatForm/_openSyncLogs)、`publish`(_openComposer)**早已迁成 `Navigator.push` 独立页**,残留 `_sheet` helper 不存在 → **本任务实为已完成,进度总览未同步**。Codex 诚实返回 no-op,worktree 无改动已清理。(data_service:165 的 sheet 是 `_yearPicker` 轻量选择器,按工单保留;publish:610 是确认框,保留。)
+
+### 另:git 上传规范(commit `e5995892`)
+删根目录无用验证截图;`.gitignore` 加策略:根 `*.png`/PPT(市赛PPT、市赛路演-全新)/原型素材(design_assets、icons_svg)/工具链产物(.agents/.cdp/.claude/.playwright-mcp/outputs)/`app/assets/images.zip` 不上传;`promo-video/.thumbnails`(误传的生成缩略图)`git rm --cached` 取消跟踪(本地保留)。
+> 旁注:用户要画 XD 原型,把 App 实际用的 242 个 Material 图标 SVG 下到了 `icons_svg/`(gitignored),`icons_svg/iot/` 是物联页专用 16 个。
+
+### 仍需后续(主要靠真机/APK)
+1. 用户拍板关 #18/#19/#20/#21(代码侧均到位+大部分浏览器验)。
+2. #22 兑换积分 BUG:web 不复现,待 APK 复测(本轮用户未选,未动)。
+3. #18 STT 真识别 / #20 TTS 真朗读 / iot 标题与适老 icon 肉眼 —— 无头测不全,需 APK 或在线环境。
+4. 广告模态「流畅度」是性能特性,截图只能证渲染无回归;真机滑动手感建议 demo 前在目标机过一眼。
+
+---
+
 ## 2026-06-13 · Claude 并行 3 轨清 open issue #18/#19/#20/#21(2 worktree agent + 主线程)
 
 ### 状态：本地/origin/main 同步在 `b456ac72`(已 push)。后端 8000(`node src/server.js`,日志 `backend/.backend-out.log`)/web 5000(release,build/web 重编于 05:04 含本批)/ollama 11434(在线但模型冷,未预热)在跑。admin 5173 未起。工作树仅原有未跟踪临时文件,没动。
