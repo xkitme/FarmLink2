@@ -20,6 +20,12 @@ export const config = {
     embedModel: process.env.OLLAMA_EMBED_MODEL || 'bge-m3',
   },
 
+  // 本地 Kokoro 中文 TTS sidecar（tts/tts_server.py，仿 ollama 的本地常驻服务）。
+  tts: {
+    baseUrl: process.env.TTS_BASE_URL || 'http://localhost:11435',
+    voice: process.env.TTS_VOICE || 'zf_xiaobei',
+  },
+
   upload: {
     dir: process.env.UPLOAD_DIR || './uploads',
     maxSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB) || 10,

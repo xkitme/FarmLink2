@@ -63,6 +63,31 @@ class ApiClient {
     return _parse(res);
   }
 
+  /// POST 并返回原始二进制响应（如 TTS 的 audio/wav）。
+  /// 成功（HTTP 200 且 Content-Type 为音频）返回字节；否则按统一 JSON 错误体抛 ApiException。
+  static Future<Uint8List> postBytes(String path,
+      {Map<String, dynamic>? body,
+      Duration timeout = const Duration(seconds: 30)}) async {
+    final res = await http
+        .post(_uri(path), headers: _headers, body: jsonEncode(body ?? {}))
+        .timeout(timeout);
+    final ct = res.headers['content-type'] ?? '';
+    if (res.statusCode == 200 && ct.startsWith('audio/')) {
+      return res.bodyBytes;
+    }
+    // 错误：尝试解析统一 { code, msg } 响应
+    try {
+      final m = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      final code = m['code'] as int? ?? res.statusCode;
+      if (code == 40101) onUnauthorized?.call();
+      throw ApiException(code, m['msg'] as String? ?? '请求失败');
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      throw ApiException(res.statusCode, '请求失败');
+    }
+  }
+
   static Future<dynamic> put(String path, {Map<String, dynamic>? body}) async {
     final res = await http
         .put(_uri(path), headers: _headers, body: jsonEncode(body ?? {}))

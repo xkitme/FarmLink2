@@ -79,6 +79,11 @@ function ratePlan(req) {
     return { ...plan, key: actor }
   }
 
+  // 本地 TTS 合成便宜,且适老模式点读会高频调用,单独给宽松桶,不挤占 AI 20/hour 配额。
+  if (path.startsWith('/ai/tts')) {
+    return { name: 'tts', windowSec: 3600, limit: 300, key: actor }
+  }
+
   const isAi = path.startsWith('/ai/')
     || path === '/policy/ai/ask'
     || path === '/policy/legal/ask'

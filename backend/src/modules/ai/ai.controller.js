@@ -7,6 +7,7 @@ import { answerQuestion } from './services/ask.service.js'
 import { fallbackAnswer, buildPrompt, systemPrompt } from './services/fallback.service.js'
 import { referencesToPrompt, searchLocalKnowledge } from './services/rag.service.js'
 import { generateText, getOllamaStatus, streamText } from './services/ollama.service.js'
+import { synthSpeech, getTtsStatus } from './services/tts.service.js'
 
 function threadIdOf(value) {
   if (value === undefined || value === null || value === '') return null
@@ -665,4 +666,24 @@ export async function imageAnalyze(req, res) {
     modelUsed,
     result,
   }, '图像识别完成')
+}
+
+// ── 本地中文 TTS（Kokoro sidecar）──────────────────────────────
+/** 把文本合成为中文语音，直接返回 audio/wav。供适老模式点读 AI 回答使用。 */
+export async function tts(req, res) {
+  const text = String(req.body?.text || '').trim()
+  if (!text) throw errors.param('text 不能为空')
+  if (text.length > 1000) throw errors.param('文本过长（最多 1000 字）')
+  const voice = req.body?.voice ? String(req.body.voice) : undefined
+  const speed = req.body?.speed != null ? Number(req.body.speed) : undefined
+  const audio = await synthSpeech(text, { voice, speed })
+  res.setHeader('Content-Type', 'audio/wav')
+  res.setHeader('Content-Length', audio.length)
+  res.setHeader('Cache-Control', 'no-store')
+  res.end(audio)
+}
+
+/** TTS sidecar 探活（供前端在不可用时优雅降级）。 */
+export async function ttsStatus(req, res) {
+  ok(res, await getTtsStatus())
 }

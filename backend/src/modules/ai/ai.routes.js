@@ -26,6 +26,10 @@ router.delete('/ai/qa/record-items/:id', wrap(ai.qaRemoveOne))
 router.delete('/ai/qa/threads/:threadId', wrap(ai.qaRemoveThread))
 router.delete('/ai/qa/records/:id', wrap(ai.qaRemove))
 
+// ── 本地中文语音合成（Kokoro TTS sidecar）─────
+router.post('/ai/tts', wrap(ai.tts))
+router.get('/ai/tts/status', wrap(ai.ttsStatus))
+
 // ── 语音与图像 ──────────────────────────────
 router.post('/ai/voice/recognize', upload.single('audio'), wrap(ai.voiceRecognize))
 router.post('/ai/image/analyze', upload.single('image'), wrap(ai.imageAnalyze))

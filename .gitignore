@@ -36,3 +36,11 @@ app/assets/images.zip
 # 比赛 PPT / 路演材料（本地保留，不上传）
 市赛PPT/
 市赛路演-全新/
+
+# 本地 Kokoro TTS：源码(server/requirements)进库，venv/模型/产物不进
+tts/.venv/
+tts/*.onnx
+tts/*.bin
+tts/*.wav
+tts/*.log
+tts/__pycache__/

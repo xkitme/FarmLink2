@@ -1,0 +1,5 @@
+# 本地 Kokoro 中文 TTS sidecar 依赖（CPU / onnxruntime，不拖 torch）。
+# 完整冻结见 requirements-freeze.txt；这里列直接依赖，安装时会带齐传递依赖。
+kokoro-onnx==0.5.0
+misaki[zh]==0.9.4
+soundfile==0.14.0
