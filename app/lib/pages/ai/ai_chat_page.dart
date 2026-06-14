@@ -42,11 +42,19 @@ class _AiChatPageState extends State<AiChatPage> {
   bool _loadingHistory = true;
   bool _sending = false;
   bool _detecting = false;
+  bool _hasDraft = false;
   bool _hasOutgoingMessage = false;
+  bool _stickToBottom = true;
+
+  static const _thinkingText = '正在思考，请稍候...';
+  static const _emptyAnswerText = 'AI 暂时没有返回内容，请换个问法再试。';
 
   @override
   void initState() {
     super.initState();
+    _input.addListener(_handleInputChanged);
+    _inputFocus.addListener(_handleInputFocusChanged);
+    _scrollCtrl.addListener(_handleScroll);
     _threadId = widget.threadId;
     _scene = _normalizeScene(widget.initialScene);
     _loadHistory();
@@ -54,11 +62,46 @@ class _AiChatPageState extends State<AiChatPage> {
 
   @override
   void dispose() {
+    _input.removeListener(_handleInputChanged);
+    _inputFocus.removeListener(_handleInputFocusChanged);
+    _scrollCtrl.removeListener(_handleScroll);
     _input.dispose();
     _inputFocus.dispose();
     _scrollCtrl.dispose();
     TtsService.stop();
     super.dispose();
+  }
+
+  bool get _busy => _loadingHistory || _sending || _detecting;
+
+  bool get _canSend => !_busy && _hasDraft;
+
+  void _handleInputChanged() {
+    final next = _input.text.trim().isNotEmpty;
+    if (!mounted || next == _hasDraft) return;
+    setState(() => _hasDraft = next);
+  }
+
+  void _handleInputFocusChanged() {
+    if (!_inputFocus.hasFocus) return;
+    _scrollToBottom(animate: true, force: true);
+    Future<void>.delayed(const Duration(milliseconds: 260), () {
+      if (mounted && _inputFocus.hasFocus) {
+        _scrollToBottom(animate: true, force: true);
+      }
+    });
+  }
+
+  void _handleScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    _stickToBottom = _isNearBottom();
+  }
+
+  bool _isNearBottom() {
+    if (!_scrollCtrl.hasClients) return true;
+    final position = _scrollCtrl.position;
+    if (!position.hasContentDimensions) return true;
+    return position.maxScrollExtent - position.pixels <= 96;
   }
 
   Future<void> _loadHistory() async {
@@ -118,6 +161,13 @@ class _AiChatPageState extends State<AiChatPage> {
           ));
         }
       }
+      if (list.isEmpty) {
+        list.add(_ChatMessage(
+          fromUser: false,
+          text: '这条对话暂无可展示内容，可以继续提问。',
+          scene: _scene,
+        ));
+      }
       final first = records.first;
       setState(() {
         _scene = _normalizeScene(first['scene']);
@@ -126,7 +176,7 @@ class _AiChatPageState extends State<AiChatPage> {
           ..addAll(list);
         _loadingHistory = false;
       });
-      _scrollToBottom(animate: false);
+      _scrollToBottom(animate: false, force: true);
       _requestInputFocus();
     } catch (_) {
       if (!mounted) return;
@@ -138,14 +188,14 @@ class _AiChatPageState extends State<AiChatPage> {
           scene: _scene,
         ));
       });
-      _scrollToBottom(animate: false);
+      _scrollToBottom(animate: false, force: true);
       _requestInputFocus();
     }
   }
 
   Future<void> _send() async {
     final question = _input.text.trim();
-    if (question.isEmpty || _sending) return;
+    if (question.isEmpty || _busy) return;
     final animateScroll = _animateNextOutgoingScroll();
     _input.clear();
     setState(() {
@@ -156,13 +206,14 @@ class _AiChatPageState extends State<AiChatPage> {
       ));
       _messages.add(_ChatMessage(
         fromUser: false,
-        text: '',
+        text: _thinkingText,
         scene: _scene,
         streaming: true,
       ));
       _sending = true;
+      _stickToBottom = true;
     });
-    _scrollToBottom(animate: animateScroll);
+    _scrollToBottom(animate: animateScroll, force: true);
 
     var buffer = '';
     int? newThreadId;
@@ -197,8 +248,9 @@ class _AiChatPageState extends State<AiChatPage> {
       }
       if (!mounted) return;
       setState(() {
+        final finalText = buffer.trim().isEmpty ? _emptyAnswerText : buffer;
         _messages[_messages.length - 1] =
-            _messages.last.copyWith(streaming: false);
+            _messages.last.copyWith(text: finalText, streaming: false);
         // 首次发送后服务端返回 threadId：仅在内部记录，供后续消息复用。
         // 不调 context.go('/ai/chat/:id') 重新导航——那会重建本页、重放
         // 进入转场并重新拉取历史（表现为「第一次发消息后页面又滑入一次」）。
@@ -206,14 +258,17 @@ class _AiChatPageState extends State<AiChatPage> {
           _threadId = newThreadId;
         }
       });
+      _scrollToBottom(animate: animateScroll);
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages[_messages.length - 1] = _ChatMessage(
-          fromUser: false,
-          text: serviceUnavailableMessage,
-          scene: _scene,
-        );
+        if (_messages.isNotEmpty) {
+          _messages[_messages.length - 1] = _ChatMessage(
+            fromUser: false,
+            text: serviceUnavailableMessage,
+            scene: _scene,
+          );
+        }
       });
       toast(context, actionErrorMessage('问答', e), error: true);
     } finally {
@@ -261,6 +316,8 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   void _openPlusSheet() {
+    if (_busy) return;
+    _inputFocus.unfocus();
     showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
@@ -320,6 +377,7 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   Future<void> _startVoiceInput() async {
+    if (_busy) return;
     final text = await VoiceInput.listen(context);
     if (text == null || text.isEmpty || !mounted) return;
     // 回填到输入框，由用户确认后再发送（不自动发送）。
@@ -341,9 +399,11 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   Future<void> _pickAndDetect(ImageSource source) async {
-    if (_detecting || _sending) return;
+    if (_busy) return;
     Timer? waitTimer;
     int? botMessageIndex;
+    setState(() => _detecting = true);
+    _inputFocus.unfocus();
     try {
       final image = await _picker.pickImage(
         source: source,
@@ -369,9 +429,9 @@ class _AiChatPageState extends State<AiChatPage> {
           streaming: true,
         ));
         botMessageIndex = _messages.length - 1;
-        _detecting = true;
+        _stickToBottom = true;
       });
-      _scrollToBottom(animate: animateScroll);
+      _scrollToBottom(animate: animateScroll, force: true);
 
       final startedAt = DateTime.now();
       waitTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -452,6 +512,10 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   void _askFollowUp(String question) {
+    if (_busy) {
+      toast(context, '请等待当前任务完成后再继续提问');
+      return;
+    }
     _input.text = question;
     _send();
   }
@@ -462,10 +526,14 @@ class _AiChatPageState extends State<AiChatPage> {
     return animate;
   }
 
-  void _scrollToBottom({bool animate = true}) {
+  void _scrollToBottom({bool animate = true, bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollCtrl.hasClients) return;
-      final bottom = _scrollCtrl.position.maxScrollExtent;
+      if (!mounted || !_scrollCtrl.hasClients) return;
+      if (!force && !_stickToBottom) return;
+      final position = _scrollCtrl.position;
+      if (!position.hasContentDimensions) return;
+      final bottom = position.maxScrollExtent;
+      if ((position.pixels - bottom).abs() < 1) return;
       if (animate) {
         _scrollCtrl.animateTo(
           bottom,
@@ -480,7 +548,7 @@ class _AiChatPageState extends State<AiChatPage> {
 
   void _requestInputFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _inputFocus.requestFocus();
+      if (mounted && !_busy) _inputFocus.requestFocus();
     });
   }
 
@@ -558,6 +626,8 @@ class _AiChatPageState extends State<AiChatPage> {
                       )
                     : ListView.builder(
                         controller: _scrollCtrl,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                         itemCount: _messages.length,
                         itemBuilder: (_, i) => Padding(
@@ -606,6 +676,8 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   Widget _inputBar() {
+    final busy = _busy;
+    final canSend = _canSend;
     return SafeArea(
       top: false,
       child: Container(
@@ -618,12 +690,20 @@ class _AiChatPageState extends State<AiChatPage> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             IconButton.filledTonal(
-              onPressed: _detecting || _sending ? null : _openPlusSheet,
+              onPressed: busy ? null : _openPlusSheet,
               icon: const Icon(Icons.add, size: 20),
-              style: IconButton.styleFrom(
-                backgroundColor: AppColors.surfaceLow,
-                foregroundColor: AppColors.onSurfaceVariant,
-                fixedSize: const Size(36, 36),
+              style: ButtonStyle(
+                fixedSize: WidgetStateProperty.all(const Size(36, 36)),
+                backgroundColor: WidgetStateProperty.resolveWith(
+                  (states) => states.contains(WidgetState.disabled)
+                      ? AppColors.surfaceHigh
+                      : AppColors.surfaceLow,
+                ),
+                foregroundColor: WidgetStateProperty.resolveWith(
+                  (states) => states.contains(WidgetState.disabled)
+                      ? AppColors.outline
+                      : AppColors.onSurfaceVariant,
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -633,21 +713,27 @@ class _AiChatPageState extends State<AiChatPage> {
                 focusNode: _inputFocus,
                 minLines: 1,
                 maxLines: 4,
-                enabled: !_sending,
+                enabled: !busy,
                 textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _send(),
+                onTap: () => _scrollToBottom(animate: true, force: true),
+                onSubmitted: (_) {
+                  if (canSend) _send();
+                },
                 decoration: InputDecoration(
-                  hintText: _scene == 'GENERAL'
-                      ? '描述问题或症状...'
-                      : '在「${_sceneLabel(_scene)}」场景下提问...',
+                  hintText: _inputHintText(),
                   isDense: true,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   filled: true,
                   fillColor: AppColors.surfaceLow,
-                  suffixIcon: const Icon(
-                    Icons.mic_none_outlined,
-                    color: AppColors.outline,
+                  suffixIcon: IconButton(
+                    tooltip: '语音输入',
+                    onPressed: busy ? null : _startVoiceInput,
+                    icon: Icon(
+                      Icons.mic_none_outlined,
+                      color:
+                          busy ? AppColors.outlineVariant : AppColors.outline,
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(999),
@@ -659,6 +745,11 @@ class _AiChatPageState extends State<AiChatPage> {
                     borderSide:
                         const BorderSide(color: AppColors.primary, width: 1.5),
                   ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide:
+                        const BorderSide(color: AppColors.outlineVariant),
+                  ),
                 ),
               ),
             ),
@@ -668,11 +759,15 @@ class _AiChatPageState extends State<AiChatPage> {
               height: 40,
               child: IconButton.filled(
                 padding: EdgeInsets.zero,
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.resolveWith(
+                    (states) => states.contains(WidgetState.disabled)
+                        ? AppColors.outlineVariant
+                        : AppColors.primary,
+                  ),
+                  foregroundColor: WidgetStateProperty.all(Colors.white),
                 ),
-                icon: _sending
+                icon: busy && (_sending || _detecting)
                     ? const SizedBox(
                         width: 18,
                         height: 18,
@@ -682,13 +777,21 @@ class _AiChatPageState extends State<AiChatPage> {
                         ),
                       )
                     : const Icon(Icons.send_rounded, size: 19),
-                onPressed: _sending ? null : _send,
+                onPressed: canSend ? _send : null,
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _inputHintText() {
+    if (_loadingHistory) return '正在加载对话...';
+    if (_sending) return 'AI 正在回复中...';
+    if (_detecting) return '正在处理图片识别...';
+    if (_scene == 'GENERAL') return '描述问题或症状...';
+    return '在「${_sceneLabel(_scene)}」场景下提问...';
   }
 
   Widget _botBubble(_ChatMessage msg, int index) {
@@ -717,8 +820,7 @@ class _AiChatPageState extends State<AiChatPage> {
   Widget _textBotBubble(_ChatMessage msg, int index) {
     // 适老模式下：点击 AI 文本回答气泡朗读，再次点击停止（非适老模式不变）。
     final elderMode = context.watch<ElderModeState>().enabled;
-    final speakable =
-        elderMode && !msg.streaming && msg.text.trim().isNotEmpty;
+    final speakable = elderMode && !msg.streaming && msg.text.trim().isNotEmpty;
     final ttsId = 'bot_$index';
     final bubble = _textBotBubbleBody(msg, speakable, ttsId);
     if (!speakable) return bubble;
@@ -786,7 +888,9 @@ class _AiChatPageState extends State<AiChatPage> {
               if (speakable) ...[
                 const Spacer(),
                 Icon(
-                  speaking ? Icons.stop_circle_outlined : Icons.volume_up_outlined,
+                  speaking
+                      ? Icons.stop_circle_outlined
+                      : Icons.volume_up_outlined,
                   size: 15,
                   color: AppColors.primary,
                 ),
@@ -1323,9 +1427,25 @@ class _MarkdownText extends StatelessWidget {
   Widget build(BuildContext context) {
     final lines = text.replaceAll('\r\n', '\n').split('\n');
     final blocks = <Widget>[];
+    final codeLines = <String>[];
+    var inCodeBlock = false;
     for (final raw in lines) {
       final line = raw.trimRight();
       final t = line.trimLeft();
+      if (t.startsWith('```')) {
+        if (inCodeBlock) {
+          blocks.add(_codeBlock(codeLines.join('\n')));
+          codeLines.clear();
+          inCodeBlock = false;
+        } else {
+          inCodeBlock = true;
+        }
+        continue;
+      }
+      if (inCodeBlock) {
+        codeLines.add(line);
+        continue;
+      }
       if (RegExp(r'^([-*_=]\s*){3,}$').hasMatch(t)) {
         blocks.add(const Padding(
           padding: EdgeInsets.symmetric(vertical: 6),
@@ -1342,48 +1462,109 @@ class _MarkdownText extends StatelessWidget {
       if (header != null) {
         blocks.add(Padding(
           padding: const EdgeInsets.only(top: 4, bottom: 2),
-          child: RichText(
-            text: _inline(
-                header.group(2)!,
-                baseStyle.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: (baseStyle.fontSize ?? 14) + 1)),
+          child: _richText(
+            header.group(2)!,
+            baseStyle.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: (baseStyle.fontSize ?? 14) + 1,
+            ),
           ),
+        ));
+        continue;
+      }
+      final ordered = RegExp(r'^(\d{1,2})[.)]\s+(.*)$').firstMatch(t);
+      if (ordered != null) {
+        blocks.add(_listItem(
+          marker: '${ordered.group(1)}.',
+          text: ordered.group(2)!,
         ));
         continue;
       }
       final bullet = RegExp(r'^[-*•]\s+(.*)$').firstMatch(t);
       if (bullet != null) {
-        blocks.add(Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 7, right: 8),
-                child: Container(
-                  width: 5,
-                  height: 5,
-                  decoration: BoxDecoration(
-                      color: baseStyle.color, shape: BoxShape.circle),
-                ),
-              ),
-              Expanded(
-                  child: RichText(text: _inline(bullet.group(1)!, baseStyle))),
-            ],
-          ),
-        ));
+        blocks.add(_listItem(text: bullet.group(1)!));
         continue;
       }
       blocks.add(Padding(
         padding: const EdgeInsets.symmetric(vertical: 1.5),
-        child: RichText(text: _inline(line, baseStyle)),
+        child: _richText(line, baseStyle),
       ));
+    }
+    if (inCodeBlock || codeLines.isNotEmpty) {
+      blocks.add(_codeBlock(codeLines.join('\n')));
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: blocks,
+    );
+  }
+
+  Widget _richText(String text, TextStyle style) {
+    return RichText(
+      softWrap: true,
+      overflow: TextOverflow.clip,
+      text: _inline(text, style),
+    );
+  }
+
+  Widget _listItem({String? marker, required String text}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: marker == null ? 13 : 24,
+            child: marker == null
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 7),
+                    child: Container(
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: baseStyle.color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  )
+                : Text(
+                    marker,
+                    style: baseStyle.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(child: _richText(text, baseStyle)),
+        ],
+      ),
+    );
+  }
+
+  Widget _codeBlock(String code) {
+    final content = code.trimRight().isEmpty ? ' ' : code.trimRight();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Text(
+          content,
+          style: baseStyle.copyWith(
+            fontFamily: 'monospace',
+            fontSize: (baseStyle.fontSize ?? 14) - 1,
+            height: 1.45,
+          ),
+        ),
+      ),
     );
   }
 
@@ -1422,7 +1603,7 @@ class _MarkdownText extends StatelessWidget {
       // 流式生成中：尾部可能有尚未闭合的标记（如刚打出 **加粗）。
       // 把标记后的文本直接按对应样式渲染，避免中途闪出原始 ** / * / `（边生成边渲染）。
       final tail = s.substring(last);
-      final open = RegExp(r'(\*\*\*|\*\*|\*|`)').firstMatch(tail);
+      final open = RegExp(r'(\*\*\*|\*\*|\*|`)(?=\S|$)').firstMatch(tail);
       if (open == null) {
         spans.add(TextSpan(text: tail, style: style));
       } else {

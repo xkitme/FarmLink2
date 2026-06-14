@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -19,6 +20,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final _formKey = GlobalKey<FormState>();
   final _username = TextEditingController();
   final _password = TextEditingController();
   bool _loading = false;
@@ -56,16 +58,20 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
-    final u = _username.text.trim();
-    final p = _password.text;
-    if (u.isEmpty || p.isEmpty) {
-      setState(() => _error = '请输入用户名和密码');
+    if (_loading) return;
+    FocusScope.of(context).unfocus();
+    final isValid = _formKey.currentState?.validate() ?? false;
+    if (!isValid) {
+      setState(() => _error = null);
       return;
     }
+    final u = _username.text.trim();
+    final p = _password.text;
     if (!_agreed) {
       setState(() => _error = '请先阅读并勾选同意《用户协议》与《隐私政策》');
       return;
     }
+    TextInput.finishAutofillContext();
     setState(() {
       _loading = true;
       _error = null;
@@ -82,190 +88,264 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void _clearError() {
+    if (_error != null) setState(() => _error = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.6,
-            child: const Stack(
-              fit: StackFit.expand,
-              children: [
-                SiteImage(
-                  'assets/images/generated/auth-hero.jpg',
-                  fit: BoxFit.cover,
-                  errorFallback: ColoredBox(color: Color(0xFF1F5E26)),
-                ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.center,
-                      colors: [Color(0x992A2E27), Color(0x00000000)],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 48,
-                  left: 20,
-                  child: Row(
-                    children: [
-                      Icon(Icons.agriculture, color: Colors.white, size: 30),
-                      SizedBox(width: 8),
-                      Text(
-                        '田园通',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              width: double.infinity,
-              constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height * 0.52,
-              ),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x142E7D32),
-                    blurRadius: 30,
-                    offset: Offset(0, -8),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '欢迎回来',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '进入您的智能农业中心',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _underlineField(
-                      label: '手机号/账号',
-                      controller: _username,
-                      hint: '请输入注册手机号或账号',
-                      icon: Icons.person_outline,
-                    ),
-                    const SizedBox(height: 16),
-                    _underlineField(
-                      label: '密码',
-                      controller: _password,
-                      hint: '请输入登录密码',
-                      icon: Icons.lock_outline,
-                      obscure: _obscure,
-                      onSubmit: _login,
-                      suffix: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: Icon(
-                          _obscure ? Icons.visibility_off : Icons.visibility,
-                          size: 20,
-                          color: AppColors.outline,
-                        ),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
-                    ),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(child: _agreementRow()),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: () => context.go('/auth/forgot-password'),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            minimumSize: const Size(0, 0),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: const Text(
-                            '忘记密码？',
-                            style: TextStyle(fontSize: 12),
-                          ),
+      resizeToAvoidBottomInset: true,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final media = MediaQuery.of(context);
+          final compact = constraints.maxHeight < 680;
+          final heroHeight = (constraints.maxHeight * (compact ? 0.34 : 0.46))
+              .clamp(190.0, 360.0)
+              .toDouble();
+          final panelMinHeight =
+              (constraints.maxHeight - heroHeight).clamp(0.0, 520.0).toDouble();
+
+          return SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding:
+                EdgeInsets.only(bottom: media.viewInsets.bottom > 0 ? 16 : 0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                children: [
+                  _hero(height: heroHeight),
+                  Container(
+                    width: double.infinity,
+                    constraints: BoxConstraints(minHeight: panelMinHeight),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(32)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x142E7D32),
+                          blurRadius: 30,
+                          offset: Offset(0, -8),
                         ),
                       ],
                     ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 4),
-                      Center(
-                        child: Text(
-                          _error!,
-                          style: const TextStyle(
-                            color: AppColors.error,
-                            fontSize: 13,
-                          ),
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      compact ? 24 : 28,
+                      20,
+                      media.viewPadding.bottom + 32,
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      child: AutofillGroup(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '欢迎回来',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              '进入您的智能农业中心',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            _underlineField(
+                              label: '手机号/账号',
+                              controller: _username,
+                              hint: '请输入注册手机号或账号',
+                              icon: Icons.person_outline,
+                              autofillHints: const [
+                                AutofillHints.username,
+                                AutofillHints.telephoneNumber,
+                              ],
+                              keyboardType: TextInputType.text,
+                              enabled: !_loading,
+                              validator: (value) {
+                                if ((value ?? '').trim().isEmpty) {
+                                  return '请输入手机号/账号';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            _underlineField(
+                              label: '密码',
+                              controller: _password,
+                              hint: '请输入登录密码',
+                              icon: Icons.lock_outline,
+                              obscure: _obscure,
+                              onSubmit: _login,
+                              autofillHints: const [AutofillHints.password],
+                              keyboardType: TextInputType.visiblePassword,
+                              enabled: !_loading,
+                              validator: (value) {
+                                if ((value ?? '').isEmpty) return '请输入密码';
+                                return null;
+                              },
+                              suffix: IconButton(
+                                tooltip: _obscure ? '显示密码' : '隐藏密码',
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  _obscure
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  size: 20,
+                                  color: AppColors.outline,
+                                ),
+                                onPressed: _loading
+                                    ? null
+                                    : () => setState(
+                                          () => _obscure = !_obscure,
+                                        ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(child: _agreementRow()),
+                                const SizedBox(width: 8),
+                                TextButton(
+                                  onPressed: _loading
+                                      ? null
+                                      : () => context.go(
+                                            '/auth/forgot-password',
+                                          ),
+                                  style: TextButton.styleFrom(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 4),
+                                    minimumSize: const Size(0, 0),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text(
+                                    '忘记密码？',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_error != null) ...[
+                              const SizedBox(height: 8),
+                              _errorText(_error!),
+                            ],
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: ElevatedButton(
+                                onPressed: _loading ? null : _login,
+                                child: _loading
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text('安全登录'),
+                                          SizedBox(width: 6),
+                                          Icon(Icons.arrow_forward, size: 20),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: OutlinedButton.icon(
+                                onPressed: _loading
+                                    ? null
+                                    : () => context.go('/auth/login/register'),
+                                icon: const Icon(
+                                  Icons.person_add_alt_1,
+                                  size: 20,
+                                ),
+                                label: const Text('注册账号'),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _loading ? null : _login,
-                        child: _loading
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('安全登录'),
-                                  SizedBox(width: 6),
-                                  Icon(Icons.arrow_forward, size: 20),
-                                ],
-                              ),
-                      ),
                     ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: OutlinedButton.icon(
-                        onPressed: () => context.go('/auth/login/register'),
-                        icon: const Icon(Icons.person_add_alt_1, size: 20),
-                        label: const Text('注册账号'),
+                  )
+                      .animate()
+                      .slideY(
+                        begin: 0.2,
+                        duration: 600.ms,
+                        curve: Curves.easeOutCubic,
+                      )
+                      .fadeIn(),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _hero({required double height}) {
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: const Stack(
+        fit: StackFit.expand,
+        children: [
+          SiteImage(
+            'assets/images/generated/auth-hero.jpg',
+            fit: BoxFit.cover,
+            errorFallback: ColoredBox(color: Color(0xFF1F5E26)),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.center,
+                colors: [Color(0x992A2E27), Color(0x00000000)],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.agriculture, color: Colors.white, size: 30),
+                    SizedBox(width: 8),
+                    Text(
+                      '田园通',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
-            )
-                .animate()
-                .slideY(
-                    begin: 0.2, duration: 600.ms, curve: Curves.easeOutCubic)
-                .fadeIn(),
+            ),
           ),
         ],
       ),
@@ -279,54 +359,76 @@ class _LoginPageState extends State<LoginPage> {
       color: AppColors.primary,
       fontWeight: FontWeight.w600,
     );
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 22,
-          height: 22,
-          child: Checkbox(
-            value: _agreed,
-            onChanged: (v) => setState(() {
-              _agreed = v ?? false;
-              if (_agreed) _error = null;
-            }),
-            visualDensity: VisualDensity.compact,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            activeColor: AppColors.primary,
-            side: const BorderSide(color: AppColors.outline, width: 1.5),
+    return Semantics(
+      container: true,
+      checked: _agreed,
+      label: '已阅读并同意用户协议与隐私政策',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: Checkbox(
+              value: _agreed,
+              onChanged: _loading
+                  ? null
+                  : (v) => setState(() {
+                        _agreed = v ?? false;
+                        if (_agreed) _error = null;
+                      }),
+              visualDensity: VisualDensity.compact,
+              activeColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.outline, width: 1.5),
+            ),
           ),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: Text.rich(
-              TextSpan(
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  height: 1.4,
-                  color: AppColors.onSurfaceVariant,
+          const SizedBox(width: 2),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text.rich(
+                TextSpan(
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    height: 1.4,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                  children: [
+                    const TextSpan(text: '已阅读并同意'),
+                    TextSpan(
+                      text: '《用户协议》',
+                      style: linkStyle,
+                      recognizer: _tapService,
+                    ),
+                    const TextSpan(text: '与'),
+                    TextSpan(
+                      text: '《隐私政策》',
+                      style: linkStyle,
+                      recognizer: _tapPrivacy,
+                    ),
+                  ],
                 ),
-                children: [
-                  const TextSpan(text: '已阅读并同意'),
-                  TextSpan(
-                    text: '《用户协议》',
-                    style: linkStyle,
-                    recognizer: _tapService,
-                  ),
-                  const TextSpan(text: '与'),
-                  TextSpan(
-                    text: '《隐私政策》',
-                    style: linkStyle,
-                    recognizer: _tapPrivacy,
-                  ),
-                ],
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _errorText(String text) {
+    return Semantics(
+      liveRegion: true,
+      child: Center(
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppColors.error,
+            fontSize: 13,
+          ),
         ),
-      ],
+      ),
     );
   }
 
@@ -338,6 +440,10 @@ class _LoginPageState extends State<LoginPage> {
     bool obscure = false,
     Widget? suffix,
     VoidCallback? onSubmit,
+    Iterable<String>? autofillHints,
+    TextInputType? keyboardType,
+    bool enabled = true,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,17 +457,25 @@ class _LoginPageState extends State<LoginPage> {
             color: AppColors.onSurfaceVariant,
           ),
         ),
-        TextField(
+        TextFormField(
           controller: controller,
+          enabled: enabled,
           obscureText: obscure,
+          keyboardType: keyboardType,
+          autofillHints: autofillHints,
+          enableSuggestions: !obscure,
+          autocorrect: !obscure,
           textInputAction:
               onSubmit != null ? TextInputAction.done : TextInputAction.next,
-          onSubmitted: onSubmit != null ? (_) => onSubmit() : null,
+          onFieldSubmitted: onSubmit != null ? (_) => onSubmit() : null,
+          onChanged: (_) => _clearError(),
+          validator: validator,
           decoration: InputDecoration(
             filled: false,
             hintText: hint,
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            errorMaxLines: 2,
             prefixIcon: Icon(icon, color: AppColors.outline, size: 20),
             prefixIconConstraints:
                 const BoxConstraints(minWidth: 28, minHeight: 20),

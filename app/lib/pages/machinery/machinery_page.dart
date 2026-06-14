@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
@@ -158,6 +160,12 @@ Widget _machineImage(String image,
 
 class _MachineryPageState extends State<MachineryPage> {
   static const _cacheKey = 'machinery:list';
+  static const _mapMarkerPositions = [
+    Offset(0.18, 0.35),
+    Offset(0.45, 0.55),
+    Offset(0.72, 0.28),
+    Offset(0.60, 0.70),
+  ];
 
   // 搜索
   final _keywordCtrl = TextEditingController();
@@ -172,6 +180,7 @@ class _MachineryPageState extends State<MachineryPage> {
   var _fromCache = false;
   String? _cacheTime;
   String? _error;
+  int? _selectedMapIndex;
   List<_Machine> _machines = [];
 
   // 已加载的完整列表（用于前端关键字过滤）
@@ -207,6 +216,7 @@ class _MachineryPageState extends State<MachineryPage> {
     setState(() {
       _loading = true;
       _error = null;
+      _selectedMapIndex = null;
     });
     try {
       final typeQuery = _activeTypeQuery;
@@ -245,6 +255,7 @@ class _MachineryPageState extends State<MachineryPage> {
         _machines = _applyKeyword(_allMachines);
         _fromCache = false;
         _loading = false;
+        _selectedMapIndex = null;
       });
     } catch (error) {
       final typeQuery = _activeTypeQuery;
@@ -265,6 +276,7 @@ class _MachineryPageState extends State<MachineryPage> {
         _cacheTime = cacheTime;
         _error = cached.isNotEmpty ? null : serviceUnavailableMessage;
         _loading = false;
+        _selectedMapIndex = null;
       });
     }
   }
@@ -284,6 +296,7 @@ class _MachineryPageState extends State<MachineryPage> {
     setState(() {
       _keyword = _keywordCtrl.text.trim();
       _machines = _applyKeyword(_allMachines);
+      _selectedMapIndex = null;
     });
   }
 
@@ -419,7 +432,10 @@ class _MachineryPageState extends State<MachineryPage> {
           final active = index == _activeFilter;
           return InkWell(
             onTap: () {
-              setState(() => _activeFilter = index);
+              setState(() {
+                _activeFilter = index;
+                _selectedMapIndex = null;
+              });
               _loadMachines();
             },
             borderRadius: BorderRadius.circular(R.sm),
@@ -457,72 +473,244 @@ class _MachineryPageState extends State<MachineryPage> {
       borderRadius: BorderRadius.circular(R.md),
       child: SizedBox(
         height: mapHeight.clamp(220.0, 260.0),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 背景图（保留，后期接真实地图）
-            const SiteImage(
-              'assets/images/generated/farmland-map.jpg',
-              fit: BoxFit.cover,
-              errorFallback: ColoredBox(color: Color(0xFF315A35)),
-            ),
-            // 装饰性地图浮层（轻深色，无半透明白浮层）
-            const ColoredBox(color: Color(0x1A1A1C1C)),
-            // 装饰性 marker
-            ..._buildMapMarkers(),
-            // 右上角标：即将上线
-            Positioned(
-              top: 12,
-              right: 12,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryContainer.withValues(alpha: 0.88),
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: AppColors.ambientShadow,
-                ),
-                child: const Text(
-                  '地图功能即将上线',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final markerCount =
+                math.min(_machines.length, _mapMarkerPositions.length);
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _clearSelectedMapMarker,
+                    child: const Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        SiteImage(
+                          'assets/images/generated/farmland-map.jpg',
+                          fit: BoxFit.cover,
+                          errorFallback: ColoredBox(color: Color(0xFF315A35)),
+                        ),
+                        ColoredBox(color: Color(0x1A1A1C1C)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
+                ..._buildMapMarkers(constraints, markerCount),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: _mapCountChip(markerCount),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  List<Widget> _buildMapMarkers() {
-    // 装饰性点位，不再承担"选中"职责
-    const positions = [
-      Offset(0.18, 0.35),
-      Offset(0.45, 0.55),
-      Offset(0.72, 0.28),
-      Offset(0.60, 0.70),
+  List<Widget> _buildMapMarkers(BoxConstraints constraints, int markerCount) {
+    final widgets = <Widget>[
+      for (var index = 0; index < markerCount; index++)
+        _mapMarker(constraints, index),
     ];
-    return [
-      for (final p in positions)
-        Align(
-          alignment: Alignment(p.dx * 2 - 1, p.dy * 2 - 1),
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.80),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-              boxShadow: AppColors.ambientShadow,
-            ),
-            child: const Icon(Icons.agriculture, color: Colors.white, size: 18),
+    final selectedIndex = _selectedMapIndex;
+    if (selectedIndex != null &&
+        selectedIndex >= 0 &&
+        selectedIndex < markerCount) {
+      widgets.add(_mapCallout(constraints, selectedIndex));
+    }
+    return widgets;
+  }
+
+  Widget _mapMarker(BoxConstraints constraints, int index) {
+    final position = _mapMarkerPositions[index];
+    final width = _safeExtent(constraints.maxWidth, 360);
+    final height = _safeExtent(constraints.maxHeight, 240);
+    final selected = _selectedMapIndex == index;
+    final markerSize = selected ? 44.0 : 36.0;
+    final x = position.dx * width;
+    final y = position.dy * height;
+
+    return Positioned(
+      left: x - markerSize / 2,
+      top: y - markerSize / 2,
+      width: markerSize,
+      height: markerSize,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedMapIndex = selected ? null : index;
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.primary
+                : AppColors.primary.withValues(alpha: 0.80),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: selected ? 3 : 2),
+            boxShadow: AppColors.ambientShadow,
+          ),
+          child: Icon(
+            Icons.agriculture,
+            color: Colors.white,
+            size: selected ? 21 : 18,
           ),
         ),
-    ];
+      ),
+    );
+  }
+
+  Widget _mapCallout(BoxConstraints constraints, int index) {
+    const calloutWidth = 190.0;
+    const calloutHeight = 76.0;
+    const edge = 8.0;
+    final position = _mapMarkerPositions[index];
+    final width = _safeExtent(constraints.maxWidth, 360);
+    final height = _safeExtent(constraints.maxHeight, 240);
+    final x = position.dx * width;
+    final y = position.dy * height;
+    final left = _clampDouble(
+      x - calloutWidth / 2,
+      edge,
+      width - calloutWidth - edge,
+    );
+    final top = _clampDouble(
+      y - calloutHeight - 14,
+      edge,
+      height - calloutHeight - edge,
+    );
+    final machine = _machines[index];
+
+    return Positioned(
+      left: left,
+      top: top,
+      width: calloutWidth,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(R.sm),
+          border: Border.all(color: AppColors.outlineVariant, width: 1),
+          boxShadow: AppColors.ambientShadow,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _openMachineDetail(machine),
+            borderRadius: BorderRadius.circular(R.sm),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(R.sm),
+                    ),
+                    child: const Icon(
+                      Icons.agriculture,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          machine.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.onSurface,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          machine.distance,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '查看',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.primary,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mapCountChip(int markerCount) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(R.sm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+        boxShadow: AppColors.ambientShadow,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.location_on_outlined,
+              color: AppColors.primary, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            '附近 $markerCount 台',
+            style: const TextStyle(
+              color: AppColors.onSurface,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _clearSelectedMapMarker() {
+    if (_selectedMapIndex == null) return;
+    setState(() => _selectedMapIndex = null);
+  }
+
+  double _safeExtent(double value, double fallback) =>
+      value.isFinite ? value : fallback;
+
+  double _clampDouble(double value, double min, double max) {
+    if (max <= min) return min;
+    return math.min(math.max(value, min), max);
   }
 
   // ── L3 预约 sheet ────────────────────────────────────

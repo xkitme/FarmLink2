@@ -6,8 +6,9 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const root = path.join(__dirname, 'build', 'web')
-const PORT = 5000
+const root = path.resolve(__dirname, 'build', 'web')
+const rootPrefix = root.endsWith(path.sep) ? root : `${root}${path.sep}`
+const PORT = Number(process.env.PORT || 5000)
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -20,10 +21,21 @@ const MIME = {
 }
 
 http.createServer((req, res) => {
-  let urlPath = decodeURIComponent(req.url.split('?')[0])
+  let urlPath
+  try {
+    const url = new URL(req.url || '/', `http://localhost:${PORT}`)
+    urlPath = decodeURIComponent(url.pathname)
+  } catch {
+    res.writeHead(400)
+    return res.end('bad request')
+  }
+
   if (urlPath === '/') urlPath = '/index.html'
-  const file = path.join(root, urlPath)
-  if (!file.startsWith(root)) { res.writeHead(403); return res.end() }
+  const file = path.resolve(root, `.${urlPath}`)
+  if (file !== root && !file.startsWith(rootPrefix)) {
+    res.writeHead(403)
+    return res.end('forbidden')
+  }
 
   fs.readFile(file, (err, data) => {
     if (err) {
@@ -35,7 +47,9 @@ http.createServer((req, res) => {
       })
       return
     }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' })
-    res.end(data)
+    res.writeHead(200, {
+      'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
+    })
+    res.end(req.method === 'HEAD' ? undefined : data)
   })
 }).listen(PORT, () => console.log(`田园通 Web → http://localhost:${PORT}`))

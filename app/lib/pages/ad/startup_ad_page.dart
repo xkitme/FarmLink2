@@ -183,27 +183,37 @@ class _StartupAdPageState extends State<StartupAdPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Image.network(
-            ApiClient.resolveImageUrl(ad.imageUrl),
-            fit: BoxFit.cover,
-            filterQuality: FilterQuality.low,
-            errorBuilder: (_, __, ___) => const SiteImage(
-              'assets/images/generated/farm-market.jpg',
-              fit: BoxFit.cover,
-            ),
-          ),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0x66000000),
-                  Color(0x08000000),
-                  Color(0x99000000),
-                ],
-                stops: [0, 0.48, 1],
-              ),
+          // 全屏大图 + 渐变隔离成独立缓存层：协议弹窗（半透明遮罩 + CRT 动画）
+          // 浮在其上时，这层静止不变，引擎复用缓存而不必每帧透过遮罩重采样大图，
+          // 否则广告页模态框会明显掉帧（登录页背景简单故不卡）。
+          RepaintBoundary(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  ApiClient.resolveImageUrl(ad.imageUrl),
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.low,
+                  errorBuilder: (_, __, ___) => const SiteImage(
+                    'assets/images/generated/farm-market.jpg',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0x66000000),
+                        Color(0x08000000),
+                        Color(0x99000000),
+                      ],
+                      stops: [0, 0.48, 1],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           if (!_agreementShowing)
