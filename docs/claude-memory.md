@@ -23,8 +23,10 @@
 ollama(如需问答)→ **tts sidecar(`cd tts; .\start.ps1`,等 `[tts] ready`)** → 后端(8000)→ web(5000)。
 后端不强依赖 sidecar:离线时 /ai/tts 返错,App 静默降级不崩。sidecar setup/音色见 `tts/README.md`。venv/模型(311MB onnx+27MB voices)gitignore,离线机拷整个 tts/ 或重跑 setup(联网一次)。
 
-### TTS 后续
-1. **APK 离线打包**:把引擎/模型随 APK 走(用户选的范围是 web 先跑通,APK 后续)。注意 Android 上 sidecar 不能跑 Python——APK 方案需另议(端上 onnxruntime / 或随包带个本地服务,要重新设计)。
+### TTS 后续 / APK 结论(已厘清)
+1. **APK 不需要塞模型、不需要 sherpa-onnx**。本 App 架构=「手机/web 都是本地后端的瘦客户端」(登录/集市/AI 全靠连本地后端 8000)。所谓离线=不连公网,但手机与后端在**同一局域网**互通。所以 **TTS 的 Kokoro 留后端即可,APK 同样调 /ai/tts**——本次的 TtsService+audioplayers(安卓原生支持)APK 已能用,只需打包时 `--dart-define=FARMLINK_API_BASE_URL=http://<笔记本局域网IP>:8000` + 手机连同 WiFi(与其它所有功能前提一致)。后端 `app.listen(PORT)` 默认绑 0.0.0.0,手机连得上(首连不上多半 Windows 防火墙挡入站 8000,放行 Node)。
+   - 已用 `scripts/build-apk.ps1 -ApiBaseUrl http://10.178.46.24:8000 -Mode debug` 出 debug APK(产物 `dist/FarmLink.apk`,gitignore)。用户会自行改成正确局域网 IP 重打。
+   - 仅当要做「真·无后端单机 App」(手机不连任何笔记本)才需端上 sherpa-onnx + 模型进 APK——那是动全 App 的大改,非当前需求。
 2. 适老点读真机/浏览器走一遍 UI(本批因 ollama down 无新 AI 回答 bubble,只在 HTTP+audio 层验证了链路,Dart→audioplayers 那段靠 analyze + 同源 Audio 可播推断)。
 3. 音色/语速可调(config.tts.voice / TTS_VOICE 环境变量;server 支持 speed 参数)。
 
