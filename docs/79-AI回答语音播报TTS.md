@@ -53,7 +53,6 @@ App → 后端 /api/v1/ai/tts → 语音引擎 sidecar(127.0.0.1:11435) → WAV 
 ## 不在范围内
 - 端上离线 TTS（sherpa-onnx + 模型进 APK）：仅「真·无后端单机 App」才需要，非当前架构需求。
 - 语音输入（STT）：见 #18 / #72，与本段无关。
-- TTS 接入一键启动脚本（让 sidecar 随 ollama/后端拉起）：可作后续小段。
 
 ## 实施备注（2026-06-15）
 - 踩坑：kokoro-onnx 默认 G2P 走 phonemizer+espeak，**espeak 不支持中文**（`language "zh" is not supported`）；
@@ -64,3 +63,10 @@ App → 后端 /api/v1/ai/tts → 语音引擎 sidecar(127.0.0.1:11435) → WAV 
   debug 胖包，全 ABI，**非 TTS 撑大**)。PowerShell 5.1 把 flutter 的 x86 弃用警告(stderr)当错误，脚本在
   Copy-Item 前 abort，手动补拷即可（待后续给脚本加 stderr 容错）。用户自行改局域网 IP 重打。
 - 提交：`da7f466c`（功能）、`78b019dd`（交接簿厘清 APK 结论）等。
+- **一键启动集成（补做）**：`scripts/start-local.ps1` 加 TTS sidecar 启动（端口 11435，
+  `-SkipTts` 开关；缺 venv/模型则优雅跳过并提示，后端不强依赖）。注意脚本输出与新增逻辑
+  保持 ASCII（PowerShell 5.1 按非 UTF-8 读 .ps1 时中文单引号串会破坏解析；中文仅留在原有
+  注释里）。`start.bat` 现在一条命令带起 后端+admin+web+TTS（ollama 仍需另起）。
+- **待办（读 docs 后发现的差距）**：① 我验证用的 `flutter build web` 漏了 `--no-web-resources-cdn
+  --pwa-strategy=none`（一键脚本里有），离线 demo 要用脚本构建以自托管 canvaskit；② APK 正式
+  交付应 `-Mode release`（~56MB，docs/21），本次先出的是 debug（217MB）便于快速验证。

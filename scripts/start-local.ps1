@@ -2,9 +2,11 @@ param(
   [int]$BackendPort = 8000,
   [int]$WebPort = 5000,
   [int]$AdminPort = 5173,
+  [int]$TtsPort = 11435,
   [switch]$SkipWebBuild,
   [switch]$SkipAdmin,
-  [switch]$SkipMobile
+  [switch]$SkipMobile,
+  [switch]$SkipTts
 )
 
 # Force UTF-8 console output for Chinese log compatibility.
@@ -17,6 +19,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 $BackendDir = Join-Path $Root 'backend'
 $AdminDir = Join-Path $BackendDir 'admin'
 $AppDir = Join-Path $Root 'app'
+$TtsDir = Join-Path $Root 'tts'
 $LogDir = Join-Path $Root '.runtime'
 $Flutter = 'C:\dev\flutter\bin\flutter.bat'
 if (-not (Test-Path $Flutter)) {
@@ -75,6 +78,25 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 Stop-PortProcess $BackendPort
 if (-not $SkipAdmin) { Stop-PortProcess $AdminPort }
 if (-not $SkipMobile) { Stop-PortProcess $WebPort }
+if (-not $SkipTts) { Stop-PortProcess $TtsPort }
+
+# Local Chinese TTS sidecar (elder-mode AI answer voice broadcast; see docs/79).
+# Requires tts/ setup first (.venv + model files, see tts/README.md); skipped gracefully
+# if missing. Backend does not hard-depend on it: when down, /ai/tts errors and the App
+# degrades silently.
+$ttsProcess = $null
+$ttsSkipReason = $null
+if (-not $SkipTts) {
+  $ttsPython = Join-Path $TtsDir '.venv\Scripts\python.exe'
+  $ttsModel = Join-Path $TtsDir 'kokoro-v1.0.onnx'
+  if ((Test-Path $ttsPython) -and (Test-Path $ttsModel)) {
+    $env:PYTHONUTF8 = '1'
+    $env:TTS_PORT = "$TtsPort"
+    $ttsProcess = Start-HiddenProcess -FilePath $ttsPython -Arguments @('tts_server.py') -WorkingDirectory $TtsDir -Name 'tts'
+  } else {
+    $ttsSkipReason = 'tts/.venv or model file missing - run tts/ setup (see tts/README.md)'
+  }
+}
 
 $env:PORT = "$BackendPort"
 $env:FARMLINK_BACKEND_PORT = "$BackendPort"
@@ -110,6 +132,11 @@ if (-not $SkipMobile) {
 }
 
 $backendReady = Wait-Port $BackendPort
+if ($ttsProcess) {
+  $ttsReady = Wait-Port $TtsPort
+} else {
+  $ttsReady = $null
+}
 if (-not $SkipAdmin) {
   $adminReady = Wait-Port $AdminPort
 } else {
@@ -128,6 +155,11 @@ $lanIp = Get-NetIPAddress -AddressFamily IPv4 |
 Write-Output ""
 Write-Output "FarmLink local services are running."
 Write-Output "Backend API:  http://localhost:$BackendPort/api/v1  (PID $($backendProcess.Id), Ready $backendReady)"
+if ($ttsProcess) {
+  Write-Output "TTS engine:   http://localhost:$TtsPort  (PID $($ttsProcess.Id), Ready $ttsReady)"
+} elseif ($ttsSkipReason) {
+  Write-Output "TTS engine:   skipped - $ttsSkipReason"
+}
 if (-not $SkipAdmin) {
   Write-Output "Admin panel:  http://localhost:$AdminPort/admin/  (PID $($adminProcess.Id), Ready $adminReady)"
 }
@@ -144,6 +176,7 @@ Write-Output "Run again to restart occupied ports, or stop ports manually if nee
 $summary = @(
   "FarmLink local services are running.",
   "Backend API:  http://localhost:$BackendPort/api/v1  (PID $($backendProcess.Id), Ready $backendReady)",
+  $(if ($ttsProcess) { "TTS engine:   http://localhost:$TtsPort  (PID $($ttsProcess.Id), Ready $ttsReady)" }),
   $(if (-not $SkipAdmin) { "Admin panel:  http://localhost:$AdminPort/admin/  (PID $($adminProcess.Id), Ready $adminReady)" }),
   $(if (-not $SkipMobile) { "Mobile web:   http://localhost:$WebPort  (PID $($mobileProcess.Id), Ready $mobileReady)" }),
   $(if ($lanIp) { "LAN API:      http://$lanIp`:$BackendPort/api/v1" }),
