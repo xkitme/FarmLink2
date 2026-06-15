@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-06-15 (续) · 本地 Kokoro 中文 TTS(离线)替换 flutter_tts
+
+### 状态：origin/main 在 `da7f466c`(已 push)。新增本地 TTS sidecar 跑在 **127.0.0.1:11435**(我本会话起的,health ok);后端 8000 已重启(PID 变)加载了 /ai/tts;web 5000 release 含本批;ollama 11434 仍 down(本批没用到)。
+
+用户问「能不能部署一个本地 TTS」。选型(用户拍板):**引擎 Kokoro**(音质),**范围 web 先全链路跑通**。
+
+**架构(仿 ollama 本地常驻服务)**:`tts/tts_server.py` Python sidecar(kokoro-onnx,onnxruntime CPU,**不拖 torch**)常驻加载模型 → 后端 `/api/v1/ai/tts` 代理返 audio/wav → App `tts_service.dart` 用 audioplayers 播 WAV。web+APK 用同一把离线中文嗓子,替掉旧 flutter_tts(借浏览器/系统的嘴,音色不一)。
+
+**关键坑(已解)**:kokoro-onnx 默认 G2P 走 phonemizer+espeak,**espeak 不支持中文**(报 `language "zh" is not supported`)。正解:用官方 `misaki[zh]` 生成拼音音素,再 `k.create(phonemes, is_phonemes=True)` 喂模型(Kokoro 中文就是这套音素训练的)。默认女声 `zf_xiaobei`,24kHz,CPU 实时率 ~0.25。
+
+**改动**:后端 config.tts + tts.service.js + ai.controller(tts/ttsStatus) + ai.routes(/ai/tts,/ai/tts/status) + apiControl 单独 tts 限流桶 300/h(不挤 AI 20/h)。App ApiClient.postBytes(二进制响应) + tts_service 重写(同样静态 API,ai_chat 调用处不变) + audioplayers ^6.1.0。
+
+**验证**:浏览器源(5000)→/ai/tts(跨域 8000) 200 audio/wav,`<audio>` readyState4 可解码播放;后端 Node/curl 端到端 RIFF wav 非静音。⚠️ 我用 `audio.play()` 验证时**声音真从音箱放出来吓到用户了**——以后浏览器验证 TTS 别触发 play(),只验 readyState/duration。
+
+### 启动顺序(重要)
+ollama(如需问答)→ **tts sidecar(`cd tts; .\start.ps1`,等 `[tts] ready`)** → 后端(8000)→ web(5000)。
+后端不强依赖 sidecar:离线时 /ai/tts 返错,App 静默降级不崩。sidecar setup/音色见 `tts/README.md`。venv/模型(311MB onnx+27MB voices)gitignore,离线机拷整个 tts/ 或重跑 setup(联网一次)。
+
+### TTS 后续
+1. **APK 离线打包**:把引擎/模型随 APK 走(用户选的范围是 web 先跑通,APK 后续)。注意 Android 上 sidecar 不能跑 Python——APK 方案需另议(端上 onnxruntime / 或随包带个本地服务,要重新设计)。
+2. 适老点读真机/浏览器走一遍 UI(本批因 ollama down 无新 AI 回答 bubble,只在 HTTP+audio 层验证了链路,Dart→audioplayers 那段靠 analyze + 同源 Audio 可播推断)。
+3. 音色/语速可调(config.tts.voice / TTS_VOICE 环境变量;server 支持 speed 参数)。
+
+---
+
 ## 2026-06-15 · Claude+Codex 并行赶工:广告模态卡顿 + 登录页 Pixel2 布局 + #18-21 收尾 + git 规范
 
 ### 状态：origin/main 同步在 `2aa50f12`(已 push)。后端 8000/web 5000(release 重编含本批,06-15 夜)在跑;ollama 11434 **down**(本轮未用到);admin 5173 未起。工作树干净。
