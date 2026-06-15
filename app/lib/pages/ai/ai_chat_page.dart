@@ -45,6 +45,7 @@ class _AiChatPageState extends State<AiChatPage> {
   bool _hasDraft = false;
   bool _hasOutgoingMessage = false;
   bool _stickToBottom = true;
+  String? _ttsPendingId;
 
   static const _thinkingText = '正在思考，请稍候...';
   static const _emptyAnswerText = 'AI 暂时没有返回内容，请换个问法再试。';
@@ -143,12 +144,14 @@ class _AiChatPageState extends State<AiChatPage> {
         final answer = _text(record['answer']);
         final createdAt = _date(record['createdAt']);
         final detect = _detectResultFromRecord(record);
+        final imageUrl = _detectImageUrlFromRecord(record);
         if (question.isNotEmpty) {
           list.add(_ChatMessage(
             fromUser: true,
             text: question,
             scene: scene,
             createdAt: createdAt,
+            imageUrl: imageUrl,
           ));
         }
         if (answer.isNotEmpty || detect != null) {
@@ -389,13 +392,20 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   Future<void> _toggleSpeak(String id, String text) async {
-    if (TtsService.speakingId == id) {
+    if (TtsService.speakingId == id || _ttsPendingId == id) {
       await TtsService.stop();
-      if (mounted) setState(() {});
+      if (mounted) setState(() => _ttsPendingId = null);
       return;
     }
-    await TtsService.speak(text, id: id);
-    if (mounted) setState(() {});
+    setState(() => _ttsPendingId = id);
+    final started = await TtsService.speak(text, id: id);
+    if (!mounted) return;
+    setState(() {
+      if (_ttsPendingId == id) _ttsPendingId = null;
+    });
+    if (!started) {
+      toast(context, '语音播报暂时不可用，请稍后重试', error: true);
+    }
   }
 
   Future<void> _pickAndDetect(ImageSource source) async {
@@ -615,7 +625,6 @@ class _AiChatPageState extends State<AiChatPage> {
       ),
       body: Column(
         children: [
-          _sceneBar(),
           Expanded(
             child: _loadingHistory
                 ? const Loading(text: '加载对话历史')
@@ -640,37 +649,6 @@ class _AiChatPageState extends State<AiChatPage> {
           ),
           _inputBar(),
         ],
-      ),
-    );
-  }
-
-  Widget _sceneBar() {
-    const scenes = [
-      ('GENERAL', '综合'),
-      ('AGRI', '农技'),
-      ('POLICY', '政策'),
-      ('LEGAL', '法律'),
-    ];
-    return Container(
-      color: AppColors.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final scene in scenes)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(scene.$2),
-                  selected: _scene == scene.$1,
-                  selectedColor:
-                      AppColors.primaryContainer.withValues(alpha: 0.16),
-                  onSelected: (_) => setState(() => _scene = scene.$1),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }
@@ -832,6 +810,7 @@ class _AiChatPageState extends State<AiChatPage> {
 
   Widget _textBotBubbleBody(_ChatMessage msg, bool speakable, String ttsId) {
     final speaking = speakable && TtsService.speakingId == ttsId;
+    final preparing = speakable && _ttsPendingId == ttsId;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
@@ -888,15 +867,21 @@ class _AiChatPageState extends State<AiChatPage> {
               if (speakable) ...[
                 const Spacer(),
                 Icon(
-                  speaking
-                      ? Icons.stop_circle_outlined
-                      : Icons.volume_up_outlined,
+                  preparing
+                      ? Icons.hourglass_empty_rounded
+                      : speaking
+                          ? Icons.stop_circle_outlined
+                          : Icons.volume_up_outlined,
                   size: 15,
                   color: AppColors.primary,
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  speaking ? '点按停止' : '点按朗读',
+                  preparing
+                      ? '正在生成'
+                      : speaking
+                          ? '点按停止'
+                          : '点按朗读',
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontSize: 11,
@@ -1231,16 +1216,34 @@ class _AiChatPageState extends State<AiChatPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (msg.image != null) ...[
+                if (_bubbleImageProvider(msg) != null) ...[
                   GestureDetector(
-                    onTap: () => _showImagePreview(msg.image!),
+                    onTap: () =>
+                        _showImagePreview(_bubbleImageProvider(msg)!),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(R.sm),
-                      child: Image.memory(
-                        msg.image!,
+                      child: Image(
+                        image: _bubbleImageProvider(msg)!,
                         width: 160,
                         height: 160,
                         fit: BoxFit.cover,
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return _imagePlaceholder(
+                            const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => _imagePlaceholder(
+                          const Icon(Icons.broken_image_outlined,
+                              color: Colors.white70, size: 28),
+                        ),
                       ),
                     ),
                   ),
@@ -1280,7 +1283,24 @@ class _AiChatPageState extends State<AiChatPage> {
     );
   }
 
-  void _showImagePreview(Uint8List bytes) {
+  /// 用户气泡里的图片来源：实时发送用内存字节（Image.memory），
+  /// 历史回显用后端 URL（Image.network）。
+  ImageProvider? _bubbleImageProvider(_ChatMessage msg) {
+    if (msg.image != null) return MemoryImage(msg.image!);
+    final url = msg.imageUrl;
+    if (url != null && url.isNotEmpty) return NetworkImage(url);
+    return null;
+  }
+
+  Widget _imagePlaceholder(Widget child) => Container(
+        width: 160,
+        height: 160,
+        color: Colors.black.withValues(alpha: 0.18),
+        alignment: Alignment.center,
+        child: child,
+      );
+
+  void _showImagePreview(ImageProvider provider) {
     showDialog<void>(
       context: context,
       barrierColor: Colors.black87,
@@ -1294,7 +1314,7 @@ class _AiChatPageState extends State<AiChatPage> {
                 minScale: 0.8,
                 maxScale: 5,
                 child: Center(
-                  child: Image.memory(bytes, fit: BoxFit.contain),
+                  child: Image(image: provider, fit: BoxFit.contain),
                 ),
               ),
             ),
@@ -1350,6 +1370,21 @@ class _AiChatPageState extends State<AiChatPage> {
       return _detectResultOf(detect.map((k, v) => MapEntry('$k', v)));
     }
     return null;
+  }
+
+  /// 从历史记录里取出识图时上传的图片 URL（与 ai_threads_page 列表页同口径）：
+  /// referencesJson.imageUrl → referencesJson.detect.imageUrl → record.imageUrl，
+  /// 解析为绝对地址供 Image.network 加载。无图返回 null。
+  String? _detectImageUrlFromRecord(Map<String, dynamic> record) {
+    final refs = _jsonMap(record['referencesJson']);
+    var url = _text(refs['imageUrl']);
+    final detect = refs['detect'];
+    if (url.isEmpty && detect is Map) {
+      url = _text(detect['imageUrl']);
+    }
+    if (url.isEmpty) url = _text(record['imageUrl']);
+    if (url.isEmpty) return null;
+    return ApiClient.resolveImageUrl(url);
   }
 
   String _sceneLabel(String scene) {
@@ -1679,6 +1714,7 @@ class _ChatMessage {
   final String? subText;
   final String? scene;
   final Uint8List? image;
+  final String? imageUrl;
   final _DetectResult? detect;
   final bool streaming;
   final DateTime createdAt;
@@ -1689,6 +1725,7 @@ class _ChatMessage {
     this.subText,
     this.scene,
     this.image,
+    this.imageUrl,
     this.detect,
     this.streaming = false,
     DateTime? createdAt,
@@ -1701,6 +1738,7 @@ class _ChatMessage {
         subText: subText ?? this.subText,
         scene: scene,
         image: image,
+        imageUrl: imageUrl,
         detect: detect,
         streaming: streaming ?? this.streaming,
         createdAt: createdAt,
