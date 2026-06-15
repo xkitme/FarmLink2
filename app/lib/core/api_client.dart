@@ -32,7 +32,7 @@ class ApiClient {
   static String? get token => _token;
 
   static Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
         if (_token != null) 'Authorization': 'Bearer $_token',
       };
 

@@ -42,7 +42,11 @@ class TtsService {
     final mySeq = ++_seq; // 防并发：合成期间又点了别条时，丢弃过期结果
     try {
       await _player.stop();
-      final bytes = await ApiClient.postBytes('/ai/tts', body: {'text': content});
+      final bytes = await ApiClient.postBytes(
+        '/ai/tts',
+        body: {'text': content},
+        timeout: const Duration(seconds: 90),
+      );
       if (bytes.isEmpty || mySeq != _seq) {
         if (mySeq == _seq) _speakingId = null;
         return false;

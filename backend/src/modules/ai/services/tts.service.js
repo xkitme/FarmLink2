@@ -14,7 +14,7 @@ function baseUrl() {
 }
 
 /** 合成中文语音，返回 WAV 音频 Buffer（PCM16 / 24kHz / 单声道）。 */
-export async function synthSpeech(text, { voice, speed } = {}, timeoutMs = 30000) {
+export async function synthSpeech(text, { voice, speed } = {}, timeoutMs = 90000) {
   const res = await fetch(`${baseUrl()}/tts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
