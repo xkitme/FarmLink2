@@ -81,7 +81,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final media = MediaQuery.of(context);
-          final compact = constraints.maxHeight < 720;
+          // 阈值覆盖 Pixel 2(731) 一类中等高度机型,避免高 hero 挤出底部提交按钮。
+          final compact = constraints.maxHeight < 820;
           final heroHeight = (constraints.maxHeight * (compact ? 0.28 : 0.36))
               .clamp(160.0, 300.0)
               .toDouble();
