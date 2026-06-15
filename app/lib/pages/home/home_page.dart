@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/site_images.dart';
 import '../../core/feature_catalog.dart';
@@ -40,10 +42,13 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
+    final isAdmin = context.read<AuthState>().user?.role == 'ADMIN';
     final results = await Future.wait<dynamic>([
       _loadWeatherSnapshot(),
       _loadTodoRecords(),
-      _loadDashboardExtras(),
+      isAdmin
+          ? _loadDashboardExtras()
+          : Future.value({'policy': null, 'stats': null}),
       _loadPrices(),
       _loadSubsidy(),
       NotificationState.refresh().then((_) => null),
@@ -186,6 +191,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isAdmin = context.watch<AuthState>().user?.role == 'ADMIN';
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const FarmAppBar(title: '田园通'),
@@ -214,7 +220,7 @@ class _HomePageState extends State<HomePage> {
                       .animate(delay: 60.ms)
                       .fadeIn(duration: 340.ms)
                       .slideY(begin: 0.06),
-                  if (_hasPlatformStats) ...[
+                  if (isAdmin && _hasPlatformStats) ...[
                     const SizedBox(height: 14),
                     _platformStatsStrip()
                         .animate(delay: 90.ms)

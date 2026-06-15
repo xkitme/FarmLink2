@@ -47,6 +47,7 @@ function normalizeStatReport(row) {
 
 /** 农情数据看板：汇总平台业务数据。 */
 export async function dashboard(req, res) {
+  const isAdmin = req.user.role === 'ADMIN'
   const regionWhere = whereByRegion(req)
   const userWhere = req.user.role === 'ADMIN' || req.user.role === 'VILLAGE' ? {} : { userId: req.user.id }
   const plotWhere = { ...regionWhere, ...(req.user.role === 'ADMIN' || req.user.role === 'VILLAGE' ? {} : { userId: req.user.id }) }
@@ -92,9 +93,9 @@ export async function dashboard(req, res) {
     prisma.syncLog.findMany({ where: req.user.role === 'ADMIN' ? {} : { userId: req.user.id }, orderBy: { syncedAt: 'desc' }, take: 8 }),
     prisma.aiQaRecord.count({ where: req.user.role === 'ADMIN' ? {} : { userId: req.user.id } }),
     prisma.aiDetectRecord.count({ where: req.user.role === 'ADMIN' ? {} : { userId: req.user.id } }),
-    prisma.landPlot.findMany({ select: { areaMu: true, cropType: true } }),
-    prisma.aiQaRecord.count(),
-    prisma.aiDetectRecord.count(),
+    isAdmin ? prisma.landPlot.findMany({ select: { areaMu: true, cropType: true } }) : Promise.resolve([]),
+    isAdmin ? prisma.aiQaRecord.count() : Promise.resolve(0),
+    isAdmin ? prisma.aiDetectRecord.count() : Promise.resolve(0),
     prisma.policy.findFirst({
       where: {
         status: 1,
@@ -157,13 +158,15 @@ export async function dashboard(req, res) {
       policyCount,
       aiCallCount: aiQaCount + aiDetectCount,
     },
-    platformStats: {
-      farmerCount: userCount,
-      totalAreaMu: platformTotalAreaMu,
-      cropTypeCount: platformCropTypeCount,
-      aiServiceCount: platformAiQaCount + platformAiDetectCount,
-      orderCount,
-    },
+    platformStats: isAdmin
+      ? {
+          farmerCount: userCount,
+          totalAreaMu: platformTotalAreaMu,
+          cropTypeCount: platformCropTypeCount,
+          aiServiceCount: platformAiQaCount + platformAiDetectCount,
+          orderCount,
+        }
+      : null,
     cropArea: [...cropMap.values()].sort((a, b) => b.areaMu - a.areaMu),
     farmRecordTypes: [...recordTypeMap.entries()].map(([type, count]) => ({ type, count })),
     disasterStats: [...disasterMap.values()].sort((a, b) => b.loss - a.loss),
