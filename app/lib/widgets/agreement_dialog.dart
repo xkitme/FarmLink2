@@ -273,6 +273,12 @@ class _AgreementDialogState extends State<AgreementDialog>
   Widget _scrollContent() {
     return Scrollbar(
       controller: _scrollController,
+      // 常显 + 可手动拖拽：移动端默认滚动条只在滚动时短暂出现且不可拖，
+      // 这里强制常显并开启交互，方便用户拖到底（同意按钮需读到底才激活）。
+      thumbVisibility: true,
+      interactive: true,
+      thickness: 6,
+      radius: const Radius.circular(3),
       // 全量布局，总高度精确恒定：滚动条不乱跳、不每帧重估，滚动顺滑。
       child: SingleChildScrollView(
         controller: _scrollController,
