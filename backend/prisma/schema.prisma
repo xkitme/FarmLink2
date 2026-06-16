@@ -34,6 +34,7 @@ model User {
   villageName       String?
   realName          String?
   points            Int       @default(0)
+  growth            Int       @default(0) // 成长值（累计，只增不减，用于等级体系）
   isElderMode       Boolean   @default(false)
   status            Int       @default(1) // 1正常 0禁用
   lastLoginAt       DateTime?

@@ -53,7 +53,7 @@ export const RESOURCE_CONFIGS = {
     title: '用户与角色',
     model: 'user',
     searchFields: ['username', 'nickname', 'phone', 'realName', 'villageName'],
-    listFields: ['id', 'username', 'nickname', 'role', 'phone', 'regionCode', 'points', 'status', 'createdAt'],
+    listFields: ['id', 'username', 'nickname', 'role', 'phone', 'regionCode', 'points', 'growth', 'status', 'createdAt'],
     fields: [
       field('username', '用户名', 'string', { required: true }),
       field('password', '初始密码', 'password', { createOnly: true, placeholder: '不填则默认为 123456' }),
@@ -64,6 +64,7 @@ export const RESOURCE_CONFIGS = {
       field('villageName', '所属村'),
       field('realName', '实名'),
       field('points', '积分', 'int'),
+      field('growth', '成长值', 'int', { placeholder: '累计成长值，跨阈值自动升级（新芽/幼苗/拔节/抽穗/金穗/丰仓）' }),
       field('isElderMode', '适老模式', 'boolean'),
       field('status', '状态', 'int'),
     ],

@@ -54,7 +54,7 @@ async function main() {
   const pwd = await bcrypt.hash('123456', 10)
   const mkUser = (username, nickname, role, realName, phone) => ({
     username, nickname, role, realName, phone,
-    passwordHash: pwd, regionCode: VILLAGE, villageName: '松华村', points: 0,
+    passwordHash: pwd, regionCode: VILLAGE, villageName: '松华村', points: 0, growth: 0,
   })
   await prisma.user.createMany({
     data: [
@@ -87,6 +87,10 @@ async function main() {
   await prisma.user.update({ where: { id: farmer.id }, data: { points: 65 } })
   await prisma.user.update({ where: { id: bigfarmer.id }, data: { points: 76 } })
   await prisma.user.update({ where: { id: village.id }, data: { points: 95 } })
+  // 成长值（累计，与积分分离）：跨阈值即升级（新芽/幼苗/拔节/抽穗/金穗/丰仓）。
+  await prisma.user.update({ where: { id: farmer.id }, data: { growth: 320 } }) // 拔节，距抽穗 280
+  await prisma.user.update({ where: { id: bigfarmer.id }, data: { growth: 760 } }) // 抽穗，距金穗 240
+  await prisma.user.update({ where: { id: village.id }, data: { growth: 1180 } }) // 金穗，距丰仓 820
 
   // ── API 功能开关 ──────────────────────────────────
   await prisma.apiSwitch.createMany({

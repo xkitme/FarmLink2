@@ -3,12 +3,23 @@ import { prisma } from '../../db.js'
 import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams } from '../../utils/page.js'
 import { sanitizeUser } from './auth.controller.js'
+import { growthInfo } from './growth.js'
 
-/** 个人资料 */
+/** 个人资料（附带成长值/等级信息，前端 hero 与个人资料页共用） */
 export async function getProfile(req, res) {
   const user = await prisma.user.findUnique({ where: { id: req.user.id } })
   if (!user) throw errors.notFound('用户不存在')
-  ok(res, sanitizeUser(user))
+  ok(res, { ...sanitizeUser(user), growthInfo: growthInfo(user.growth) })
+}
+
+/** 成长值与等级（独立端点，供 hero / 个人资料页按需拉取） */
+export async function getGrowth(req, res) {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { growth: true },
+  })
+  if (!user) throw errors.notFound('用户不存在')
+  ok(res, growthInfo(user.growth))
 }
 
 /** 更新个人资料 */

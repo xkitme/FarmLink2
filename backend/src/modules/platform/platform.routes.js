@@ -32,6 +32,7 @@ router.put('/user/profile',     requireAuth, wrap(user.updateProfile))
 router.put('/user/password',    requireAuth, wrap(user.updatePassword))
 router.get('/user/points',      requireAuth, wrap(user.getPoints))
 router.get('/user/points/log',  requireAuth, wrap(user.getPointsLog))
+router.get('/user/growth',      requireAuth, wrap(user.getGrowth))
 
 // ── 通知 ────────────────────────────────────
 router.get('/notification/list',      requireAuth, wrap(noti.list))

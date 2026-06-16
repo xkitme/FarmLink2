@@ -6,6 +6,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/offline_sync_queue.dart';
+import '../../models/user.dart';
 import '../../widgets/common.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -22,6 +23,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic> _dashboard = {};
   Map<String, dynamic> _syncStatus = {};
   List<SyncQueueItem> _queue = [];
+  GrowthInfo? _growth;
 
   @override
   void initState() {
@@ -46,11 +48,13 @@ class _ProfilePageState extends State<ProfilePage> {
       final results = await Future.wait<dynamic>([
         ApiClient.get('/data/dashboard'),
         ApiClient.get('/data/sync/status'),
+        ApiClient.get('/user/growth'),
       ]);
       if (!mounted) return;
       setState(() {
         _dashboard = _map(results[0]);
         _syncStatus = _map(results[1]);
+        _growth = GrowthInfo.fromJson(_map(results[2]));
         _queue = queue;
         _error = null;
         _loading = false;
@@ -142,12 +146,10 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ── Hero：绿色渐变 + 圆形头像 + 成长值 + 角色/村庄徽标 ──────────
+  // ── Hero：绿色渐变 + 圆形头像 + 成长值/等级 + 角色/村庄徽标 ──────
   Widget _profileHero(BuildContext context, dynamic user) {
-    final points = _int(user?.points);
-    final nextLevelAt = ((points ~/ 100) + 1) * 100;
-    final remaining = nextLevelAt - points;
-    final growthText = user == null ? '登录后解锁成长体系' : '距下一等级还差 $remaining 成长值';
+    final g = _growth;
+    final growthText = user == null ? '登录后解锁成长体系' : (g?.headline ?? '正在读取成长值…');
 
     return Material(
       color: Colors.transparent,
@@ -196,15 +198,25 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          user?.displayName ?? '未登录',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 21,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                user?.displayName ?? '未登录',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            if (g != null) ...[
+                              const SizedBox(width: 8),
+                              _levelChip(g),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 6),
                         Row(
@@ -226,6 +238,20 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ],
                         ),
+                        if (g != null && !g.isMax) ...[
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(R.sm),
+                            child: LinearProgressIndicator(
+                              value: g.progress.clamp(0.0, 1.0),
+                              minHeight: 5,
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.22),
+                              valueColor: const AlwaysStoppedAnimation(
+                                  AppColors.primaryDim),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
@@ -262,6 +288,32 @@ class _ProfilePageState extends State<ProfilePage> {
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
+        ),
+      );
+
+  /// 等级胶囊：金穗色描边底，`Lv3 拔节`。
+  Widget _levelChip(GrowthInfo g) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: AppColors.gold.withValues(alpha: 0.22),
+          borderRadius: BorderRadius.circular(R.sm),
+          border: Border.all(
+              color: AppColors.gold.withValues(alpha: 0.85), width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.eco, size: 12, color: Colors.white),
+            const SizedBox(width: 3),
+            Text(
+              'Lv${g.level} ${g.levelName}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
       );
 
