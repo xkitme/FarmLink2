@@ -111,14 +111,18 @@ class _ProfilePageState extends State<ProfilePage> {
                         AlertBanner(_error!, critical: false),
                         const SizedBox(height: 12),
                       ],
-                      _profileHero(user),
-                      const SizedBox(height: 16),
-                      _overview(cards),
+                      // 渐变 hero + 概览卡（概览卡上移 24，叠压 hero 底缘）
+                      _profileHero(context, user),
+                      Transform.translate(
+                        offset: const Offset(0, -24),
+                        child: _overview(context, cards),
+                      ),
+                      _entryCards(context),
                       const SizedBox(height: 16),
                       _syncPanel(),
                       const SectionTitle('我的事务'),
-                      _menuPanel(context),
-                      const SizedBox(height: 20),
+                      _taskGrid(context),
+                      const SizedBox(height: 24),
                       OutlinedButton.icon(
                         onPressed: () async {
                           await auth.logout();
@@ -138,95 +142,266 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _profileHero(dynamic user) {
-    return _flatBox(
-      Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(R.md),
-            ),
-            child: const Icon(Icons.person, size: 36, color: AppColors.primary),
+  // ── Hero：绿色渐变 + 圆形头像 + 成长值 + 角色/村庄徽标 ──────────
+  Widget _profileHero(BuildContext context, dynamic user) {
+    final points = _int(user?.points);
+    final nextLevelAt = ((points ~/ 100) + 1) * 100;
+    final remaining = nextLevelAt - points;
+    final growthText = user == null ? '登录后解锁成长体系' : '距下一等级还差 $remaining 成长值';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push('/profile/settings/account'),
+        borderRadius: BorderRadius.circular(R.md),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: AppColors.heroGradient,
+            borderRadius: BorderRadius.circular(R.md),
+            boxShadow: AppColors.ambientShadow,
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user?.displayName ?? '未登录',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface,
-                  ),
+          padding: const EdgeInsets.fromLTRB(20, 22, 16, 40),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // 右侧淡水印
+              Positioned(
+                right: -6,
+                top: -6,
+                child: Icon(
+                  Icons.agriculture,
+                  size: 92,
+                  color: Colors.white.withValues(alpha: 0.10),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    _whiteBadge(kRoleLabels[user?.role] ?? '农户'),
-                    _whiteBadge(user?.villageName ?? '幸福村'),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+              ),
+              Row(
+                children: [
+                  // 圆形头像 + 白环
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.15),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        width: 2,
+                      ),
+                    ),
+                    child:
+                        const Icon(Icons.person, size: 34, color: Colors.white),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.stars_rounded,
-                            color: AppColors.gold, size: 16),
-                        const SizedBox(width: 3),
                         Text(
-                          '${user?.points ?? 0} 积分',
+                          user?.displayName ?? '未登录',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: AppColors.onSurface,
-                            fontSize: 13,
+                            fontSize: 21,
                             fontWeight: FontWeight.w700,
+                            color: Colors.white,
                           ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(Icons.trending_up_rounded,
+                                size: 15,
+                                color: Colors.white.withValues(alpha: 0.85)),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                growthText,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _heroBadge(kRoleLabels[user?.role] ?? '农户'),
+                            _heroBadge(user?.villageName ?? '幸福村'),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                  Icon(Icons.chevron_right,
+                      color: Colors.white.withValues(alpha: 0.85)),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-      padding: const EdgeInsets.all(20),
     );
   }
 
-  Widget _whiteBadge(String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  Widget _heroBadge(String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
-          color: AppColors.primaryContainer.withValues(alpha: 0.10),
+          color: Colors.white.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(R.sm),
-          border: Border.all(color: AppColors.outlineVariant, width: 1),
         ),
         child: Text(
           text,
-          style:
-              const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       );
 
-  Widget _overview(Map<String, dynamic> cards) {
-    return _flatBox(
-      Row(
+  // ── 概览：4 项数据，叠压在 hero 底部的白卡 ──────────────────
+  Widget _overview(BuildContext context, Map<String, dynamic> cards) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(R.md),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+        boxShadow: AppColors.ambientShadow,
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
         children: [
-          _stat('地块', '${_int(cards['plotCount'])}'),
+          _stat(context, '地块', _int(cards['plotCount']), '/agri'),
           _divider(),
-          _stat('农事', '${_int(cards['recordCount'])}'),
+          _stat(context, '农事', _int(cards['recordCount']), '/agri'),
           _divider(),
-          _stat('订单', '${_int(cards['orderCount'])}'),
+          _stat(context, '订单', _int(cards['orderCount']), '/market'),
           _divider(),
-          _stat('AI', '${_int(cards['aiCallCount'])}'),
+          _stat(context, 'AI', _int(cards['aiCallCount']), '/ai'),
         ],
+      ),
+    );
+  }
+
+  Widget _stat(BuildContext context, String label, int value, String route) =>
+      Expanded(
+        child: InkWell(
+          onTap: () => context.push(route),
+          borderRadius: BorderRadius.circular(R.sm),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              children: [
+                Text('$value',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary)),
+                const SizedBox(height: 2),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.onSurfaceVariant)),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  Widget _divider() =>
+      Container(width: 1, height: 30, color: AppColors.outlineVariant);
+
+  // ── 两张大入口卡：我的订单 / 我的发布 ───────────────────────
+  Widget _entryCards(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _entryCard(
+            context,
+            icon: Icons.receipt_long_outlined,
+            tint: AppColors.primary,
+            title: '我的订单',
+            subtitle: '查看全部订单',
+            route: '/market',
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _entryCard(
+            context,
+            icon: Icons.campaign_outlined,
+            tint: AppColors.secondary,
+            title: '我的发布',
+            subtitle: '管理我的发布',
+            route: '/publish',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _entryCard(
+    BuildContext context, {
+    required IconData icon,
+    required Color tint,
+    required String title,
+    required String subtitle,
+    required String route,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(route),
+        borderRadius: BorderRadius.circular(R.md),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(R.md),
+            border: Border.all(color: AppColors.outlineVariant, width: 1),
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: tint.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(R.sm),
+                ),
+                child: Icon(icon, color: tint, size: 22),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onSurface)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -266,7 +441,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   height: 44,
                   decoration: BoxDecoration(
                     color: AppColors.primaryContainer.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(R.md),
+                    borderRadius: BorderRadius.circular(R.sm),
                   ),
                   child: const Icon(Icons.sync_alt_rounded,
                       color: AppColors.primary),
@@ -337,29 +512,83 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _menuPanel(BuildContext context) {
+  // ── 我的事务：4 列图标宫格 ──────────────────────────────────
+  Widget _taskGrid(BuildContext context) {
+    const items = <_TaskItem>[
+      _TaskItem(Icons.eco_outlined, '农事记录', '/agri'),
+      _TaskItem(Icons.thunderstorm_outlined, '灾情记录', '/disaster'),
+      _TaskItem(Icons.assignment_turned_in_outlined, '政策申请', '/policy/service'),
+      _TaskItem(Icons.insights_outlined, '数据看板', '/data'),
+      _TaskItem(Icons.notifications_none_rounded, '消息通知', '/messages'),
+      _TaskItem(Icons.agriculture_outlined, '农机服务', '/machinery/service'),
+      _TaskItem(Icons.elderly_outlined, '适老模式', '/profile/settings/elder',
+          badge: '新'),
+      _TaskItem(Icons.settings_outlined, '设置', '/profile/settings'),
+    ];
+
     return _flatBox(
-      Column(
+      GridView.count(
+        crossAxisCount: 4,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 4,
+        crossAxisSpacing: 4,
+        childAspectRatio: 0.92,
         children: [
-          _menu(context, Icons.receipt_long_outlined, '我的订单', '/market'),
-          _line(),
-          _menu(context, Icons.add_circle_outline, '我的发布', '/publish'),
-          _line(),
-          _menu(context, Icons.eco_outlined, '农事记录', '/agri'),
-          _line(),
-          _menu(context, Icons.thunderstorm_outlined, '灾情记录', '/disaster'),
-          _line(),
-          _menu(context, Icons.assignment_turned_in_outlined, '政策申请',
-              '/policy/service'),
-          _line(),
-          _menu(context, Icons.insights_outlined, '数据看板', '/data'),
-          _line(),
-          _menu(context, Icons.notifications_none_rounded, '消息通知', '/messages'),
-          _line(),
-          _menu(context, Icons.settings_outlined, '设置', '/profile/settings'),
+          for (final item in items) _taskCell(context, item),
         ],
       ),
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+    );
+  }
+
+  Widget _taskCell(BuildContext context, _TaskItem item) {
+    return InkWell(
+      onTap: () => context.push(item.route),
+      borderRadius: BorderRadius.circular(R.sm),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(R.sm),
+                ),
+                child: Icon(item.icon, color: AppColors.primary, size: 24),
+              ),
+              if (item.badge != null)
+                Positioned(
+                  right: -6,
+                  top: -6,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(R.sm),
+                    ),
+                    child: Text(item.badge!,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 12, color: AppColors.onSurfaceVariant)),
+        ],
+      ),
     );
   }
 
@@ -369,7 +598,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final box = Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(R.sm),
+        borderRadius: BorderRadius.circular(R.md),
         border: Border.all(color: AppColors.outlineVariant, width: 1),
       ),
       padding: padding,
@@ -380,47 +609,9 @@ class _ProfilePageState extends State<ProfilePage> {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(R.sm),
+        borderRadius: BorderRadius.circular(R.md),
         child: box,
       ),
-    );
-  }
-
-  Widget _stat(String label, String value) => Expanded(
-        child: Column(
-          children: [
-            Text(value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary)),
-            const SizedBox(height: 2),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 12, color: AppColors.onSurfaceVariant)),
-          ],
-        ),
-      );
-
-  Widget _divider() =>
-      Container(width: 1, height: 32, color: AppColors.outlineVariant);
-
-  Widget _line() => const Divider(height: 1, indent: 56);
-
-  Widget _menu(
-      BuildContext context, IconData icon, String label, String route) {
-    return _menuAction(context, icon, label, () => context.push(route));
-  }
-
-  Widget _menuAction(
-      BuildContext context, IconData icon, String label, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primary),
-      title: Text(label, style: const TextStyle(fontSize: 15)),
-      trailing: const Icon(Icons.chevron_right, color: AppColors.outline),
-      onTap: onTap,
     );
   }
 
@@ -435,4 +626,12 @@ class _ProfilePageState extends State<ProfilePage> {
     if (value is num) return value.toInt();
     return int.tryParse('$value') ?? 0;
   }
+}
+
+class _TaskItem {
+  final IconData icon;
+  final String label;
+  final String route;
+  final String? badge;
+  const _TaskItem(this.icon, this.label, this.route, {this.badge});
 }
