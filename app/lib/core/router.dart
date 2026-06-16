@@ -32,6 +32,7 @@ import '../pages/screen/village_screen_page.dart';
 import '../pages/profile/profile_page.dart';
 import '../pages/profile/settings/about_page.dart';
 import '../pages/profile/settings/account_page.dart';
+import '../pages/profile/settings/account_edit_page.dart';
 import '../pages/profile/settings/elder_mode_page.dart';
 import '../pages/profile/settings/help_feedback_page.dart';
 import '../pages/profile/settings/password_page.dart';
@@ -184,6 +185,9 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
             GoRoute(
                 path: '/profile/settings/account',
                 builder: (_, __) => const AccountPage()),
+            GoRoute(
+                path: '/profile/settings/account/edit',
+                builder: (_, __) => const AccountEditPage()),
             GoRoute(
                 path: '/profile/settings/password',
                 builder: (_, __) => const PasswordPage()),

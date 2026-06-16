@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/auth_state.dart';
 import '../../../core/constants.dart';
-import '../../../core/site_images.dart';
 import '../../../models/user.dart';
-import '../../../widgets/common.dart';
+import 'profile_media.dart';
 
-/// 个人资料 ——「推特/X 资料页」版式：顶部宽幅封面 banner + 圆形头像叠压在 banner
-/// 左下缘（背景色描边「抠出」效果），其下名字 / @账号 / 角色·村庄元信息，再接成长值
-/// 与等级阶梯。下方无卡片，按「认证信息 / 个人资料」分组，载入逐段渐入。
-/// 账号/角色只读；昵称/真实姓名/手机号/所属村可编辑，保存走 PUT /user/profile。
+/// 个人界面（只读）——「推特/X 资料页」版式：封面 banner + 叠压头像 + 名字/@账号/
+/// 角色·村庄元信息 + 成长值与等级阶梯。右上「编辑资料」进入独立编辑页。
+/// 编辑全部字段（含头像 / banner / 账号 / 手机号等）在 `account_edit_page.dart`。
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
 
@@ -23,34 +20,29 @@ class AccountPage extends StatefulWidget {
 
 class _AccountPageState extends State<AccountPage>
     with SingleTickerProviderStateMixin {
-  static const String _banner = 'assets/images/generated/smart-farming.jpg';
+  static const String _bannerFallback =
+      'assets/images/generated/smart-farming.jpg';
   static const double _bannerH = 150;
   static const double _avatar = 84;
   static const double _overhang = 44;
 
-  late final TextEditingController _nickname;
-  late final TextEditingController _realName;
-  late final TextEditingController _phone;
-  late final TextEditingController _village;
   late final AnimationController _intro;
-  bool _saving = false;
   GrowthInfo? _growth;
 
   @override
   void initState() {
     super.initState();
-    final user = context.read<AuthState>().user;
-    _nickname = TextEditingController(text: user?.nickname ?? '');
-    _realName = TextEditingController(text: user?.realName ?? '');
-    _phone = TextEditingController(text: user?.phone ?? '');
-    _village = TextEditingController(text: user?.villageName ?? '');
     _intro = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 850))
       ..forward();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadGrowth());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
   }
 
-  Future<void> _loadGrowth() async {
+  Future<void> _refresh() async {
+    // 拉成长值；顺带刷新资料，保证编辑返回后看到最新值。
+    try {
+      await context.read<AuthState>().refreshProfile();
+    } catch (_) {}
     try {
       final data = await ApiClient.get('/user/growth');
       if (!mounted) return;
@@ -58,49 +50,13 @@ class _AccountPageState extends State<AccountPage>
         setState(() =>
             _growth = GrowthInfo.fromJson(Map<String, dynamic>.from(data)));
       }
-    } catch (_) {
-      // 成长值读取失败不阻断资料编辑，静默降级（隐藏成长阶梯）。
-    }
+    } catch (_) {}
   }
 
   @override
   void dispose() {
-    _nickname.dispose();
-    _realName.dispose();
-    _phone.dispose();
-    _village.dispose();
     _intro.dispose();
     super.dispose();
-  }
-
-  Future<void> _save() async {
-    final nickname = _nickname.text.trim();
-    final phone = _phone.text.trim();
-    if (nickname.isEmpty) {
-      toast(context, '昵称不能为空', error: true);
-      return;
-    }
-    if (phone.isNotEmpty && !RegExp(r'^1\d{10}$').hasMatch(phone)) {
-      toast(context, '请输入有效的 11 位手机号', error: true);
-      return;
-    }
-    setState(() => _saving = true);
-    try {
-      await ApiClient.put('/user/profile', body: {
-        'nickname': nickname,
-        'realName': _realName.text.trim(),
-        'phone': phone,
-        'villageName': _village.text.trim(),
-      });
-      if (!mounted) return;
-      await context.read<AuthState>().refreshProfile();
-      if (!mounted) return;
-      toast(context, '资料已更新');
-    } catch (e) {
-      if (mounted) toast(context, actionErrorMessage('保存', e), error: true);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
   }
 
   @override
@@ -117,71 +73,16 @@ class _AccountPageState extends State<AccountPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _reveal(1, _eyebrow('认证信息')),
-                _reveal(1, _readonlyRow('账号', user?.username ?? '-')),
+                _reveal(1, _eyebrow('账号资料')),
+                _reveal(1, _infoRow('账号', user?.username ?? '-')),
                 _reveal(1, const Divider(height: 1)),
-                _reveal(
-                    1, _readonlyRow('角色', kRoleLabels[user?.role] ?? '普通农户')),
-                const SizedBox(height: 26),
-                _reveal(2, _eyebrow('个人资料')),
-                _reveal(2,
-                    _field(controller: _nickname, label: '昵称', maxLength: 20)),
-                _reveal(
-                    3,
-                    _field(
-                      controller: _realName,
-                      label: '真实姓名',
-                      hint: '便于村委核验身份',
-                      maxLength: 20,
-                    )),
-                _reveal(
-                    3,
-                    _field(
-                      controller: _phone,
-                      label: '手机号',
-                      hint: '11 位手机号，便于接收通知',
-                      maxLength: 11,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    )),
-                _reveal(
-                    4,
-                    _field(
-                      controller: _village,
-                      label: '所属村',
-                      hint: '如：青禾村',
-                      maxLength: 40,
-                    )),
-                const SizedBox(height: 26),
-                _reveal(
-                    5,
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _saving ? null : _save,
-                        child: _saving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text('保存修改'),
-                      ),
-                    )),
-                const SizedBox(height: 12),
-                _reveal(
-                    5,
-                    const Center(
-                      child: Text(
-                        '账号如需变更，请联系村委或管理员',
-                        style: TextStyle(
-                            fontSize: 12, color: AppColors.onSurfaceVariant),
-                      ),
-                    )),
+                _reveal(1, _infoRow('真实姓名', _orDash(user?.realName))),
+                _reveal(1, const Divider(height: 1)),
+                _reveal(2, _infoRow('手机号', _orDash(user?.phone))),
+                _reveal(2, const Divider(height: 1)),
+                _reveal(2, _infoRow('所属村', _orDash(user?.villageName))),
+                _reveal(2, const Divider(height: 1)),
+                _reveal(2, _infoRow('角色', kRoleLabels[user?.role] ?? '普通农户')),
               ],
             ),
           ),
@@ -190,7 +91,6 @@ class _AccountPageState extends State<AccountPage>
     );
   }
 
-  /// 载入逐段渐入：按 step 错峰，淡入 + 轻微上移。
   Widget _reveal(int step, Widget child) {
     final start = (step * 0.1).clamp(0.0, 0.6);
     final anim = CurvedAnimation(
@@ -211,7 +111,7 @@ class _AccountPageState extends State<AccountPage>
     );
   }
 
-  // ── 推特式头部：封面 banner + 叠压头像 + 名字/@账号/元信息 + 成长 ──────
+  // ── 推特式头部 ────────────────────────────────────────────
   Widget _header(BuildContext context, dynamic user) {
     final topInset = MediaQuery.of(context).padding.top;
     final g = _growth;
@@ -228,7 +128,6 @@ class _AccountPageState extends State<AccountPage>
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // 封面 banner
               Positioned(
                 top: 0,
                 left: 0,
@@ -237,8 +136,9 @@ class _AccountPageState extends State<AccountPage>
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    const SiteImage(_banner, fit: BoxFit.cover),
-                    // 顶部轻压暗：保证返回箭头可读
+                    ProfileBanner(
+                        url: user?.bannerUrl as String?,
+                        fallbackAsset: _bannerFallback),
                     const DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -256,15 +156,33 @@ class _AccountPageState extends State<AccountPage>
                   ],
                 ),
               ),
-              // 头像：叠压 banner 左下缘，背景色描边「抠出」
               Positioned(
                 left: 16,
                 top: _bannerH - _overhang,
-                child: _avatarWidget(initial),
+                child: ProfileAvatar(
+                    url: user?.avatarUrl as String?,
+                    initial: initial,
+                    size: _avatar),
               ),
-              // 等级胶囊：banner 右下、名字行之上（对应推特「编辑资料」位）
-              if (g != null)
-                Positioned(right: 16, top: _bannerH + 12, child: _levelPill(g)),
+              Positioned(
+                right: 16,
+                top: _bannerH + 12,
+                child: OutlinedButton(
+                  onPressed: () =>
+                      context.push('/profile/settings/account/edit'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 38),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    side: const BorderSide(
+                        color: AppColors.outlineVariant, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(R.sm)),
+                  ),
+                  child: const Text('编辑资料',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                ),
+              ),
             ],
           ),
         ),
@@ -273,16 +191,26 @@ class _AccountPageState extends State<AccountPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                user?.displayName ?? '未登录',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.onSurface,
-                  fontSize: 23,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.2,
-                ),
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      user?.displayName ?? '未登录',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.onSurface,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                  if (g != null) ...[
+                    const SizedBox(width: 8),
+                    _levelPill(g),
+                  ],
+                ],
               ),
               const SizedBox(height: 2),
               Text(
@@ -290,9 +218,7 @@ class _AccountPageState extends State<AccountPage>
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: AppColors.onSurfaceVariant,
-                  fontSize: 14,
-                ),
+                    color: AppColors.onSurfaceVariant, fontSize: 14),
               ),
               const SizedBox(height: 10),
               Wrap(
@@ -317,39 +243,8 @@ class _AccountPageState extends State<AccountPage>
     );
   }
 
-  Widget _avatarWidget(String? initial) => Container(
-        width: _avatar,
-        height: _avatar,
-        padding: const EdgeInsets.all(4),
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppColors.background,
-        ),
-        child: Container(
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [Color(0xFF2E7D32), Color(0xFF0D631B)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: initial != null
-              ? Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                  ),
-                )
-              : const Icon(Icons.person, size: 40, color: Colors.white),
-        ),
-      );
-
   Widget _levelPill(GrowthInfo g) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
         decoration: BoxDecoration(
           color: AppColors.gold.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(R.sm),
@@ -358,15 +253,14 @@ class _AccountPageState extends State<AccountPage>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.spa_rounded, size: 13, color: AppColors.tertiary),
-            const SizedBox(width: 4),
+            const Icon(Icons.spa_rounded, size: 12, color: AppColors.tertiary),
+            const SizedBox(width: 3),
             Text(
               'Lv${g.level} ${g.levelName}',
               style: const TextStyle(
-                color: AppColors.tertiary,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
+                  color: AppColors.tertiary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800),
             ),
           ],
         ),
@@ -377,48 +271,35 @@ class _AccountPageState extends State<AccountPage>
         children: [
           Icon(icon, size: 15, color: AppColors.onSurfaceVariant),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: const TextStyle(
-                color: AppColors.onSurfaceVariant, fontSize: 13),
-          ),
+          Text(text,
+              style: const TextStyle(
+                  color: AppColors.onSurfaceVariant, fontSize: 13)),
         ],
       );
 
-  /// 成长值大字 + 距下一级文案
   Widget _growthHeader(GrowthInfo g) => Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(
-            '${g.growth}',
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              height: 1.0,
-            ),
-          ),
+          Text('${g.growth}',
+              style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0)),
           const Padding(
             padding: EdgeInsets.only(left: 5, bottom: 2),
-            child: Text(
-              '成长值',
-              style: TextStyle(
-                color: AppColors.onSurfaceVariant,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: Text('成长值',
+                style: TextStyle(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
           ),
           const Spacer(),
           Padding(
             padding: const EdgeInsets.only(bottom: 2),
-            child: Text(
-              g.headline,
-              style: const TextStyle(
-                color: AppColors.onSurfaceVariant,
-                fontSize: 12.5,
-              ),
-            ),
+            child: Text(g.headline,
+                style: const TextStyle(
+                    color: AppColors.onSurfaceVariant, fontSize: 12.5)),
           ),
         ],
       );
@@ -438,21 +319,17 @@ class _AccountPageState extends State<AccountPage>
         ),
       );
 
-  // ── 下方分组 ────────────────────────────────────────────
   Widget _eyebrow(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.primary,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 2,
-          ),
-        ),
+        child: Text(text,
+            style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2)),
       );
 
-  Widget _readonlyRow(String label, String value) => Padding(
+  Widget _infoRow(String label, String value) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 13),
         child: Row(
           children: [
@@ -460,53 +337,26 @@ class _AccountPageState extends State<AccountPage>
                 style: const TextStyle(
                     color: AppColors.onSurfaceVariant, fontSize: 14)),
             const Spacer(),
-            Text(value,
-                style: const TextStyle(
-                    color: AppColors.onSurface,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700)),
+            Flexible(
+              child: Text(value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                      color: AppColors.onSurface,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700)),
+            ),
           ],
         ),
       );
 
-  /// 利落方角小圆角 + 描边输入框（R.sm），禁胶囊
-  Widget _field({
-    required TextEditingController controller,
-    required String label,
-    String? hint,
-    int? maxLength,
-    TextInputType? keyboardType,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    OutlineInputBorder border(Color color, double width) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.sm),
-          borderSide: BorderSide(color: color, width: width),
-        );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: TextField(
-        controller: controller,
-        enabled: !_saving,
-        maxLength: maxLength,
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          counterText: '',
-          filled: true,
-          fillColor: AppColors.surface,
-          enabledBorder: border(AppColors.outlineVariant, 1),
-          focusedBorder: border(AppColors.primary, 1.5),
-          disabledBorder: border(AppColors.outlineVariant, 1),
-        ),
-      ),
-    );
-  }
+  static String _orDash(String? v) =>
+      (v == null || v.trim().isEmpty) ? '未填写' : v;
 }
 
-/// 作物成长等级阶梯（浅底版）：6 档节点 + 连接段，已过=主绿实心，当前=放大主绿+麦金环，
-/// 当前→下一档之间按 progress 部分填充，未达=浅描边空心。一图说清「我在哪、还差多少」。
+/// 成长等级阶梯（浅底版）：6 档节点 + 连接段，已过=主绿实心，当前=放大主绿+麦金环，
+/// 当前→下一档之间按 progress 部分填充，未达=浅描边空心。
 class _LevelLadder extends StatelessWidget {
   final GrowthInfo g;
   const _LevelLadder(this.g);

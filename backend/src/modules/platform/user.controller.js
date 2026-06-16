@@ -12,6 +12,12 @@ export async function getProfile(req, res) {
   ok(res, { ...sanitizeUser(user), growthInfo: growthInfo(user.growth) })
 }
 
+/** 通用图片上传：存盘并回传可访问 URL（头像 / banner / 其它用户图片） */
+export async function uploadImage(req, res) {
+  if (!req.file) throw errors.param('未接收到图片')
+  ok(res, { url: `/uploads/${req.file.filename}` }, '上传成功')
+}
+
 /** 成长值与等级（独立端点，供 hero / 个人资料页按需拉取） */
 export async function getGrowth(req, res) {
   const user = await prisma.user.findUnique({
@@ -24,14 +30,23 @@ export async function getGrowth(req, res) {
 
 /** 更新个人资料 */
 export async function updateProfile(req, res) {
-  const { nickname, avatarUrl, realName, phone, villageName, regionCode, isElderMode } = req.body
+  const { username, nickname, avatarUrl, bannerUrl, realName, phone, villageName, regionCode, isElderMode } = req.body
   const data = {}
   if (nickname !== undefined) data.nickname = nickname
   if (avatarUrl !== undefined) data.avatarUrl = avatarUrl
+  if (bannerUrl !== undefined) data.bannerUrl = bannerUrl
   if (realName !== undefined) data.realName = realName
   if (villageName !== undefined) data.villageName = villageName
   if (regionCode !== undefined) data.regionCode = regionCode
   if (isElderMode !== undefined) data.isElderMode = !!isElderMode
+  if (username !== undefined) {
+    const u = (username || '').trim()
+    if (u.length < 3) throw errors.param('账号至少 3 个字符')
+    if (!/^[a-zA-Z0-9_]+$/.test(u)) throw errors.param('账号仅支持字母、数字、下划线')
+    const exists = await prisma.user.findUnique({ where: { username: u } })
+    if (exists && exists.id !== req.user.id) throw errors.param('该账号已被占用')
+    data.username = u
+  }
   if (phone !== undefined) {
     const trimmed = (phone || '').trim()
     if (trimmed === '') {

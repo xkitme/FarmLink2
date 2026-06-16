@@ -5,6 +5,7 @@ class AppUser {
   final String? realName;
   final String? phone;
   final String? avatarUrl;
+  final String? bannerUrl;
   final String role;
   final String? regionCode;
   final String? villageName;
@@ -19,6 +20,7 @@ class AppUser {
     this.realName,
     this.phone,
     this.avatarUrl,
+    this.bannerUrl,
     this.role = 'FARMER',
     this.regionCode,
     this.villageName,
@@ -36,6 +38,7 @@ class AppUser {
         realName: j['realName'] as String?,
         phone: j['phone'] as String?,
         avatarUrl: j['avatarUrl'] as String?,
+        bannerUrl: j['bannerUrl'] as String?,
         role: j['role'] as String? ?? 'FARMER',
         regionCode: j['regionCode'] as String?,
         villageName: j['villageName'] as String?,
@@ -51,6 +54,7 @@ class AppUser {
         'realName': realName,
         'phone': phone,
         'avatarUrl': avatarUrl,
+        'bannerUrl': bannerUrl,
         'role': role,
         'regionCode': regionCode,
         'villageName': villageName,

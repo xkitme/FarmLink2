@@ -59,6 +59,8 @@ export const RESOURCE_CONFIGS = {
       field('password', '初始密码', 'password', { createOnly: true, placeholder: '不填则默认为 123456' }),
       field('nickname', '昵称'),
       field('phone', '手机号'),
+      field('avatarUrl', '头像URL'),
+      field('bannerUrl', '封面URL'),
       field('role', '角色', 'select', { options: ['FARMER', 'BIGFARMER', 'VILLAGE', 'EXPERT', 'MERCHANT', 'ADMIN'] }),
       field('regionCode', '行政区划'),
       field('villageName', '所属村'),
