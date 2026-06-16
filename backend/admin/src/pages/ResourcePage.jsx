@@ -5,6 +5,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons'
 import {
   Button,
@@ -23,6 +24,7 @@ import {
   Tabs,
   Tag,
   Typography,
+  Upload,
   message,
   Spin,
 } from 'antd'
@@ -106,6 +108,15 @@ function optionValue(item) {
 
 function formatValue(value, field) {
   if (value === null || value === undefined || value === '') return '-'
+  if (field?.type === 'image') {
+    return (
+      <img
+        src={value}
+        alt={field.label}
+        style={{ height: 36, maxWidth: 96, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+      />
+    )
+  }
   if (typeof value === 'boolean') return value ? <Tag color="green">是</Tag> : <Tag>否</Tag>
   if (field?.name === 'status' && typeof value === 'number') {
     return value === 1 ? <Tag color="green">启用</Tag> : <Tag>停用</Tag>
@@ -129,8 +140,54 @@ function normalizeInitial(record, fields) {
   return values
 }
 
+/** 图片字段：上传到 /upload/image 拿回 URL（也可直接填 URL），带缩略图预览。 */
+function ImageUploadField({ value, onChange }) {
+  const [loading, setLoading] = useState(false)
+  async function customRequest({ file, onSuccess, onError }) {
+    setLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append('image', file)
+      const data = await api.post('/upload/image', fd)
+      onChange?.(data?.url || '')
+      onSuccess?.(data)
+      message.success('图片已上传')
+    } catch (error) {
+      onError?.(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  return (
+    <Space direction="vertical" size={8} style={{ width: '100%' }}>
+      {value ? (
+        <img
+          src={value}
+          alt="预览"
+          style={{ maxWidth: 200, maxHeight: 110, objectFit: 'cover', borderRadius: 6, border: '1px solid #eee' }}
+        />
+      ) : null}
+      <Space wrap>
+        <Upload showUploadList={false} accept="image/*" customRequest={customRequest}>
+          <Button icon={<UploadOutlined />} loading={loading}>
+            {value ? '更换图片' : '上传图片'}
+          </Button>
+        </Upload>
+        {value ? <Button danger onClick={() => onChange?.('')}>清除</Button> : null}
+      </Space>
+      <Input
+        value={value || ''}
+        onChange={(event) => onChange?.(event.target.value)}
+        placeholder="或直接填图片 URL"
+        allowClear
+      />
+    </Space>
+  )
+}
+
 function FieldInput({ field, ...rest }) {
   // rest 携带 Form.Item 注入的 value/onChange/id，必须透传给真正的控件，否则字段不与表单绑定。
+  if (field.type === 'image') return <ImageUploadField {...rest} />
   if (field.type === 'textarea' || field.type === 'json') {
     return <Input.TextArea {...rest} rows={field.type === 'json' ? 4 : 3} placeholder={field.placeholder || field.label} />
   }

@@ -80,15 +80,18 @@ class _AccountEditPageState extends State<AccountEditPage> {
       final r = await ApiClient.upload('/upload/image', bytes, img.name);
       final url = (r is Map) ? r['url'] as String? : null;
       if (!mounted) return;
+      if (url == null || url.isEmpty) {
+        toast(context, '上传失败，请重试', error: true);
+        return;
+      }
       setState(() {
-        if (url != null) {
-          if (banner) {
-            _bannerUrl = url;
-          } else {
-            _avatarUrl = url;
-          }
+        if (banner) {
+          _bannerUrl = url;
+        } else {
+          _avatarUrl = url;
         }
       });
+      toast(context, banner ? '封面已更新，点「保存」生效' : '头像已更新，点「保存」生效');
     } catch (e) {
       if (mounted) toast(context, actionErrorMessage('上传', e), error: true);
     } finally {
