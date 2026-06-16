@@ -59,6 +59,7 @@ class _StartupAdPageState extends State<StartupAdPage> {
   DateTime? _deadline;
   int _remainingSeconds = 0;
   bool _agreementShowing = false;
+  bool _countdownActive = false;
   bool _exited = false;
 
   @override
@@ -78,24 +79,27 @@ class _StartupAdPageState extends State<StartupAdPage> {
       final data = await ApiClient.get('/site/startup-ad');
       if (!mounted) return;
       final ad = _StartupAdConfig.fromJson(data as Map<String, dynamic>);
-      // 未登录：直接进入服务协议，不渲染广告与「跳过」按钮——
-      // 否则跳过按钮会闪现一帧、随即被协议模态覆盖（先出现按钮→消失→弹协议）。
-      if (!context.read<AuthState>().isLoggedIn) {
-        _finishAd(ad.targetPath);
-        return;
-      }
       if (!ad.enabled || ad.imageUrl.isEmpty || ad.durationMs <= 0) {
         _finishAd(ad.targetPath);
         return;
       }
+      // 广告图始终渲染作背景。
       setState(() => _ad = ad);
-      _startCountdown(ad.durationMs);
+      if (context.read<AuthState>().isLoggedIn) {
+        // 已登录：正常倒计时广告，显示「跳过」按钮。
+        _startCountdown(ad.durationMs);
+      } else {
+        // 未登录：广告图作背景，直接弹服务协议浮于其上；不启动倒计时、不显示
+        // 「跳过」按钮，避免按钮闪现一帧又被协议模态覆盖。
+        _finishAd(ad.targetPath);
+      }
     } catch (_) {
       if (mounted) _finishAd('/home');
     }
   }
 
   void _startCountdown(int durationMs) {
+    _countdownActive = true;
     _deadline = DateTime.now().add(Duration(milliseconds: durationMs));
     _tick();
     _timer?.cancel();
@@ -217,7 +221,9 @@ class _StartupAdPageState extends State<StartupAdPage> {
               ],
             ),
           ),
-          if (!_agreementShowing)
+          // 「跳过」按钮仅在倒计时进行中显示（即已登录看广告时）；未登录场景
+          // 不启动倒计时，按钮始终不渲染，协议弹窗直接浮在广告图上。
+          if (_countdownActive && !_agreementShowing)
             SafeArea(
               child: Align(
                 alignment: Alignment.topRight,
