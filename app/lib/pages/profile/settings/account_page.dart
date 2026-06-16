@@ -332,16 +332,19 @@ class _AccountPageState extends State<AccountPage>
   Widget _infoRow(String label, String value) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 13),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label,
-                style: const TextStyle(
-                    color: AppColors.onSurfaceVariant, fontSize: 14)),
-            const Spacer(),
-            Flexible(
+            // 固定宽标签列，保证各行「值」左缘对齐到同一条竖线。
+            SizedBox(
+              width: 84,
+              child: Text(label,
+                  style: const TextStyle(
+                      color: AppColors.onSurfaceVariant, fontSize: 14)),
+            ),
+            Expanded(
               child: Text(value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
                   style: const TextStyle(
                       color: AppColors.onSurface,
                       fontSize: 15,
