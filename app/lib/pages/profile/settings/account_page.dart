@@ -97,7 +97,7 @@ class _AccountPageState extends State<AccountPage> {
   Widget build(BuildContext context) {
     final user = context.watch<AuthState>().user;
     final topInset = MediaQuery.of(context).padding.top;
-    const headerHeight = 300.0;
+    final headerHeight = 214.0 + topInset;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -180,19 +180,35 @@ class _AccountPageState extends State<AccountPage> {
         fit: StackFit.expand,
         children: [
           const SiteImage(_bgImage, fit: BoxFit.cover),
-          // 上压暗、下渐出到页面背景：保证文字可读 + 与下方表单无缝衔接。
+          // 自下而上的深色擦罩：仅压暗底部供白字落座，纯黑不掺色，避免灰绿浑浊。
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0x73000000),
-                  Color(0x33000000),
-                  Color(0x66000000),
-                  AppColors.background,
+                  Color(0x00000000),
+                  Color(0x40000000),
+                  Color(0xCC000000),
+                  Color(0xE6000000),
                 ],
-                stops: [0.0, 0.32, 0.72, 1.0],
+                stops: [0.0, 0.34, 0.84, 1.0],
+              ),
+            ),
+          ),
+          // 底缘窄渐出：把擦罩底色软化进页面背景，只在身份下方 18px，文字不落其中。
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 18,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00F9F9F9), AppColors.background],
+                ),
               ),
             ),
           ),
@@ -202,11 +218,11 @@ class _AccountPageState extends State<AccountPage> {
             left: 6,
             child: _circleBack(context),
           ),
-          // 身份 + 成长值
+          // 身份 + 成长值（坐落在底部深色擦罩上，高对比）
           Positioned(
             left: 20,
             right: 20,
-            bottom: 20,
+            bottom: 22,
             child: _identity(user),
           ),
         ],
@@ -236,17 +252,16 @@ class _AccountPageState extends State<AccountPage> {
       children: [
         Row(
           children: [
-            // 圆头像 + 白环
+            // 圆头像 + 白环（深底白图标，任何背景下都读得出是头像）
             Container(
-              width: 60,
-              height: 60,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.18),
-                border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.8), width: 2),
+                color: Colors.black.withValues(alpha: 0.28),
+                border: Border.all(color: Colors.white, width: 2),
               ),
-              child: const Icon(Icons.person, size: 32, color: Colors.white),
+              child: const Icon(Icons.person, size: 30, color: Colors.white),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -297,7 +312,7 @@ class _AccountPageState extends State<AccountPage> {
           ],
         ),
         if (g != null) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
