@@ -170,6 +170,7 @@ npm run db:seed          # ⑤ 写入种子数据（含三位主角的全年农�
 > **常见报错**
 > - `Environment variable not found: DATABASE_URL` → 漏了第 ① 步，先 `copy .env.example .env`
 > - `prisma migrate dev` 报错 → 全新 clone 没有迁移历史，请用 `npm run db:push`（已在上方）
+> - `PrismaClientValidationError: Unknown field ...` / 接口 500 → 拉了新代码但没同步数据库，见 [「六.4 更新代码后必读」](#4-更新代码后必读拉取新代码--必跑这步)
 > - Mac/Linux 把 `copy` 换成 `cp`、`mkdir ..\data` 换成 `mkdir -p ../data`
 
 移动端首次运行前：
@@ -268,6 +269,48 @@ node serve_web.mjs   # 启动静态服务器
 ```
 
 构建产物输出到 `dist/FarmLink.apk`。
+
+### 4. 更新代码后必读（拉取新代码 → 必跑这步）
+
+> **每次 `git pull` 之后，只要后端 `prisma/schema.prisma` 有变化（新增字段/表），
+> 必须同步数据库结构并重新生成 Prisma 客户端，否则后端 500。**
+
+**典型报错**（接口返回 500，后端控制台打印）：
+
+```
+PrismaClientValidationError: Unknown field `growth` for select statement on model `User`.
+    at getGrowth (.../user.controller.js)
+```
+
+含义：代码已经用到新字段（如 `growth` / `bannerUrl`），但这台机器的
+**Prisma 客户端还是旧的**（`prisma generate` 没跑）、或**数据库缺列**（结构没同步）。
+
+**修复步骤（Windows）**：
+
+```powershell
+# 1) 先停掉后端进程！
+#    Windows 上后端开着时 prisma 会因引擎 DLL 被占用报 EPERM。
+#    npm run dev / 一键脚本：关掉那个终端窗口或 Ctrl+C；用 pm2 则 pm2 stop all。
+
+cd backend
+
+# 2) 同步数据库结构 + 重新生成客户端（db:push 会自动 generate）
+npm run db:push
+
+# 3) 重新启动后端（一键脚本 / npm run dev / npm run dev:backend / pm2 start）
+```
+
+> - 本项目数据库用 `db:push` 维护（见「六.1」），**更新也用 `npm run db:push`**——
+>   它会把新增的列补进现有库并重新生成客户端，已有数据不受影响。
+> - **不要**在这种库上用 `prisma migrate deploy`：通过 `db:push` 建的库没有迁移基线，
+>   `migrate deploy` 会尝试重建已存在的表而失败。
+> - 改完后端**无需重新打包 APK**，App 刷新即可（接口是同一个）。
+> - 验证：
+>   ```powershell
+>   $t = (curl.exe -s -X POST http://localhost:8000/api/v1/auth/login -H "Content-Type: application/json" -d '{\"username\":\"farmer\",\"password\":\"123456\"}' | ConvertFrom-Json).data.token
+>   curl.exe -s http://localhost:8000/api/v1/user/growth -H "Authorization: Bearer $t"
+>   ```
+>   返回带 `level / levelName` 的 200 即修复。
 
 ---
 
