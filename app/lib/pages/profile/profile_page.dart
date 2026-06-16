@@ -48,13 +48,17 @@ class _ProfilePageState extends State<ProfilePage> {
       final results = await Future.wait<dynamic>([
         ApiClient.get('/data/dashboard'),
         ApiClient.get('/data/sync/status'),
-        ApiClient.get('/user/growth'),
       ]);
+      // 成长值单独、容错拉取：它失败只让 hero 等级条降级，不拖垮整页加载。
+      var growth = _growth;
+      try {
+        growth = GrowthInfo.fromJson(_map(await ApiClient.get('/user/growth')));
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _dashboard = _map(results[0]);
         _syncStatus = _map(results[1]);
-        _growth = GrowthInfo.fromJson(_map(results[2]));
+        _growth = growth;
         _queue = queue;
         _error = null;
         _loading = false;
