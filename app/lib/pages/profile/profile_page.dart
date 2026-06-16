@@ -130,20 +130,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       _syncPanel(),
                       const SectionTitle('我的事务'),
                       _taskGrid(context),
-                      const SizedBox(height: 24),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          await auth.logout();
-                          if (context.mounted) context.go('/auth/login');
-                        },
-                        icon: const Icon(Icons.logout_rounded, size: 18),
-                        label: const Text('退出登录'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.error,
-                          side: const BorderSide(
-                              color: AppColors.error, width: 2),
-                        ),
-                      ),
                     ],
                   ),
                 ),

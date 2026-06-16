@@ -177,21 +177,6 @@ class _AccountEditPageState extends State<AccountEditPage> {
                 color: AppColors.primary,
                 fontSize: 20,
                 fontWeight: FontWeight.w700)),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.primary),
-                  )
-                : const Text('保存',
-                    style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 28),
