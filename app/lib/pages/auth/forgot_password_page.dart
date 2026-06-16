@@ -83,8 +83,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           final media = MediaQuery.of(context);
           // 阈值覆盖 Pixel 2(731) 一类中等高度机型,避免高 hero 挤出底部提交按钮。
           final compact = constraints.maxHeight < 820;
-          final heroHeight = (constraints.maxHeight * (compact ? 0.28 : 0.36))
-              .clamp(160.0, 300.0)
+          final heroHeight = (constraints.maxHeight * (compact ? 0.22 : 0.36))
+              .clamp(148.0, 300.0)
               .toDouble();
           final panelMinHeight =
               (constraints.maxHeight - heroHeight).clamp(0.0, 620.0).toDouble();
@@ -142,7 +142,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                 fontSize: 16,
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 16),
                             _field(
                               label: '手机号/账号',
                               controller: _username,
@@ -325,7 +325,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xAA2A2E27), Color(0x332E7D32)],
+                // 中性黑半透明,仅压暗顶部供返回箭头/logo 可读;去掉原绿色蒙版。
+                colors: [Color(0x80000000), Color(0x00000000)],
               ),
             ),
           ),
@@ -439,7 +440,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
       ],
     );
   }

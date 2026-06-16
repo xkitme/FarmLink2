@@ -104,8 +104,8 @@ class _LoginPageState extends State<LoginPage> {
           // 才放得下完整表单,否则底部「注册账号」按钮会被挤出屏外需滚动;此band
           // 改用 34% 矮 hero 让全部内容一屏装下。高屏(≥820)仍用大 hero。
           final compact = constraints.maxHeight < 820;
-          final heroHeight = (constraints.maxHeight * (compact ? 0.34 : 0.46))
-              .clamp(190.0, 360.0)
+          final heroHeight = (constraints.maxHeight * (compact ? 0.30 : 0.46))
+              .clamp(180.0, 360.0)
               .toDouble();
           final panelMinHeight =
               (constraints.maxHeight - heroHeight).clamp(0.0, 520.0).toDouble();
@@ -323,7 +323,8 @@ class _LoginPageState extends State<LoginPage> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.center,
-                colors: [Color(0x992A2E27), Color(0x00000000)],
+                // 中性黑半透明,仅压暗顶部供白色 logo 可读;去掉原绿灰蒙版。
+                colors: [Color(0x73000000), Color(0x00000000)],
               ),
             ),
           ),
