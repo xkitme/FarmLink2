@@ -36,6 +36,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- 关闭 Impeller，回退 Skia：模拟器/软件 GPU(SwiftShader) 上 Impeller 画不出
+             渐变与阴影(render_pass invalid command)，导致绿色 hero 渲染失败发白。 -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
