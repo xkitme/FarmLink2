@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 
-/// 品牌顶栏：白底 h64，左农机图标（或返回箭头）、居中「田园通」粗体绿、右搜索/铃铛
+/// 品牌顶栏：白底 h64，左农机图标（或返回箭头）、居中页面标题、右搜索/铃铛
 ///
 /// 一级 tab 页：直接 `FarmAppBar()`，左侧是品牌叶 icon。
-/// 详情页：`FarmAppBar(showBack: true, backFallback: '/home')`，左侧变返回箭头。
+/// 二级及详情页：传入当前页面标题，左侧变返回箭头。
 class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final VoidCallback? onBell;

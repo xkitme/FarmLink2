@@ -234,7 +234,7 @@ class _PolicyPageState extends State<PolicyPage> {
     final list = _data[_active] ?? [];
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: FarmAppBar(showBack: true, actions: [
+      appBar: FarmAppBar(title: '惠农政策', showBack: true, actions: [
         IconButton(
           tooltip: '政策服务',
           onPressed: () => context.push('/policy/service'),

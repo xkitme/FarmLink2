@@ -95,6 +95,7 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: FarmAppBar(
+        title: '数据看板',
         showBack: true,
         actions: [
           IconButton(

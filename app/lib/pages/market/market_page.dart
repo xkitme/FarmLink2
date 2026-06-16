@@ -278,7 +278,7 @@ class _MarketPageState extends State<MarketPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: FarmAppBar(showBack: true, actions: [
+      appBar: FarmAppBar(title: '乡村集市', showBack: true, actions: [
         IconButton(
           tooltip: '流通服务',
           onPressed: () => context.push('/market/service'),

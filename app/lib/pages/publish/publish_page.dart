@@ -655,7 +655,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(showBack: true),
+      appBar: FarmAppBar(
+        title: title == '-' || title.isEmpty ? '动态详情' : title,
+        showBack: true,
+      ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

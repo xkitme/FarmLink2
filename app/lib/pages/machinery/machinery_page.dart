@@ -311,7 +311,7 @@ class _MachineryPageState extends State<MachineryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: FarmAppBar(showBack: true, actions: [
+      appBar: FarmAppBar(title: '农机共享', showBack: true, actions: [
         // M1 发布农机入口
         IconButton(
           tooltip: '发布农机',
@@ -1379,7 +1379,7 @@ class MachineDetailPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(showBack: true),
+      appBar: FarmAppBar(title: machine.name, showBack: true),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

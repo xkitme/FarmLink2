@@ -180,6 +180,16 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       backgroundColor: AppColors.surface,
       foregroundColor: AppColors.onSurface,
       elevation: 0,
+      title: Text(
+        _title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppColors.onSurface,
+        ),
+      ),
       leading: _circleBtn(
         Icons.arrow_back,
         () {
