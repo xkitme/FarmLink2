@@ -82,7 +82,7 @@ class _AccountPageState extends State<AccountPage>
                 _reveal(2, const Divider(height: 1)),
                 _reveal(2, _infoRow('所属村', _orDash(user?.villageName))),
                 _reveal(2, const Divider(height: 1)),
-                _reveal(2, _infoRow('角色', kRoleLabels[user?.role] ?? '普通农户')),
+                _reveal(2, _infoRow('身份', kRoleLabels[user?.role] ?? '普通农户')),
               ],
             ),
           ),
