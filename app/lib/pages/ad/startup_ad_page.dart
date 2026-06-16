@@ -78,17 +78,18 @@ class _StartupAdPageState extends State<StartupAdPage> {
       final data = await ApiClient.get('/site/startup-ad');
       if (!mounted) return;
       final ad = _StartupAdConfig.fromJson(data as Map<String, dynamic>);
+      // 未登录：直接进入服务协议，不渲染广告与「跳过」按钮——
+      // 否则跳过按钮会闪现一帧、随即被协议模态覆盖（先出现按钮→消失→弹协议）。
+      if (!context.read<AuthState>().isLoggedIn) {
+        _finishAd(ad.targetPath);
+        return;
+      }
       if (!ad.enabled || ad.imageUrl.isEmpty || ad.durationMs <= 0) {
         _finishAd(ad.targetPath);
         return;
       }
       setState(() => _ad = ad);
       _startCountdown(ad.durationMs);
-      if (!context.read<AuthState>().isLoggedIn) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _finishAd(ad.targetPath);
-        });
-      }
     } catch (_) {
       if (mounted) _finishAd('/home');
     }
