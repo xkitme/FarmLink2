@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants.dart';
 import '../../core/notification_state.dart';
+import '../../widgets/voice_assistant_layer.dart';
 
 class ShellPage extends StatefulWidget {
   final Widget child;
@@ -57,7 +58,11 @@ class _ShellPageState extends State<ShellPage> {
     // 底栏只在精确等于 5 个一级 tab 的路径显示；二级页（/search /all /market…）不展示。
     final idx = _index(widget.location);
     return Scaffold(
-      body: widget.child,
+      body: VoiceAssistantLayer(
+        location: widget.location,
+        enabled: idx >= 0,
+        child: widget.child,
+      ),
       bottomNavigationBar: idx >= 0 ? _navBar(idx) : null,
     );
   }

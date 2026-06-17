@@ -8,6 +8,7 @@ import { fallbackAnswer, buildPrompt, systemPrompt } from './services/fallback.s
 import { referencesToPrompt, searchLocalKnowledge } from './services/rag.service.js'
 import { generateText, getOllamaStatus, streamText } from './services/ollama.service.js'
 import { synthSpeech, getTtsStatus } from './services/tts.service.js'
+import { runAssistantTurn } from './services/assistant.service.js'
 
 function threadIdOf(value) {
   if (value === undefined || value === null || value === '') return null
@@ -232,6 +233,30 @@ export async function agriAsk(req, res) {
 
 export async function legalAsk(req, res) {
   return askScene(req, res, 'LEGAL')
+}
+
+/** AI 语音自动化助手：返回回复 Markdown、朗读文本和白名单命令。 */
+export async function assistantTurn(req, res) {
+  const result = await runAssistantTurn({
+    userId: req.user.id,
+    text: req.body.text || req.body.transcript || '',
+    route: req.body.route || req.body.currentRoute || '',
+    context: req.body.context || {},
+    commandResult: null,
+  })
+  ok(res, result, 'AI 助手已响应')
+}
+
+/** 前端执行白名单命令后的回传入口，让助手决定下一步。 */
+export async function assistantCommandResult(req, res) {
+  const result = await runAssistantTurn({
+    userId: req.user.id,
+    text: req.body.text || '命令已执行',
+    route: req.body.route || req.body.currentRoute || '',
+    context: req.body.context || {},
+    commandResult: req.body.result || {},
+  })
+  ok(res, result, 'AI 助手已响应')
 }
 
 /** 知识库检索调试 */

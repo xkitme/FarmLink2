@@ -14,6 +14,8 @@ router.get('/ai/model/version', wrap(ai.modelVersion))
 
 // ── 大模型问答 ──────────────────────────────
 router.post('/ai/chat', wrap(ai.chat))
+router.post('/ai/assistant/turn', wrap(ai.assistantTurn))
+router.post('/ai/assistant/command-result', wrap(ai.assistantCommandResult))
 router.post('/ai/policy/ask', wrap(ai.policyAsk))
 router.post('/ai/agri/ask', wrap(ai.agriAsk))
 router.post('/ai/legal/ask', wrap(ai.legalAsk))

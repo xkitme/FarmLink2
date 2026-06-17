@@ -20,6 +20,12 @@ export const config = {
     embedModel: process.env.OLLAMA_EMBED_MODEL || 'bge-m3',
   },
 
+  deepseek: {
+    apiKey: process.env.DEEPSEEK_API_KEY || '',
+    baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
+    model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+  },
+
   // 本地 Kokoro 中文 TTS sidecar（tts/tts_server.py，仿 ollama 的本地常驻服务）。
   tts: {
     baseUrl: process.env.TTS_BASE_URL || 'http://localhost:11435',

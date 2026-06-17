@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../widgets/common.dart';
+import '../../widgets/voice_assistant_layer.dart';
 
 class AiThreadsPage extends StatefulWidget {
   const AiThreadsPage({super.key});
@@ -188,6 +189,8 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
                 children: [
                   _searchBar(),
                   const SizedBox(height: 14),
+                  _assistantEntry(),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       const Text(
@@ -250,6 +253,61 @@ class _AiThreadsPageState extends State<AiThreadsPage> {
             ),
     );
   }
+
+  Widget _assistantEntry() => AppCard(
+        padding: const EdgeInsets.all(16),
+        ai: true,
+        onTap: VoiceAssistantController.open,
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    AppColors.primary,
+                    AppColors.secondary,
+                    AppColors.gold,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(R.sm),
+              ),
+              child:
+                  const Icon(Icons.graphic_eq, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'AI 语音助手',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '说出需求，自动打开页面、推荐商品和播报结果',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Icon(Icons.chevron_right, color: AppColors.primary),
+          ],
+        ),
+      );
 
   Widget _searchBar() => Container(
         height: 50,
