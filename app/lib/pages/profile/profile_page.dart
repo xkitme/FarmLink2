@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -145,6 +147,12 @@ class _ProfilePageState extends State<ProfilePage> {
     final initial = name.isNotEmpty ? name.substring(0, 1) : null;
     final bannerUrl = (user?.bannerUrl as String?)?.trim();
     final hasBanner = bannerUrl != null && bannerUrl.isNotEmpty;
+    // 有横幅 → 白色毛玻璃亮底，文字/徽标改深色；无横幅 → 绿底白字（默认观感）。
+    final onLight = hasBanner;
+    final fgMain = onLight ? AppColors.onSurface : Colors.white;
+    final fgSub = onLight
+        ? AppColors.onSurfaceVariant
+        : Colors.white.withValues(alpha: 0.85);
 
     return Material(
       color: Colors.transparent,
@@ -161,8 +169,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           child: Stack(
             children: [
-              // 背景横幅：铺用户横幅图 + 深绿渐变遮罩，保证白字/徽标可读；
-              // 加载失败回落主绿渐变。
+              // 背景横幅 + 白色毛玻璃蒙版（高斯模糊 + 半透明白），加载失败回落主绿渐变。
               if (hasBanner) ...[
                 Positioned.fill(
                   child: Image.network(
@@ -174,15 +181,11 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                 ),
-                const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        // 半透明深绿遮罩：露出横幅图的同时保证白字/徽标可读。
-                        colors: [Color(0x992E7D32), Color(0xB30D631B)],
-                      ),
+                Positioned.fill(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Container(
+                      color: Colors.white.withValues(alpha: 0.58),
                     ),
                   ),
                 ),
@@ -199,7 +202,9 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Icon(
                         Icons.agriculture,
                         size: 92,
-                        color: Colors.white.withValues(alpha: 0.10),
+                        color: onLight
+                            ? AppColors.primary.withValues(alpha: 0.08)
+                            : Colors.white.withValues(alpha: 0.10),
                       ),
                     ),
                     Row(
@@ -222,16 +227,16 @@ class _ProfilePageState extends State<ProfilePage> {
                                       name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 21,
                                         fontWeight: FontWeight.w700,
-                                        color: Colors.white,
+                                        color: fgMain,
                                       ),
                                     ),
                                   ),
                                   if (g != null) ...[
                                     const SizedBox(width: 8),
-                                    _levelChip(g),
+                                    _levelChip(g, onLight),
                                   ],
                                 ],
                               ),
@@ -239,9 +244,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               Row(
                                 children: [
                                   Icon(Icons.trending_up_rounded,
-                                      size: 15,
-                                      color:
-                                          Colors.white.withValues(alpha: 0.85)),
+                                      size: 15, color: fgSub),
                                   const SizedBox(width: 4),
                                   Flexible(
                                     child: Text(
@@ -250,8 +253,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 13,
-                                        color: Colors.white
-                                            .withValues(alpha: 0.85),
+                                        color: fgSub,
                                       ),
                                     ),
                                   ),
@@ -264,10 +266,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                   child: LinearProgressIndicator(
                                     value: g.progress.clamp(0.0, 1.0),
                                     minHeight: 5,
-                                    backgroundColor:
-                                        Colors.white.withValues(alpha: 0.22),
-                                    valueColor: const AlwaysStoppedAnimation(
-                                        AppColors.primaryDim),
+                                    backgroundColor: onLight
+                                        ? Colors.black.withValues(alpha: 0.08)
+                                        : Colors.white.withValues(alpha: 0.22),
+                                    valueColor: AlwaysStoppedAnimation(onLight
+                                        ? AppColors.primary
+                                        : AppColors.primaryDim),
                                   ),
                                 ),
                               ],
@@ -276,15 +280,16 @@ class _ProfilePageState extends State<ProfilePage> {
                                 spacing: 8,
                                 runSpacing: 6,
                                 children: [
-                                  _heroBadge(kRoleLabels[user?.role] ?? '农户'),
-                                  _heroBadge(user?.villageName ?? '幸福村'),
+                                  _heroBadge(
+                                      kRoleLabels[user?.role] ?? '农户', onLight),
+                                  _heroBadge(
+                                      user?.villageName ?? '幸福村', onLight),
                                 ],
                               ),
                             ],
                           ),
                         ),
-                        Icon(Icons.chevron_right,
-                            color: Colors.white.withValues(alpha: 0.85)),
+                        Icon(Icons.chevron_right, color: fgSub),
                       ],
                     ),
                   ],
@@ -297,16 +302,18 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _heroBadge(String text) => Container(
+  Widget _heroBadge(String text, bool onLight) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
+          color: onLight
+              ? AppColors.primary.withValues(alpha: 0.10)
+              : Colors.white.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(R.sm),
         ),
         child: Text(
           text,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: onLight ? AppColors.primary : Colors.white,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -314,10 +321,10 @@ class _ProfilePageState extends State<ProfilePage> {
       );
 
   /// 等级胶囊：金穗色描边底，`Lv3 拔节`。
-  Widget _levelChip(GrowthInfo g) => Container(
+  Widget _levelChip(GrowthInfo g, bool onLight) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: AppColors.gold.withValues(alpha: 0.22),
+          color: AppColors.gold.withValues(alpha: onLight ? 0.28 : 0.22),
           borderRadius: BorderRadius.circular(R.sm),
           border: Border.all(
               color: AppColors.gold.withValues(alpha: 0.85), width: 1),
@@ -325,12 +332,14 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.eco, size: 12, color: Colors.white),
+            Icon(Icons.eco,
+                size: 12,
+                color: onLight ? AppColors.goldContainer : Colors.white),
             const SizedBox(width: 3),
             Text(
               'Lv${g.level} ${g.levelName}',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: onLight ? AppColors.goldContainer : Colors.white,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
