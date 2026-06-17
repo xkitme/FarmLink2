@@ -23,7 +23,7 @@ export const config = {
   // 本地 Kokoro 中文 TTS sidecar（tts/tts_server.py，仿 ollama 的本地常驻服务）。
   tts: {
     baseUrl: process.env.TTS_BASE_URL || 'http://localhost:11435',
-    voice: process.env.TTS_VOICE || 'zf_xiaobei',
+    voice: process.env.TTS_VOICE || 'zf_xiaoxiao',
   },
 
   upload: {

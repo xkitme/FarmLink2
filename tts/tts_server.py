@@ -24,7 +24,7 @@ from misaki import zh
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get("TTS_PORT", "11435"))
-DEFAULT_VOICE = os.environ.get("TTS_VOICE", "zf_xiaobei")  # 中文女声
+DEFAULT_VOICE = os.environ.get("TTS_VOICE", "zf_xiaoxiao")  # 中文女声
 MODEL = os.path.join(HERE, "kokoro-v1.0.onnx")
 VOICES = os.path.join(HERE, "voices-v1.0.bin")
 MAX_TEXT_CHARS = int(os.environ.get("TTS_MAX_TEXT_CHARS", "1000"))
