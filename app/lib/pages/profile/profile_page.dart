@@ -129,7 +129,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       const SizedBox(height: 16),
                       _syncPanel(),
                       const SectionTitle('我的事务'),
-                      _taskGrid(context),
+                      _taskZone(context),
                     ],
                   ),
                 ),
@@ -554,59 +554,164 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ── 我的事务：4 列图标宫格 ──────────────────────────────────
-  Widget _taskGrid(BuildContext context) {
-    const items = <_TaskItem>[
-      _TaskItem(Icons.eco_outlined, '农事记录', '/agri'),
-      _TaskItem(Icons.thunderstorm_outlined, '灾情记录', '/disaster'),
-      _TaskItem(Icons.assignment_turned_in_outlined, '政策申请', '/policy/service'),
-      _TaskItem(Icons.insights_outlined, '数据看板', '/data'),
-      _TaskItem(Icons.notifications_none_rounded, '消息通知', '/messages'),
-      _TaskItem(Icons.agriculture_outlined, '农机服务', '/machinery/service'),
-      _TaskItem(Icons.elderly_outlined, '适老模式', '/profile/settings/elder',
-          badge: '新'),
-      _TaskItem(Icons.settings_outlined, '设置', '/profile/settings'),
-    ];
-
-    return _flatBox(
-      GridView.count(
-        crossAxisCount: 4,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 4,
-        crossAxisSpacing: 4,
-        childAspectRatio: 0.92,
+  // ── 我的事务：不规则三栏 ────────────────────────────────────
+  // 左栏竖排 4 项 · 中栏两大块（政策申请 / 适老模式·绿底）· 右栏竖排 2 项。
+  // IntrinsicHeight + 横向 stretch：中栏两块按左栏总高等分填充，右栏自然
+  // 顶对齐、下方留空，整体对齐参考图版式。
+  Widget _taskZone(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final item in items) _taskCell(context, item),
+          // 左栏：竖排 4 项
+          Expanded(
+            child: _taskList(context, const [
+              _TaskItem(Icons.eco_outlined, '农事记录', '/agri'),
+              _TaskItem(Icons.thunderstorm_outlined, '灾情记录', '/disaster'),
+              _TaskItem(Icons.notifications_none_rounded, '消息通知', '/messages'),
+              _TaskItem(
+                  Icons.agriculture_outlined, '农机服务', '/machinery/service'),
+            ]),
+          ),
+          const SizedBox(width: 10),
+          // 中栏：两个大块
+          Expanded(
+            child: Column(
+              children: [
+                Expanded(
+                  child: _taskTile(
+                    context,
+                    icon: Icons.assignment_turned_in_outlined,
+                    label: '政策申请',
+                    route: '/policy/service',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: _taskTile(
+                    context,
+                    icon: Icons.elderly_outlined,
+                    label: '适老模式',
+                    route: '/profile/settings/elder',
+                    highlight: true,
+                    badge: '新',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          // 右栏：竖排 2 项
+          Expanded(
+            child: _taskList(context, const [
+              _TaskItem(Icons.insights_outlined, '数据看板', '/data'),
+              _TaskItem(Icons.settings_outlined, '设置', '/profile/settings'),
+            ]),
+          ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
     );
   }
 
-  Widget _taskCell(BuildContext context, _TaskItem item) {
-    return InkWell(
-      onTap: () => context.push(item.route),
-      borderRadius: BorderRadius.circular(R.sm),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Stack(
+  /// 竖排列表栏：每项一张扁平描边小卡（图标在左、文字在右），顶部对齐堆叠。
+  Widget _taskList(BuildContext context, List<_TaskItem> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) const SizedBox(height: 10),
+          _taskRowCard(context, items[i]),
+        ],
+      ],
+    );
+  }
+
+  Widget _taskRowCard(BuildContext context, _TaskItem item) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(item.route),
+        borderRadius: BorderRadius.circular(R.md),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(R.md),
+            border: Border.all(color: AppColors.outlineVariant, width: 1),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Row(
+            children: [
+              Icon(item.icon, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.onSurface)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 中栏大块：图标+文字居中。`highlight` 为绿底强调（适老模式）。
+  Widget _taskTile(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String route,
+    bool highlight = false,
+    String? badge,
+  }) {
+    final bg = highlight
+        ? AppColors.primaryContainer.withValues(alpha: 0.14)
+        : AppColors.surface;
+    final fg = highlight ? AppColors.primary : AppColors.onSurface;
+    final borderColor = highlight
+        ? AppColors.primaryContainer.withValues(alpha: 0.35)
+        : AppColors.outlineVariant;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(route),
+        borderRadius: BorderRadius.circular(R.md),
+        child: Container(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(R.md),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+          child: Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryContainer.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(R.sm),
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: AppColors.primary, size: 30),
+                    const SizedBox(height: 8),
+                    Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: fg)),
+                  ],
                 ),
-                child: Icon(item.icon, color: AppColors.primary, size: 24),
               ),
-              if (item.badge != null)
+              if (badge != null)
                 Positioned(
-                  right: -6,
-                  top: -6,
+                  right: -2,
+                  top: -2,
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
@@ -614,7 +719,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       color: AppColors.error,
                       borderRadius: BorderRadius.circular(R.sm),
                     ),
-                    child: Text(item.badge!,
+                    child: Text(badge,
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -623,13 +728,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(item.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.onSurfaceVariant)),
-        ],
+        ),
       ),
     );
   }
@@ -674,6 +773,5 @@ class _TaskItem {
   final IconData icon;
   final String label;
   final String route;
-  final String? badge;
-  const _TaskItem(this.icon, this.label, this.route, {this.badge});
+  const _TaskItem(this.icon, this.label, this.route);
 }
