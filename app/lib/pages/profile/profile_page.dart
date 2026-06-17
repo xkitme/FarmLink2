@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +6,6 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/offline_sync_queue.dart';
-import '../../models/user.dart';
 import '../../widgets/common.dart';
 import 'settings/profile_media.dart';
 
@@ -26,7 +23,6 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic> _dashboard = {};
   Map<String, dynamic> _syncStatus = {};
   List<SyncQueueItem> _queue = [];
-  GrowthInfo? _growth;
 
   @override
   void initState() {
@@ -52,16 +48,10 @@ class _ProfilePageState extends State<ProfilePage> {
         ApiClient.get('/data/dashboard'),
         ApiClient.get('/data/sync/status'),
       ]);
-      // 成长值单独、容错拉取：它失败只让 hero 等级条降级，不拖垮整页加载。
-      var growth = _growth;
-      try {
-        growth = GrowthInfo.fromJson(_map(await ApiClient.get('/user/growth')));
-      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _dashboard = _map(results[0]);
         _syncStatus = _map(results[1]);
-        _growth = growth;
         _queue = queue;
         _error = null;
         _loading = false;
@@ -139,20 +129,16 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ── Hero：绿色渐变 + 圆形头像 + 成长值/等级 + 角色/村庄徽标 ──────
+  // ── Hero：横幅/绿底 + 圆形头像 + 名字 + 角色/村庄徽标（去蒙版/水印/等级）──
   Widget _profileHero(BuildContext context, dynamic user) {
-    final g = _growth;
-    final growthText = user == null ? '登录后解锁成长体系' : (g?.headline ?? '正在读取成长值…');
     final name = user?.displayName ?? '未登录';
     final initial = name.isNotEmpty ? name.substring(0, 1) : null;
     final bannerUrl = (user?.bannerUrl as String?)?.trim();
     final hasBanner = bannerUrl != null && bannerUrl.isNotEmpty;
-    // 有横幅 → 白色毛玻璃亮底，文字/徽标改深色；无横幅 → 绿底白字（默认观感）。
-    final onLight = hasBanner;
-    final fgMain = onLight ? AppColors.onSurface : Colors.white;
-    final fgSub = onLight
-        ? AppColors.onSurfaceVariant
-        : Colors.white.withValues(alpha: 0.85);
+    // 横幅直出无蒙版：给白字一点阴影，浅色横幅上也可读。
+    const shadows = [
+      Shadow(color: Color(0x73000000), blurRadius: 6, offset: Offset(0, 1)),
+    ];
 
     return Material(
       color: Colors.transparent,
@@ -169,8 +155,8 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           child: Stack(
             children: [
-              // 背景横幅 + 白色毛玻璃蒙版（高斯模糊 + 半透明白），加载失败回落主绿渐变。
-              if (hasBanner) ...[
+              // 背景横幅直出（无蒙版）；加载失败回落主绿渐变。
+              if (hasBanner)
                 Positioned.fill(
                   child: Image.network(
                     ApiClient.resolveImageUrl(bannerUrl),
@@ -181,117 +167,48 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                 ),
-                Positioned.fill(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: Container(
-                      color: Colors.white.withValues(alpha: 0.58),
-                    ),
-                  ),
-                ),
-              ],
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 16, 40),
-                child: Stack(
-                  clipBehavior: Clip.none,
+                padding: const EdgeInsets.fromLTRB(20, 22, 16, 22),
+                child: Row(
                   children: [
-                    // 右侧淡水印
-                    Positioned(
-                      right: -6,
-                      top: -6,
-                      child: Icon(
-                        Icons.agriculture,
-                        size: 92,
-                        color: onLight
-                            ? AppColors.primary.withValues(alpha: 0.08)
-                            : Colors.white.withValues(alpha: 0.10),
-                      ),
+                    // 圆形头像：后端头像 / 昵称首字 / 人像兜底
+                    ProfileAvatar(
+                      url: user?.avatarUrl as String?,
+                      initial: initial,
+                      size: 64,
                     ),
-                    Row(
-                      children: [
-                        // 圆形头像：后端头像 / 昵称首字 / 人像兜底
-                        ProfileAvatar(
-                          url: user?.avatarUrl as String?,
-                          initial: initial,
-                          size: 64,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              shadows: shadows,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
                             children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 21,
-                                        fontWeight: FontWeight.w700,
-                                        color: fgMain,
-                                      ),
-                                    ),
-                                  ),
-                                  if (g != null) ...[
-                                    const SizedBox(width: 8),
-                                    _levelChip(g, onLight),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(Icons.trending_up_rounded,
-                                      size: 15, color: fgSub),
-                                  const SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      growthText,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: fgSub,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (g != null && !g.isMax) ...[
-                                const SizedBox(height: 8),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(R.sm),
-                                  child: LinearProgressIndicator(
-                                    value: g.progress.clamp(0.0, 1.0),
-                                    minHeight: 5,
-                                    backgroundColor: onLight
-                                        ? Colors.black.withValues(alpha: 0.08)
-                                        : Colors.white.withValues(alpha: 0.22),
-                                    valueColor: AlwaysStoppedAnimation(onLight
-                                        ? AppColors.primary
-                                        : AppColors.primaryDim),
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 6,
-                                children: [
-                                  _heroBadge(
-                                      kRoleLabels[user?.role] ?? '农户', onLight),
-                                  _heroBadge(
-                                      user?.villageName ?? '幸福村', onLight),
-                                ],
-                              ),
+                              _heroBadge(kRoleLabels[user?.role] ?? '农户'),
+                              _heroBadge(user?.villageName ?? '幸福村'),
                             ],
                           ),
-                        ),
-                        Icon(Icons.chevron_right, color: fgSub),
-                      ],
+                        ],
+                      ),
                     ),
+                    Icon(Icons.chevron_right,
+                        color: Colors.white.withValues(alpha: 0.9),
+                        shadows: shadows),
                   ],
                 ),
               ),
@@ -302,49 +219,19 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _heroBadge(String text, bool onLight) => Container(
+  Widget _heroBadge(String text) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
-          color: onLight
-              ? AppColors.primary.withValues(alpha: 0.10)
-              : Colors.white.withValues(alpha: 0.18),
+          color: Colors.black.withValues(alpha: 0.22),
           borderRadius: BorderRadius.circular(R.sm),
         ),
         child: Text(
           text,
-          style: TextStyle(
-            color: onLight ? AppColors.primary : Colors.white,
+          style: const TextStyle(
+            color: Colors.white,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
-        ),
-      );
-
-  /// 等级胶囊：金穗色描边底，`Lv3 拔节`。
-  Widget _levelChip(GrowthInfo g, bool onLight) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: AppColors.gold.withValues(alpha: onLight ? 0.28 : 0.22),
-          borderRadius: BorderRadius.circular(R.sm),
-          border: Border.all(
-              color: AppColors.gold.withValues(alpha: 0.85), width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.eco,
-                size: 12,
-                color: onLight ? AppColors.goldContainer : Colors.white),
-            const SizedBox(width: 3),
-            Text(
-              'Lv${g.level} ${g.levelName}',
-              style: TextStyle(
-                color: onLight ? AppColors.goldContainer : Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
         ),
       );
 
