@@ -8,6 +8,7 @@ import '../../core/constants.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../models/user.dart';
 import '../../widgets/common.dart';
+import 'settings/profile_media.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -140,6 +141,10 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _profileHero(BuildContext context, dynamic user) {
     final g = _growth;
     final growthText = user == null ? '登录后解锁成长体系' : (g?.headline ?? '正在读取成长值…');
+    final name = user?.displayName ?? '未登录';
+    final initial = name.isNotEmpty ? name.substring(0, 1) : null;
+    final bannerUrl = (user?.bannerUrl as String?)?.trim();
+    final hasBanner = bannerUrl != null && bannerUrl.isNotEmpty;
 
     return Material(
       color: Colors.transparent,
@@ -147,116 +152,142 @@ class _ProfilePageState extends State<ProfilePage> {
         onTap: () => context.push('/profile/settings/account'),
         borderRadius: BorderRadius.circular(R.md),
         child: Container(
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            gradient: AppColors.heroGradient,
+            // 有横幅时让真实图打底；无横幅回落主绿渐变（默认观感不变）。
+            gradient: hasBanner ? null : AppColors.heroGradient,
             borderRadius: BorderRadius.circular(R.md),
             boxShadow: AppColors.ambientShadow,
           ),
-          padding: const EdgeInsets.fromLTRB(20, 22, 16, 40),
           child: Stack(
-            clipBehavior: Clip.none,
             children: [
-              // 右侧淡水印
-              Positioned(
-                right: -6,
-                top: -6,
-                child: Icon(
-                  Icons.agriculture,
-                  size: 92,
-                  color: Colors.white.withValues(alpha: 0.10),
+              // 背景横幅：铺用户横幅图 + 深绿渐变遮罩，保证白字/徽标可读；
+              // 加载失败回落主绿渐变。
+              if (hasBanner) ...[
+                Positioned.fill(
+                  child: Image.network(
+                    ApiClient.resolveImageUrl(bannerUrl),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const DecoratedBox(
+                      decoration:
+                          BoxDecoration(gradient: AppColors.heroGradient),
+                    ),
+                  ),
                 ),
-              ),
-              Row(
-                children: [
-                  // 圆形头像 + 白环
-                  Container(
-                    width: 64,
-                    height: 64,
+                const Positioned.fill(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.15),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.72),
-                        width: 2,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xD92E7D32), Color(0xD90D631B)],
                       ),
                     ),
-                    child:
-                        const Icon(Icons.person, size: 34, color: Colors.white),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 22, 16, 40),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // 右侧淡水印
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: Icon(
+                        Icons.agriculture,
+                        size: 92,
+                        color: Colors.white.withValues(alpha: 0.10),
+                      ),
+                    ),
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                user?.displayName ?? '未登录',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 21,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
+                        // 圆形头像：后端头像 / 昵称首字 / 人像兜底
+                        ProfileAvatar(
+                          url: user?.avatarUrl as String?,
+                          initial: initial,
+                          size: 64,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 21,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  if (g != null) ...[
+                                    const SizedBox(width: 8),
+                                    _levelChip(g),
+                                  ],
+                                ],
                               ),
-                            ),
-                            if (g != null) ...[
-                              const SizedBox(width: 8),
-                              _levelChip(g),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(Icons.trending_up_rounded,
+                                      size: 15,
+                                      color:
+                                          Colors.white.withValues(alpha: 0.85)),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      growthText,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.white
+                                            .withValues(alpha: 0.85),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (g != null && !g.isMax) ...[
+                                const SizedBox(height: 8),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(R.sm),
+                                  child: LinearProgressIndicator(
+                                    value: g.progress.clamp(0.0, 1.0),
+                                    minHeight: 5,
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.22),
+                                    valueColor: const AlwaysStoppedAnimation(
+                                        AppColors.primaryDim),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  _heroBadge(kRoleLabels[user?.role] ?? '农户'),
+                                  _heroBadge(user?.villageName ?? '幸福村'),
+                                ],
+                              ),
                             ],
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Icon(Icons.trending_up_rounded,
-                                size: 15,
-                                color: Colors.white.withValues(alpha: 0.85)),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                growthText,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (g != null && !g.isMax) ...[
-                          const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(R.sm),
-                            child: LinearProgressIndicator(
-                              value: g.progress.clamp(0.0, 1.0),
-                              minHeight: 5,
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.22),
-                              valueColor: const AlwaysStoppedAnimation(
-                                  AppColors.primaryDim),
-                            ),
                           ),
-                        ],
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children: [
-                            _heroBadge(kRoleLabels[user?.role] ?? '农户'),
-                            _heroBadge(user?.villageName ?? '幸福村'),
-                          ],
                         ),
+                        Icon(Icons.chevron_right,
+                            color: Colors.white.withValues(alpha: 0.85)),
                       ],
                     ),
-                  ),
-                  Icon(Icons.chevron_right,
-                      color: Colors.white.withValues(alpha: 0.85)),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
