@@ -6,11 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
-import '../../core/elder_mode.dart';
 import '../../core/tts_service.dart';
 import '../../core/voice_input.dart';
 import '../../widgets/common.dart';
@@ -796,9 +794,8 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   Widget _textBotBubble(_ChatMessage msg, int index) {
-    // 适老模式下：点击 AI 文本回答气泡朗读，再次点击停止（非适老模式不变）。
-    final elderMode = context.watch<ElderModeState>().enabled;
-    final speakable = elderMode && !msg.streaming && msg.text.trim().isNotEmpty;
+    // 点击 AI 文本回答气泡朗读，再次点击停止（不限适老模式，任何情况都可朗读）。
+    final speakable = !msg.streaming && msg.text.trim().isNotEmpty;
     final ttsId = 'bot_$index';
     final bubble = _textBotBubbleBody(msg, speakable, ttsId);
     if (!speakable) return bubble;
@@ -1218,8 +1215,7 @@ class _AiChatPageState extends State<AiChatPage> {
               children: [
                 if (_bubbleImageProvider(msg) != null) ...[
                   GestureDetector(
-                    onTap: () =>
-                        _showImagePreview(_bubbleImageProvider(msg)!),
+                    onTap: () => _showImagePreview(_bubbleImageProvider(msg)!),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(R.sm),
                       child: Image(

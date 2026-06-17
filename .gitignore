@@ -44,3 +44,6 @@ tts/*.bin
 tts/*.wav
 tts/*.log
 tts/__pycache__/
+
+# 本地 TTS 试听样本（临时，不入库）
+tts_samples/
