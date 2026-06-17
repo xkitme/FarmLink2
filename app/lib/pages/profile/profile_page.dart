@@ -180,7 +180,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xD92E7D32), Color(0xD90D631B)],
+                        // 半透明深绿遮罩：露出横幅图的同时保证白字/徽标可读。
+                        colors: [Color(0x992E7D32), Color(0xB30D631B)],
                       ),
                     ),
                   ),
