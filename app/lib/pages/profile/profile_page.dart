@@ -147,6 +147,8 @@ class _ProfilePageState extends State<ProfilePage> {
         borderRadius: BorderRadius.circular(R.md),
         child: Container(
           clipBehavior: Clip.antiAlias,
+          // 给横幅足够高度，否则高度仅由头像行撑起、横幅图被压得很矮。
+          constraints: const BoxConstraints(minHeight: 168),
           decoration: BoxDecoration(
             // 有横幅时让真实图打底；无横幅回落主绿渐变（默认观感不变）。
             gradient: hasBanner ? null : AppColors.heroGradient,
@@ -154,6 +156,8 @@ class _ProfilePageState extends State<ProfilePage> {
             boxShadow: AppColors.ambientShadow,
           ),
           child: Stack(
+            // 内容垂直居中；底部多留一点（概览卡叠压 24px），观感才居中。
+            alignment: Alignment.centerLeft,
             children: [
               // 背景横幅直出（无蒙版）；加载失败回落主绿渐变。
               if (hasBanner)
@@ -168,14 +172,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 16, 22),
+                padding: const EdgeInsets.fromLTRB(20, 22, 16, 46),
                 child: Row(
                   children: [
                     // 圆形头像：后端头像 / 昵称首字 / 人像兜底
                     ProfileAvatar(
                       url: user?.avatarUrl as String?,
                       initial: initial,
-                      size: 64,
+                      size: 76,
                     ),
                     const SizedBox(width: 16),
                     Expanded(

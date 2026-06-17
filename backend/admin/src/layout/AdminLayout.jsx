@@ -54,6 +54,7 @@ const menuItems = [
     label: 'AI 能力',
     children: [
       { key: '/ai-ops', icon: <RobotOutlined />, label: 'AI 运维中心' },
+      { key: '/ai-assistant', icon: <ControlOutlined />, label: '语音助手配置' },
       { key: '/ai', icon: <ExperimentOutlined />, label: 'AI 记录' },
       { key: '/api-debug', icon: <ApiOutlined />, label: 'API 在线调试' },
     ],

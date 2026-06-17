@@ -9,6 +9,8 @@ import { referencesToPrompt, searchLocalKnowledge } from './services/rag.service
 import { generateText, getOllamaStatus, streamText } from './services/ollama.service.js'
 import { synthSpeech, getTtsStatus } from './services/tts.service.js'
 import { runAssistantTurn } from './services/assistant.service.js'
+import { loadAssistantConfig, providerPlan } from './services/assistant-config.service.js'
+import { deepseekGenerate } from './services/deepseek.service.js'
 
 function threadIdOf(value) {
   if (value === undefined || value === null || value === '') return null
@@ -117,20 +119,53 @@ async function askScene(req, res, scene) {
   let answer = ''
   let modelUsed = config.ollama.primaryModel
   let serviceMode = '智能问答'
-  try {
-    const result = await streamText({
-      prompt,
-      system: systemPrompt(normalized),
-      model: config.ollama.primaryModel,
-      onDelta: async (delta) => {
-        answer += delta
-        sse(res, 'message', { delta })
-      },
-    })
-    answer = result.answer || answer
-    modelUsed = result.model
-  } catch {
-    serviceMode = '智能问答'
+
+  const cfg = await loadAssistantConfig()
+  const { useDeepSeek, useOllama } = providerPlan(cfg.chatProvider)
+  const sys = systemPrompt(normalized)
+  const onDelta = async (delta) => {
+    answer += delta
+    sse(res, 'message', { delta })
+  }
+
+  // 1) DeepSeek 流式（面板选 auto/deepseek 且已配置 key）
+  if (useDeepSeek && cfg.deepseekApiKey) {
+    try {
+      const result = await deepseekGenerate({
+        apiKey: cfg.deepseekApiKey,
+        baseUrl: cfg.deepseekBaseUrl,
+        model: cfg.deepseekModel,
+        system: sys,
+        prompt,
+        temperature: 0.3,
+        thinking: cfg.deepseekThinking,
+        onDelta,
+      })
+      answer = result.text || answer
+      modelUsed = result.model
+    } catch {
+      // 已吐出的增量保留；下面按是否已出字决定是否回落，避免重复内容。
+    }
+  }
+
+  // 2) 本地 Ollama 流式（未选 DeepSeek，或 DeepSeek 未吐出任何内容时回落）
+  if (!answer && useOllama) {
+    try {
+      const result = await streamText({
+        prompt,
+        system: sys,
+        model: config.ollama.primaryModel,
+        onDelta,
+      })
+      answer = result.answer || answer
+      modelUsed = result.model
+    } catch {
+      // 落到规则兜底
+    }
+  }
+
+  // 3) 规则兜底（仅在前面一个字都没吐出时）
+  if (!answer) {
     modelUsed = 'knowledge-rule'
     answer = fallbackAnswer({ scene: normalized, question, references })
     await streamFallback(res, answer)

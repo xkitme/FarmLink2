@@ -45,6 +45,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   bool _initializingSpeech = false;
   bool _speechAvailable = false;
   bool _speechInitTried = false;
+  String _initError = ''; // 诊断：保留 initialize 失败的真实原因（被吞前抓住）
   bool _listening = false;
   bool _sending = false;
   int _commandResultDepth = 0;
@@ -119,11 +120,12 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     _initializingSpeech = true;
     try {
       _speechAvailable = await _speech.initialize(
-        onError: (_) {
+        onError: (error) {
+          _initError = '$error';
           if (!mounted) return;
           setState(() {
             _listening = false;
-            _status = '语音识别暂时不可用，请稍后再试';
+            _status = '语音识别暂时不可用：$error';
           });
         },
         onStatus: (status) {
@@ -137,8 +139,9 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
           });
         },
       );
-    } catch (_) {
+    } catch (e) {
       _speechAvailable = false;
+      _initError = '$e'; // MissingPluginException = web 插件没注册（多半跑了旧 bundle）
     } finally {
       _initializingSpeech = false;
     }
@@ -152,7 +155,9 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     if (!available) {
       setState(() {
         _listening = false;
-        _status = '当前环境暂不支持语音输入，请使用 AI 聊天页键盘输入';
+        _status = _initError.isEmpty
+            ? '当前环境暂不支持语音输入，请使用 AI 聊天页键盘输入'
+            : '语音不可用：$_initError';
       });
       return;
     }

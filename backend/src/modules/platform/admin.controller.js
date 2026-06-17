@@ -3,6 +3,11 @@ import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams, parseJson } from '../../utils/page.js'
 import { invalidateApiSwitchCache, rateLimitPolicies, rateLimitSnapshot } from '../../middleware/apiControl.js'
 import { RESOURCE_CONFIGS, RESOURCE_GROUPS } from './resource.config.js'
+import {
+  getAssistantConfigView,
+  saveAssistantConfig,
+  loadAssistantConfig,
+} from '../ai/services/assistant-config.service.js'
 
 function switchWhere(query) {
   const where = {}
@@ -78,6 +83,62 @@ export async function apiSwitchRemove(req, res) {
   await prisma.apiSwitch.delete({ where: { id } })
   invalidateApiSwitchCache()
   ok(res, null, 'API 开关已删除')
+}
+
+/** 语音助手配置：读取（key 脱敏） */
+export async function aiAssistantConfigGet(req, res) {
+  ok(res, await getAssistantConfigView())
+}
+
+/** 语音助手配置：保存（仅覆盖传入字段，key 空串=保持原值） */
+export async function aiAssistantConfigUpdate(req, res) {
+  const view = await saveAssistantConfig(req.body || {})
+  ok(res, view, '语音助手配置已保存')
+}
+
+/** 语音助手配置：连通性自检（用当前已保存配置向 DeepSeek 发一次最小请求） */
+export async function aiAssistantConfigTest(req, res) {
+  const cfg = await loadAssistantConfig()
+  if (!cfg.deepseekApiKey) throw errors.param('尚未配置 DeepSeek API Key')
+  const base = cfg.deepseekBaseUrl.replace(/\/+$/, '')
+  const started = Date.now()
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 20000)
+    const resp = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${cfg.deepseekApiKey}`,
+      },
+      body: JSON.stringify({
+        model: cfg.deepseekModel,
+        temperature: 0,
+        max_tokens: 256,
+        // 与运行时一致：默认非思考模式（更快、content 不会被 reasoning 吃空）。
+        ...(cfg.deepseekThinking ? {} : { thinking: { type: 'disabled' } }),
+        messages: [{ role: 'user', content: '回复 ok 两个字符即可' }],
+      }),
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
+    const data = await resp.json().catch(() => null)
+    if (!resp.ok) {
+      const detail = data?.error?.message || `HTTP ${resp.status}`
+      throw errors.offline(`DeepSeek 连接失败：${detail}`)
+    }
+    const message = data?.choices?.[0]?.message || {}
+    ok(res, {
+      ok: true,
+      model: cfg.deepseekModel,
+      latencyMs: Date.now() - started,
+      // content 为空时(推理模型仍在思考)回退显示 reasoning 片段，证明确实连通。
+      sample: message.content || message.reasoning_content || '',
+    }, 'DeepSeek 连接正常')
+  } catch (err) {
+    if (err.code) throw err
+    throw errors.offline(`DeepSeek 连接失败：${err.message}`)
+  }
 }
 
 /** 操作日志列表 */

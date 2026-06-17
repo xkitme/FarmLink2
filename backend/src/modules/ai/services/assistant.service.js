@@ -2,6 +2,8 @@ import { config } from '../../../config/index.js'
 import { prisma } from '../../../db.js'
 import { errors } from '../../../utils/response.js'
 import { generateText } from './ollama.service.js'
+import { loadAssistantConfig, providerPlan } from './assistant-config.service.js'
+import { deepseekGenerate } from './deepseek.service.js'
 
 const ALLOWED_ROUTE_KEYS = new Set([
   'home',
@@ -24,13 +26,6 @@ const ALLOWED_COMMANDS = new Set([
   'show_message',
   'end',
 ])
-
-function timeoutSignal(ms) {
-  if (AbortSignal.timeout) return AbortSignal.timeout(ms)
-  const controller = new AbortController()
-  setTimeout(() => controller.abort(), ms)
-  return controller.signal
-}
 
 function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
@@ -193,30 +188,6 @@ async function loadAssistantContext(userId) {
   return { user, products, orders }
 }
 
-function assistantSystemPrompt() {
-  return [
-    '你是 InkFlow 的 AI 语音自动化助手，只能输出严格 JSON。',
-    '不要输出 Markdown 代码块，不要输出解释文字。',
-    'JSON schema:',
-    '{"replyMarkdown":"给用户看的中文回复","speakText":"适合朗读的短句","statusText":"可选的短状态","commands":[{"type":"命令名","params":{}}]}',
-    '允许命令:',
-    'open_page {routeKey: home|ai|market|publish|messages|profile|search|orders}',
-    'show_products {productIds:number[]}',
-    'open_product {productId:number}',
-    'show_order_confirm {productId:number, quantity:number}',
-    'create_order {productId:number, quantity:number, receiverInfo:{name,phone,address}}',
-    'mock_pay {orderId:number}',
-    'show_message {markdown:string, speak:boolean}',
-    'end {}',
-    '规则:',
-    '1. 命令只能使用给定商品 id；不确定时先回复并 show_message，不要硬下单。',
-    '2. 用户要推荐商品时，先 show_products 或 open_page market；用户明确选择某个商品时再 open_product。',
-    '3. 没有完整姓名、手机号、收货地址时，不要 create_order；先要求用户到资料页补全或口述地址。',
-    '4. 用户说“没有了/结束/不用了/关闭”时，回复一句确认并输出 end。',
-    '5. 不暴露技术命令、模型、接口、schema 或兜底细节。',
-  ].join('\n')
-}
-
 function buildUserPrompt({ text, route, context, commandResult, user, products, orders }) {
   return JSON.stringify({
     userText: text,
@@ -237,39 +208,27 @@ function buildUserPrompt({ text, route, context, commandResult, user, products, 
   })
 }
 
-async function callDeepSeek({ system, prompt }) {
-  if (!config.deepseek.apiKey) throw new Error('deepseek-api-key-missing')
-  const base = config.deepseek.baseUrl.replace(/\/+$/, '')
-  const res = await fetch(`${base}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.deepseek.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.deepseek.model,
-      temperature: 0.1,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: prompt },
-      ],
-    }),
-    signal: timeoutSignal(45000),
+async function callDeepSeek({ system, prompt, ds }) {
+  const out = await deepseekGenerate({
+    apiKey: ds.deepseekApiKey,
+    baseUrl: ds.deepseekBaseUrl,
+    model: ds.deepseekModel,
+    system,
+    prompt,
+    temperature: ds.temperature,
+    json: true,
+    thinking: ds.deepseekThinking,
+    timeoutMs: 45000,
   })
-  if (!res.ok) throw new Error(`DeepSeek HTTP ${res.status}`)
-  const data = await res.json()
-  const content = data?.choices?.[0]?.message?.content
-  if (!content) throw new Error('deepseek-empty-content')
-  return { text: content, modelUsed: config.deepseek.model }
+  return { text: out.text, modelUsed: out.model }
 }
 
-async function callOllama({ system, prompt }) {
+async function callOllama({ system, prompt, temperature }) {
   const result = await generateText({
     prompt,
     system,
     model: config.ollama.primaryModel,
-    temperature: 0.1,
+    temperature,
     format: 'json',
     timeoutMs: 90000,
   })
@@ -280,8 +239,11 @@ export async function runAssistantTurn({ userId, text, route, context, commandRe
   const userText = cleanText(text, 500)
   if (!userText && !commandResult) throw errors.param('请输入语音内容')
 
+  const cfg = await loadAssistantConfig()
+  if (!cfg.enabled) throw errors.offline('AI 语音助手当前已关闭')
+
   const { user, products, orders } = await loadAssistantContext(userId)
-  const system = assistantSystemPrompt()
+  const system = cfg.systemPrompt
   const prompt = buildUserPrompt({
     text: userText,
     route,
@@ -292,21 +254,26 @@ export async function runAssistantTurn({ userId, text, route, context, commandRe
     orders,
   })
 
+  // 语音助手提供方决定调用次序：auto=DS→Ollama 兜底；deepseek/ollama=只走其一。
+  const { useDeepSeek, useOllama } = providerPlan(cfg.assistantProvider)
+
   const failures = []
   let finalOutput
-  try {
-    const modelOutput = await callDeepSeek({ system, prompt })
-    const parsed = parseJsonLoose(modelOutput.text)
-    finalOutput = {
-      ...sanitizeAssistantOutput(parsed, products),
-      modelUsed: modelOutput.modelUsed,
-    }
-  } catch (err) {
-    failures.push(`deepseek:${err.message}`)
-  }
-  if (!finalOutput) {
+  if (useDeepSeek) {
     try {
-      const modelOutput = await callOllama({ system, prompt })
+      const modelOutput = await callDeepSeek({ system, prompt, ds: cfg })
+      const parsed = parseJsonLoose(modelOutput.text)
+      finalOutput = {
+        ...sanitizeAssistantOutput(parsed, products),
+        modelUsed: modelOutput.modelUsed,
+      }
+    } catch (err) {
+      failures.push(`deepseek:${err.message}`)
+    }
+  }
+  if (!finalOutput && useOllama) {
+    try {
+      const modelOutput = await callOllama({ system, prompt, temperature: cfg.temperature })
       const parsed = parseJsonLoose(modelOutput.text)
       finalOutput = {
         ...sanitizeAssistantOutput(parsed, products),

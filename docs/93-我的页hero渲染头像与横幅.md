@@ -41,3 +41,12 @@
 
 - 横幅遮罩用深绿（`0xD92E7D32`→`0xD90D631B`）而非纯黑，保持品牌绿调统一、且白字可读。
 - `bannerUrl` 经 `hasBanner` 判定后分析器已提升为非空，`resolveImageUrl(bannerUrl)` 不需 `!`。
+
+## 八、追加（2026-06-17 hero 精修）
+
+用户反馈横幅太矮、内容没垂直居中、头像略小，连续微调（均在 `_profileHero`）：
+
+- hero `Container` 加 `constraints: BoxConstraints(minHeight: 168)`——原高度仅由头像行撑起（≈108），横幅图被压矮。
+- `Stack` 改 `alignment: Alignment.centerLeft` 让内容垂直居中；内容 padding 底部 `22→46` 补偿概览卡叠压的 24px，使其在**可见区域**内观感居中（否则真居中会偏低）。
+- 头像 `ProfileAvatar(size: 64→76)`。
+- `flutter analyze` 通过；像素值（168/76）凭真机观感，用户可再调。

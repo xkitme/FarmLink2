@@ -3,6 +3,7 @@ import AdminLayout from './layout/AdminLayout.jsx'
 import ApiDebugPage from './pages/ApiDebugPage.jsx'
 import ApiSwitchPage from './pages/ApiSwitchPage.jsx'
 import AiOpsPage from './pages/AiOpsPage.jsx'
+import AiAssistantPage from './pages/AiAssistantPage.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Login from './pages/Login.jsx'
 import OperationLogPage from './pages/OperationLogPage.jsx'
@@ -39,6 +40,7 @@ export default function App() {
             />
           ))}
           <Route path="ai-ops" element={<AiOpsPage />} />
+          <Route path="ai-assistant" element={<AiAssistantPage />} />
           <Route path="api-switch" element={<ApiSwitchPage />} />
           <Route path="api-debug" element={<ApiDebugPage />} />
           <Route path="seed-data" element={<SeedDataPage />} />
