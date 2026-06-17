@@ -32,13 +32,37 @@ CHUNK_CHARS = int(os.environ.get("TTS_CHUNK_CHARS", "120"))
 CHUNK_GAP_SECONDS = float(os.environ.get("TTS_CHUNK_GAP_SECONDS", "0.12"))
 LOCK_TIMEOUT_SECONDS = float(os.environ.get("TTS_LOCK_TIMEOUT_SECONDS", "20"))
 
+# GPU：默认不用。实测 onnxruntime-gpu 对本 Kokoro 小模型反而更慢——暖态
+# RTF≈3.1（CPU≈1.1），且 Blackwell(sm_120) 首次推理 kernel 编译冷启 ~300s；
+# 该模型含大量 Memcpy/ScatterND 节点，CUDA 拷贝与启动开销盖过收益。故默认 CPU，
+# 仅当显式 TTS_USE_GPU=1 时才尝试 CUDA（保留入口，便于将来换更 GPU 友好的引擎）。
+if os.environ.get("TTS_USE_GPU") == "1":
+    import onnxruntime as _ort  # noqa: E402
+
+    try:
+        _ort.preload_dlls()  # 从 nvidia-*-cu12 包加载 CUDA/cuDNN（onnxruntime>=1.22）
+    except Exception:
+        pass
+    if "CUDAExecutionProvider" in _ort.get_available_providers() and not os.environ.get(
+        "ONNX_PROVIDER"
+    ):
+        os.environ["ONNX_PROVIDER"] = "CUDAExecutionProvider"
+
 print("[tts] loading Kokoro model + 中文 G2P ...", flush=True)
 _kokoro = Kokoro(MODEL, VOICES)
 # Kokoro 自带的 espeak G2P 不支持中文;改用官方 misaki[zh] 拼音音素,
 # 再以 is_phonemes=True 喂模型(Kokoro 中文正是用这套音素训练的)。
 _g2p = zh.ZHG2P()
 _lock = threading.Lock()  # onnxruntime session 串行化,避免并发踩同一 session
-print(f"[tts] ready on 127.0.0.1:{PORT} (voice={DEFAULT_VOICE})", flush=True)
+_providers = []
+try:
+    _providers = _kokoro.sess.get_providers()
+except Exception:
+    pass
+print(
+    f"[tts] ready on 127.0.0.1:{PORT} (voice={DEFAULT_VOICE}, providers={_providers})",
+    flush=True,
+)
 
 
 def split_text(text: str, max_chars: int = CHUNK_CHARS) -> list[str]:
@@ -153,6 +177,13 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    # 启动暖机：先合成一小句，触发首帧 onnx/jieba 预热，避免用户第一次朗读时
+    # 才承担冷启动延迟（冷启约 4s，暖态短句约 0.6s）。
+    try:
+        synth_wav("田园通语音已就绪。", DEFAULT_VOICE, 1.0)
+        print("[tts] warmup done", flush=True)
+    except Exception as e:  # noqa
+        print(f"[tts] warmup skipped: {e}", flush=True)
     try:
         ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
     except KeyboardInterrupt:
