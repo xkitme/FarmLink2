@@ -67,3 +67,4 @@
 - **APK 体积**：模型 ~190MB + sherpa 原生 .so（arm64/armeabi/x86/x86_64 四 ABI）。建议打包用 `--target-platform android-arm64`（真机都是 arm64）或 `--split-per-abi` 砍掉多余 ABI 的原生库，避免 APK 过大。
 - 教训：大文件下载务必校验完整性（`bzip2 -t` / 比对 Content-Length 511,274,346）——首份 tar 截断 4MB（差 int8 encoder 末尾）解压才暴露，列目录 `head` 提前关流没暴露。
 - 端点参数（rule2 1.2s）按对话手感调；嫌断句太急可调大 `rule2MinTrailingSilence`。
+- 2026-06-18 APK 重打时，`record 5.2.1` 与 Pub 新解析到的 `record_platform_interface 1.6.0` 接口不兼容，导致 release 编译失败；将 `record` 升至 `^6.2.1`，由同代平台实现消除该构建阻断，并重新执行 analyze、release 打包和 x86_64 模拟器安装验证。
