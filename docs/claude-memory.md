@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-06-18 · Claude 语音全链路本地离线化(TTS 回 flutter_tts + STT 换 sherpa-onnx)
+
+### 状态：origin/main 在 `7c42c5a9`(已 push)。两个 commit:`53bb3bc9`(doc97 TTS)+`7c42c5a9`(doc98 STT)。工作树仍有**非本会话**改动未提交:`backend/uploads/site/auth-hero.jpg`(图变大,不是我动的)。web build 产物 `app/build/web` 新(release 4.07MB)。后端/ollama/sidecar 本会话**没起**(纯前端+模型工程,没需要)。
+
+用户「继续完善 ai 语音」。开工发现工作树里有**一截没收尾的在途迁移**(非我所建):TTS 已改 flutter_tts(代码完整未提交)、STT 加了 sherpa_onnx 等依赖但 lib 里**一行没写**、`_asrdl/model.tar.bz2`(487MB)是用户下的 sherpa 流式 zipformer 中英双语模型。方向=**语音全链路本地离线化**(甩后端 Kokoro + 浏览器云识别)。用户拍板:**先收尾 TTS 再做 STT**;web 语音留 speech_to_text 当临时测试不投入;模型打进 APK assets。
+
+**doc97(commit `53bb3bc9`)TTS 回设备本地 flutter_tts**:tts_service 重写走系统原生引擎(Android TextToSpeech/web SpeechSynthesis),即时出声、离线、不依赖后端,治 Kokoro CPU RTF≈3「一句一卡」;入口加 `_plainText` 清 Markdown(不念 `**`/`#`/竖线);**API 保持 speak/stop/speakingId 不变**调用方零改;Manifest 补 TTS_SERVICE 可见性;backend dev 脚本去掉自动起 tts sidecar(/ai/tts 端点保留但 App 不再调)。**这等于把 06-15 那条「Kokoro 替换 flutter_tts」又反转回来了**——因为 Kokoro 本机 CPU 长回答确实慢。
+
+**doc98(commit `7c42c5a9`)STT 换 sherpa-onnx 离线**:新增 `core/offline_stt.dart` 门面——**条件导出** `export 'offline_stt_io.dart' if (dart.library.js_interop) 'offline_stt_stub.dart'`,把 sherpa 的 **dart:ffi 挡在 web 编译外**(关键,否则 web build 炸);io 真实现=initBindings+首启拷模型到应用支持目录+OnlineRecognizer(zipformer/endpoint)+record 取 16k 单声道 PCM16 流转 Float32 喂 acceptWaveform+decode/getResult 实时出字+isEndpoint 静音断句自动提交;stub=web 恒不可用回落 speech_to_text。voice_input + voice_assistant_layer 按 `kIsWeb` 分流。
+
+### ⚠️ 坑/要点(下个 session 必看)
+1. **用户首份模型 tar 截断损坏**(`bzip2 -t` 报 file ends unexpectedly,int8 encoder 是归档末位被切)。我从官方 release 重下 `_asrdl/model_full.tar.bz2`(511,274,346B,校验过)。**列目录 `head` 会提前关流不暴露截断,务必 `bzip2 -t` 或比对 Content-Length。**
+2. **int8 encoder 173MB > GitHub 单文件 100MB 硬上限**,没法 push。照 Kokoro `tts/*.onnx` precedent:`app/assets/models/asr/*.onnx` **gitignore**(只提交 tokens.txt 56KB);`_asrdl/`、`docs.zip` 也 gitignore。pubspec 声明的是**目录** `assets/models/asr/`(缺 onnx 也能 build,运行时 ASR 优雅不可用)。
+3. **build APK 前必须先解压模型**到 `app/assets/models/asr/`(命令见 doc98 七),否则 ASR 无模型;APK 体积会 +~190MB(模型)+四 ABI 原生 .so,**建议 `--target-platform android-arm64` 或 `--split-per-abi`** 砍体积。
+4. **sherpa 走 ffi=APK only**,web 用不了真识别(已分流,web 留 speech_to_text)。**真识别/真朗读都只能 APK 真机验**——本会话只做到 analyze 干净 + web build 通过(证不破坏 web),麦克风/ffi 无头测不了。
+5. **reference 记忆 `reference-tts-kokoro-*` 现已不是 App 的 TTS 路径**(App 改 flutter_tts 了);Kokoro sidecar 代码/端点还在仓库但 App 不调。别再按那条给 App 推 Kokoro。
+
+### 下一步(主要靠 APK 真机)
+1. 解压模型 → `--target-platform android-arm64` 打 APK → 真机验:mic 弹层离线识别、语音助手聆听→静音自动断句提交、AI 回答 flutter_tts 朗读。
+2. 端点手感(rule2 1.2s 静音断句)真机调;嫌断太急调大 `rule2MinTrailingSilence`。
+3. `backend/uploads/site/auth-hero.jpg` 那个改动不是我的,用户自己定要不要提交。
+
+---
+
 ## 2026-06-15 (续) · 本地 Kokoro 中文 TTS(离线)替换 flutter_tts
 
 ### 状态：origin/main 在 `da7f466c`(已 push)。新增本地 TTS sidecar 跑在 **127.0.0.1:11435**(我本会话起的,health ok);后端 8000 已重启(PID 变)加载了 /ai/tts;web 5000 release 含本批;ollama 11434 仍 down(本批没用到)。
@@ -473,3 +497,4 @@ Flutter web 注入 token：SP 字符串值是 **JSON 编码**，`flutter.token`=
 - 给方向时通常已有结论,别问太多三选一,直接干
 - 审美在线:讨厌大圆角胶囊、generic 渐变、半透明白浮层、脉冲光
 - 闲聊/歌词能力要在线("dont break my heart 再次温柔"是歌词不是指令)
+
