@@ -5,9 +5,16 @@
 
 ---
 
-## 2026-06-18 · Claude 语音全链路本地离线化(TTS 回 flutter_tts + STT 换 sherpa-onnx)
+## 2026-06-18 · Claude 语音全链路本地离线化 + AI 语音助手 P1 业务闭环
 
-### 状态：origin/main 在 `7c42c5a9`(已 push)。两个 commit:`53bb3bc9`(doc97 TTS)+`7c42c5a9`(doc98 STT)。工作树仍有**非本会话**改动未提交:`backend/uploads/site/auth-hero.jpg`(图变大,不是我动的)。web build 产物 `app/build/web` 新(release 4.07MB)。后端/ollama/sidecar 本会话**没起**(纯前端+模型工程,没需要)。
+### 状态：origin/main 在 `f29fdd49`(已 push)。本会话 5 commit:`53bb3bc9`(97 TTS)+`7c42c5a9`(98 STT)+`a8f79c8d`(交接簿)+`f29fdd49`(99 助手P1)。工作树仍有**非本会话**改动未提交:`backend/uploads/site/auth-hero.jpg`(图变大,不是我动的)。**会话末重启过 `npm run dev` 栈**(为 prisma generate 停过、已重启,后端:8000/admin vite 在跑;web :5000 serve_web 独立进程全程没动)。web build 产物新(release)。
+
+### 续:AI 语音助手 P1 业务闭环(doc99,commit `f29fdd49`)
+用户追问「AI 语音助手呢?不是没写完吗?」——指 doc92 的 P1 没做(进度总览一直挂🔄)。核实后真实缺口:订单页占位、无 shippingAddress、订单确认没读地址、无手链/玩偶商品、后端 create_order 硬要 receiverInfo。做了:User 加 shippingAddress(手写迁移+migrate deploy+generate)、资料编辑页加收货地址、新建「我的订单」页 `/market/orders`+集市顶栏入口、语音助手 show_order_confirm 读资料地址/空引导 + create_order 用资料 receiverInfo 兜底、后端放宽 create_order 必填 + 提示词改「App自动填地址」、seed 手链/玩偶。**后端订单模型+API(下单/列表/状态机/物流)P0 后早已完整**,P1 主要是地址+订单页+接线。
+- **验证**:后端端到端(地址中文 round-trip 200、手链/玩偶 id70/71 在列表、order/list 200)+ **浏览器实测**(注入 farmer token:订单页渲染真实订单「李大姐阳光番茄 ￥64 已支付」、编辑页收货地址回显「四川…青禾村3组18号」)+ analyze + web build。**语音整链(说话→确认→下单→支付→播报)只能 APK 真机**(STT 是 sherpa/APK only + 要麦克风)。
+- ⚠️ 没 reseed(避免清用户测试数据);手链/玩偶用幂等脚本补进活库。重置环境 `npm run seed` 会带上。
+
+### 语音本地化(97/98)经过
 
 用户「继续完善 ai 语音」。开工发现工作树里有**一截没收尾的在途迁移**(非我所建):TTS 已改 flutter_tts(代码完整未提交)、STT 加了 sherpa_onnx 等依赖但 lib 里**一行没写**、`_asrdl/model.tar.bz2`(487MB)是用户下的 sherpa 流式 zipformer 中英双语模型。方向=**语音全链路本地离线化**(甩后端 Kokoro + 浏览器云识别)。用户拍板:**先收尾 TTS 再做 STT**;web 语音留 speech_to_text 当临时测试不投入;模型打进 APK assets。
 
