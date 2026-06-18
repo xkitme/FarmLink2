@@ -7,7 +7,6 @@ import {
   Form,
   Input,
   InputNumber,
-  message,
   Row,
   Select,
   Space,
@@ -23,6 +22,7 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons'
 import { api } from '../api/request.js'
+import { message } from '../api/feedback.js'
 
 const { Title, Paragraph, Text } = Typography
 

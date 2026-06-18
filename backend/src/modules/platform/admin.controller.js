@@ -8,6 +8,7 @@ import {
   saveAssistantConfig,
   loadAssistantConfig,
 } from '../ai/services/assistant-config.service.js'
+import { deepseekGenerate } from '../ai/services/deepseek.service.js'
 
 function switchWhere(query) {
   const where = {}
@@ -100,43 +101,37 @@ export async function aiAssistantConfigUpdate(req, res) {
 export async function aiAssistantConfigTest(req, res) {
   const cfg = await loadAssistantConfig()
   if (!cfg.deepseekApiKey) throw errors.param('尚未配置 DeepSeek API Key')
-  const base = cfg.deepseekBaseUrl.replace(/\/+$/, '')
   const started = Date.now()
   try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 20000)
-    const resp = await fetch(`${base}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${cfg.deepseekApiKey}`,
-      },
-      body: JSON.stringify({
-        model: cfg.deepseekModel,
-        temperature: 0,
-        max_tokens: 256,
-        // 与运行时一致：默认非思考模式（更快、content 不会被 reasoning 吃空）。
-        ...(cfg.deepseekThinking ? {} : { thinking: { type: 'disabled' } }),
-        messages: [{ role: 'user', content: '回复 ok 两个字符即可' }],
-      }),
-      signal: controller.signal,
+    // 复用运行时同一条 DeepSeek 调用路径：自带 Connection: close + 建连重试，
+    // 规避 undici 复用死 keep-alive 连接导致的 ECONNRESET（旧版测试用内联 fetch 故必挂）。
+    const { text, model } = await deepseekGenerate({
+      apiKey: cfg.deepseekApiKey,
+      baseUrl: cfg.deepseekBaseUrl,
+      model: cfg.deepseekModel,
+      prompt: '回复 ok 两个字符即可',
+      temperature: 0,
+      thinking: cfg.deepseekThinking,
+      timeoutMs: 20000,
     })
-    clearTimeout(timer)
-    const data = await resp.json().catch(() => null)
-    if (!resp.ok) {
-      const detail = data?.error?.message || `HTTP ${resp.status}`
-      throw errors.offline(`DeepSeek 连接失败：${detail}`)
-    }
-    const message = data?.choices?.[0]?.message || {}
     ok(res, {
       ok: true,
-      model: cfg.deepseekModel,
+      model: model || cfg.deepseekModel,
       latencyMs: Date.now() - started,
-      // content 为空时(推理模型仍在思考)回退显示 reasoning 片段，证明确实连通。
-      sample: message.content || message.reasoning_content || '',
+      sample: text,
     }, 'DeepSeek 连接正常')
   } catch (err) {
     if (err.code) throw err
+    // content 为空说明已连通、只是模型没吐内容（多见于思考模式）→ 视作连接正常。
+    if (err.message === 'deepseek-empty-content') {
+      ok(res, {
+        ok: true,
+        model: cfg.deepseekModel,
+        latencyMs: Date.now() - started,
+        sample: '(模型已连通，本次未返回文本内容)',
+      }, 'DeepSeek 连接正常')
+      return
+    }
     throw errors.offline(`DeepSeek 连接失败：${err.message}`)
   }
 }

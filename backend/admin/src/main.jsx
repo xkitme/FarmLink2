@@ -1,9 +1,20 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { useEffect } from 'react'
 import { ConfigProvider, App as AntApp } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import App from './App.jsx'
+import { setFeedbackMessage } from './api/feedback.js'
 import './styles.css'
+
+// 把 App 上下文的 message 实例注入全局代理（见 api/feedback.js）。
+function FeedbackBridge() {
+  const { message } = AntApp.useApp()
+  useEffect(() => {
+    setFeedbackMessage(message)
+  }, [message])
+  return null
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -39,6 +50,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       }}
     >
       <AntApp>
+        <FeedbackBridge />
         <App />
       </AntApp>
     </ConfigProvider>

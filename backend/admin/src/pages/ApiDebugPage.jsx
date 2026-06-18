@@ -18,9 +18,9 @@ import {
   Table,
   Tag,
   Typography,
-  message,
 } from 'antd'
 import { useMemo, useState } from 'react'
+import { message } from '../api/feedback.js'
 import { rawRequest } from '../api/request.js'
 import { API_CATALOG, flatApiCatalog } from '../apiCatalog.js'
 

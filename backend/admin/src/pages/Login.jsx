@@ -1,6 +1,7 @@
 import { LockOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Form, Input, Typography, message } from 'antd'
+import { Button, Card, Form, Input, Typography } from 'antd'
 import { useEffect, useState } from 'react'
+import { message } from '../api/feedback.js'
 import { useNavigate } from 'react-router-dom'
 import { API_BASE, api } from '../api/request.js'
 import { saveSession } from '../api/auth.js'

@@ -25,10 +25,10 @@ import {
   Tag,
   Typography,
   Upload,
-  message,
   Spin,
 } from 'antd'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { message } from '../api/feedback.js'
 import { api } from '../api/request.js'
 
 const VALUE_LABELS = {

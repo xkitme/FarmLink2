@@ -21,9 +21,9 @@ import {
   Table,
   Tag,
   Typography,
-  message,
 } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
+import { message } from '../api/feedback.js'
 import { API_BASE, api } from '../api/request.js'
 
 const sceneOptions = [

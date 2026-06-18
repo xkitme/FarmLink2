@@ -19,9 +19,9 @@ import {
   Table,
   Tag,
   Typography,
-  message,
 } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
+import { message } from '../api/feedback.js'
 import { api } from '../api/request.js'
 
 function formatTime(value) {

@@ -7,7 +7,6 @@ import {
   Form,
   Input,
   InputNumber,
-  message,
   Row,
   Select,
   Space,
@@ -17,6 +16,7 @@ import {
   Upload,
 } from 'antd'
 import { ReloadOutlined, SaveOutlined, UploadOutlined } from '@ant-design/icons'
+import { message } from '../api/feedback.js'
 import { API_BASE, api } from '../api/request.js'
 
 const { Title, Paragraph, Text } = Typography
