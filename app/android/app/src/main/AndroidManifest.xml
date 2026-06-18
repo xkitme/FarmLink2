@@ -59,5 +59,9 @@
         <intent>
             <action android:name="android.speech.RecognitionService"/>
         </intent>
+        <!-- 同理：不声明则 flutter_tts 看不到系统 TTS 引擎，离线朗读会静默失败。 -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
     </queries>
 </manifest>

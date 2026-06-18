@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "dev":          "concurrently -n backend,admin,tts -c bgBlue,bgGreen,bgMagenta \"nodemon src/server.js\" \"npm run dev --prefix admin\" \"npm run dev:tts\"",
+    "dev":          "concurrently -n backend,admin -c bgBlue,bgGreen \"nodemon src/server.js\" \"npm run dev --prefix admin\"",
     "dev:backend":  "nodemon src/server.js",
     "dev:admin":    "npm run dev --prefix admin",
     "dev:tts":      "node scripts/start-tts.mjs",
