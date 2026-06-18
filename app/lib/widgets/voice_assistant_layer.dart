@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,16 @@ import '../core/constants.dart';
 import '../core/tts_service.dart';
 import 'common.dart';
 import 'markdown_text.dart';
+
+/// 跑马灯边框配色——从设计参考图（霓虹彩虹光带）提取的柔和高亮色，绕边顺时针流动。
+const List<Color> _auroraColors = [
+  Color(0xFF7CF0BD), // 薄荷绿
+  Color(0xFF6FD3FF), // 青
+  Color(0xFF7FA8FF), // 蓝
+  Color(0xFFB89BFF), // 紫
+  Color(0xFFFF9EC4), // 粉
+  Color(0xFFFFD58A), // 暖琥珀
+];
 
 class VoiceAssistantController {
   VoiceAssistantController._();
@@ -48,6 +59,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   String _initError = ''; // 诊断：保留 initialize 失败的真实原因（被吞前抓住）
   bool _listening = false;
   bool _sending = false;
+  bool _hasReply = false; // 收到首轮 AI 回复后才显示回复气泡，纯聆听态保持图示的简洁
   int _commandResultDepth = 0;
   String _recognized = '';
   String _lastSubmitted = '';
@@ -59,8 +71,8 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     super.initState();
     _glow = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 4200),
+    )..repeat(); // 不反向，0→1 循环驱动边框跑马灯绕圈
     VoiceAssistantController.requests.addListener(_handleOpenRequest);
   }
 
@@ -91,6 +103,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     setState(() {
       _active = true;
       _recognized = '';
+      _hasReply = false;
       _status = '正在准备语音识别';
     });
     await _startListening();
@@ -108,6 +121,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       _listening = false;
       _sending = false;
       _recognized = '';
+      _hasReply = false;
       _lastSubmitted = '';
       _status = '已关闭语音助手';
       _commandResultDepth = 0;
@@ -122,10 +136,11 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       _speechAvailable = await _speech.initialize(
         onError: (error) {
           _initError = '$error';
+          debugPrint('[voice] speech error: $error'); // 原始错误供排查
           if (!mounted) return;
           setState(() {
             _listening = false;
-            _status = '语音识别暂时不可用：$error';
+            _status = _friendlySpeechError('$error');
           });
         },
         onStatus: (status) {
@@ -134,7 +149,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
           setState(() {
             _listening = listening;
             if (!_sending) {
-              _status = listening ? '聆听中，停顿 3 秒自动提交' : '语音已暂停，点击小球重试';
+              _status = listening ? '聆听中，停顿 1 秒自动提交' : '语音已暂停，点击小球重试';
             }
           });
         },
@@ -155,9 +170,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     if (!available) {
       setState(() {
         _listening = false;
-        _status = _initError.isEmpty
-            ? '当前环境暂不支持语音输入，请使用 AI 聊天页键盘输入'
-            : '语音不可用：$_initError';
+        _status = _friendlySpeechError(_initError);
       });
       return;
     }
@@ -169,7 +182,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
           if (next.isEmpty) return;
           setState(() {
             _recognized = next;
-            _status = '聆听中，停顿 3 秒自动提交';
+            _status = '聆听中，停顿 1 秒自动提交';
           });
           _scheduleAutoSubmit(result.finalResult);
         },
@@ -183,7 +196,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       if (!mounted) return;
       setState(() {
         _listening = true;
-        _status = '聆听中，停顿 3 秒自动提交';
+        _status = '聆听中，停顿 1 秒自动提交';
       });
     } catch (_) {
       if (!mounted) return;
@@ -199,7 +212,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     _silenceTimer = Timer(
       finalResult
           ? const Duration(milliseconds: 600)
-          : const Duration(seconds: 3),
+          : const Duration(seconds: 1),
       () => _submitRecognized(auto: true),
     );
   }
@@ -219,6 +232,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     setState(() {
       _sending = true;
       _listening = false;
+      _recognized = ''; // 提交后清空，底栏回到「正在理解…」而非停留在已提交文本
       _status = auto ? '已自动提交，正在理解' : '正在理解您的指令';
     });
     try {
@@ -250,6 +264,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     final commands = _commandsOf(data['commands']);
     setState(() {
       _replyMarkdown = reply;
+      _hasReply = true;
       if (statusText.isNotEmpty) _status = statusText;
     });
     if (speakText.isNotEmpty) {
@@ -403,7 +418,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   Widget _smallOrb() {
     return Positioned(
       right: 18,
-      bottom: 92,
+      bottom: 150, // 覆盖层已包住底部导航栏，抬高小球避免压在导航栏上
       child: SafeArea(
         minimum: EdgeInsets.zero,
         child: Semantics(
@@ -444,175 +459,210 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
 
   Widget _overlay() {
     return Positioned.fill(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _deactivate,
-        child: Material(
-          color: Colors.black.withValues(alpha: 0.34),
-          child: Stack(
-            children: [
-              _edgeGlow(),
-              Center(
-                child: GestureDetector(
-                  onTap: () => _submitRecognized(auto: false),
-                  child: _largeOrb(),
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            // 点击空白处关闭；底栏与按钮在更上层，自行吞掉点击。
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _deactivate,
+              ),
+            ),
+            // 边框跑马灯（不拦截点击，让底层页面交互不受影响）。
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _glow,
+                  builder: (context, _) => CustomPaint(
+                    painter: _MarqueeBorderPainter(t: _glow.value),
+                  ),
                 ),
               ),
-              Positioned(
-                top: 52,
-                left: 18,
-                right: 18,
-                child: _statusBar(),
-              ),
+            ),
+            if (_hasReply || _sending)
               Positioned(
                 left: 16,
                 right: 16,
-                bottom: 28,
+                bottom: 132,
                 child: SafeArea(top: false, child: _replyBubble()),
               ),
-            ],
-          ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _bottomBar(),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _edgeGlow() {
-    return AnimatedBuilder(
-      animation: _glow,
-      builder: (context, _) {
-        final opacity = 0.38 + _glow.value * 0.34;
-        final gradient = LinearGradient(
-          colors: [
-            AppColors.primary.withValues(alpha: opacity),
-            AppColors.secondary.withValues(alpha: opacity * 0.82),
-            AppColors.gold.withValues(alpha: opacity * 0.74),
-          ],
-        );
-        return Stack(
-          children: [
-            Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 5,
-                child: DecoratedBox(
-                    decoration: BoxDecoration(gradient: gradient))),
-            Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 5,
-                child: DecoratedBox(
-                    decoration: BoxDecoration(gradient: gradient))),
-            Positioned(
-                top: 0,
-                bottom: 0,
-                left: 0,
-                width: 5,
-                child: DecoratedBox(
-                    decoration: BoxDecoration(gradient: gradient))),
-            Positioned(
-                top: 0,
-                bottom: 0,
-                right: 0,
-                width: 5,
-                child: DecoratedBox(
-                    decoration: BoxDecoration(gradient: gradient))),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _largeOrb() {
-    return AnimatedBuilder(
-      animation: _glow,
-      builder: (context, _) {
-        final size = 154.0 + _glow.value * 12;
-        return Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const RadialGradient(
-              colors: [
-                Colors.white,
-                AppColors.primaryDim,
-                AppColors.primary,
-                AppColors.secondary,
-              ],
-              stops: [0.0, 0.28, 0.66, 1.0],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.45),
-                blurRadius: 36 + _glow.value * 18,
-                spreadRadius: 5 + _glow.value * 4,
-              ),
-            ],
-          ),
-          child: Icon(
-            _sending
-                ? Icons.auto_awesome
-                : _listening
-                    ? Icons.mic
-                    : Icons.graphic_eq,
-            color: Colors.white,
-            size: 48,
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _statusBar() {
+  Widget _bottomBar() {
     final transcript = _recognized.trim();
+    final centerText = transcript.isNotEmpty
+        ? transcript
+        : _sending
+            ? '正在理解…'
+            : _listening
+                ? '聆听中…'
+                : _status;
     return GestureDetector(
-      onTap: () {},
+      onTap: () {}, // 吸收点击，避免误触关闭
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.94),
-          borderRadius: BorderRadius.circular(R.sm),
-          border: Border.all(color: AppColors.outlineVariant),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0x00000000), Color(0xE6000000)],
+          ),
         ),
-        child: Row(
-          children: [
-            Icon(
-              _sending
-                  ? Icons.sync
-                  : _listening
-                      ? Icons.hearing
-                      : Icons.mic_off_outlined,
-              color: AppColors.primary,
-              size: 18,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                transcript.isEmpty ? _status : '$transcript  ·  $_status',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.onSurface,
-                  fontSize: 13,
-                  height: 1.35,
-                  fontWeight: FontWeight.w600,
+        padding: const EdgeInsets.fromLTRB(20, 26, 20, 12),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              _circleButton(
+                icon: Icons.auto_awesome,
+                label: '提交',
+                onTap: () => _submitRecognized(auto: false),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: Text(
+                      centerText,
+                      key: ValueKey(centerText),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: transcript.isNotEmpty ? 17 : 18,
+                        height: 1.3,
+                        fontWeight: FontWeight.w600,
+                        shadows: const [
+                          Shadow(color: Colors.black54, blurRadius: 8),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            IconButton(
-              tooltip: '关闭',
-              visualDensity: VisualDensity.compact,
-              onPressed: _deactivate,
-              icon: const Icon(Icons.close,
-                  size: 18, color: AppColors.onSurfaceVariant),
-            ),
-          ],
+              _circleButton(
+                icon: Icons.keyboard_alt_outlined,
+                label: '键盘输入',
+                onTap: _promptKeyboardInput,
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _circleButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 58,
+          height: 58,
+          padding: const EdgeInsets.all(2.5),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const SweepGradient(
+                colors: [..._auroraColors, Color(0xFF7CF0BD)]),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFB89BFF).withValues(alpha: 0.45),
+                blurRadius: 16,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFEDF1F6),
+            ),
+            child: Icon(icon, color: const Color(0xFF2A2A33), size: 26),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 键盘兜底输入：弹出文本框，提交后走与语音相同的指令管线。
+  Future<void> _promptKeyboardInput() async {
+    try {
+      await _speech.stop();
+    } catch (_) {}
+    if (!mounted) return;
+    final controller = TextEditingController();
+    final text = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.md)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: controller,
+                autofocus: true,
+                minLines: 1,
+                maxLines: 4,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (v) => Navigator.of(sheetContext).pop(v),
+                decoration: InputDecoration(
+                  hintText: '输入想让助手做的事…',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(R.sm),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.of(sheetContext).pop(controller.text),
+                child: const Text('发送'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    controller.dispose();
+    if (!mounted || !_active) return;
+    final next = (text ?? '').trim();
+    if (next.isEmpty) {
+      unawaited(_startListening());
+      return;
+    }
+    setState(() => _recognized = next);
+    await _submitRecognized(auto: false);
   }
 
   Widget _replyBubble() {
@@ -641,6 +691,30 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     );
   }
 
+  // 把底层语音识别错误码映射成口语化中文，并引导到键盘输入；原始错误打到 debug 控制台。
+  static String _friendlySpeechError(String raw) {
+    final e = raw.toLowerCase();
+    if (e.contains('no_match') ||
+        e.contains('no match') ||
+        e.contains('speech_timeout') ||
+        e.contains('timeout')) {
+      return '没听清，请再说一次，或点小球重试。';
+    }
+    if (e.contains('permission')) {
+      return '语音识别不可用：设备未授权麦克风或没有语音识别服务。可到「AI 农技」页用键盘提问。';
+    }
+    if (e.contains('network')) {
+      return '语音识别需要网络，当前不可用。可到「AI 农技」页用键盘提问。';
+    }
+    if (e.contains('not supported') ||
+        e.contains('not_supported') ||
+        e.contains('speech_not_supported') ||
+        e.contains('missingplugin')) {
+      return '当前设备不支持语音输入。可到「AI 农技」页用键盘提问。';
+    }
+    return '语音识别暂时不可用。可到「AI 农技」页用键盘提问。';
+  }
+
   static Map<String, dynamic> _mapOf(dynamic value) {
     if (value is Map) return value.map((key, val) => MapEntry('$key', val));
     return {};
@@ -663,4 +737,47 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     if (value is num) return value.toInt();
     return int.tryParse('$value') ?? fallback;
   }
+}
+
+/// 全屏圆角边框跑马灯：彩虹光带绕边顺时针流动，外发光模拟霓虹。
+class _MarqueeBorderPainter extends CustomPainter {
+  _MarqueeBorderPainter({required this.t});
+
+  /// 0..1 的动画相位，驱动 SweepGradient 旋转。
+  final double t;
+
+  static const double _stroke = 7;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    // 全屏直角边框（无圆角），描边整条留在屏幕内。
+    final rrect = RRect.fromRectAndRadius(
+      rect.deflate(_stroke / 2),
+      Radius.zero,
+    );
+    final shader = SweepGradient(
+      colors: const [..._auroraColors, Color(0xFF7CF0BD)],
+      transform: GradientRotation(t * 2 * math.pi),
+    ).createShader(rect);
+
+    // 外发光层：更宽 + 模糊。
+    final glow = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _stroke * 2.4
+      ..shader = shader
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+    canvas.drawRRect(rrect, glow);
+
+    // 清晰主描边。
+    final line = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _stroke
+      ..shader = shader;
+    canvas.drawRRect(rrect, line);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MarqueeBorderPainter oldDelegate) =>
+      oldDelegate.t != t;
 }

@@ -57,13 +57,14 @@ class _ShellPageState extends State<ShellPage> {
   Widget build(BuildContext context) {
     // 底栏只在精确等于 5 个一级 tab 的路径显示；二级页（/search /all /market…）不展示。
     final idx = _index(widget.location);
-    return Scaffold(
-      body: VoiceAssistantLayer(
-        location: widget.location,
-        enabled: idx >= 0,
-        child: widget.child,
+    // 助手覆盖层包住整个 Scaffold（含底部导航栏），激活时跑马灯边框与底栏才能盖住导航栏。
+    return VoiceAssistantLayer(
+      location: widget.location,
+      enabled: idx >= 0,
+      child: Scaffold(
+        body: widget.child,
+        bottomNavigationBar: idx >= 0 ? _navBar(idx) : null,
       ),
-      bottomNavigationBar: idx >= 0 ? _navBar(idx) : null,
     );
   }
 
