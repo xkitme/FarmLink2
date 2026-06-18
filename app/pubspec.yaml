@@ -23,6 +23,11 @@ dependencies:
   speech_to_text: ^7.4.0
   flutter_tts: ^4.2.5
   audioplayers: ^6.1.0
+  # 离线中文语音识别（sherpa-onnx + 流式 zipformer 中英双语模型，完全本地，无外网）
+  sherpa_onnx: ^1.13.3
+  record: ^5.1.2
+  path_provider: ^2.1.4
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:
@@ -35,3 +40,6 @@ flutter:
     - assets/images/generated/
     - assets/images/farmlink-mark.png
     - assets/images/ai_1.jpg
+    # 离线 STT（sherpa-onnx 流式 zipformer 中英双语）模型权重 + 词表。
+    # *.onnx 因体积(encoder 173MB>GitHub 100MB)未入库，build APK 前需从 _asrdl 解压。
+    - assets/models/asr/

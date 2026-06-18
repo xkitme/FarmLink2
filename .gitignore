@@ -47,3 +47,12 @@ tts/__pycache__/
 
 # 本地 TTS 试听样本（临时，不入库）
 tts_samples/
+
+# 离线 STT 模型下载包（487MB tar，本地解压后进 app/assets，原包不入库）
+_asrdl/
+docs.zip
+
+# 离线 STT 模型权重：int8 encoder 173MB 超 GitHub 单文件 100MB 硬上限，
+# 随交付包/本地解压保留，不入库（tokens.txt 小且标识模型，照常入库）。
+# 解压：tar -xjf _asrdl/model_full.tar.bz2 --strip-components=1 -C app/assets/models/asr <四个文件名>
+app/assets/models/asr/*.onnx

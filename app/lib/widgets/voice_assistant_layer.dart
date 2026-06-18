@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../core/api_client.dart';
 import '../core/constants.dart';
+import '../core/offline_stt.dart';
 import '../core/tts_service.dart';
 import 'common.dart';
 import 'markdown_text.dart';
@@ -89,7 +91,11 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     VoiceAssistantController.requests.removeListener(_handleOpenRequest);
     _silenceTimer?.cancel();
     _glow.dispose();
-    _speech.cancel();
+    if (kIsWeb) {
+      _speech.cancel();
+    } else {
+      OfflineStt.stop();
+    }
     super.dispose();
   }
 
@@ -112,7 +118,11 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   Future<void> _deactivate() async {
     _silenceTimer?.cancel();
     try {
-      await _speech.cancel();
+      if (kIsWeb) {
+        await _speech.cancel();
+      } else {
+        await OfflineStt.stop();
+      }
     } catch (_) {}
     await TtsService.stop();
     if (!mounted) return;
@@ -133,27 +143,34 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     _speechInitTried = true;
     _initializingSpeech = true;
     try {
-      _speechAvailable = await _speech.initialize(
-        onError: (error) {
-          _initError = '$error';
-          debugPrint('[voice] speech error: $error'); // 原始错误供排查
-          if (!mounted) return;
-          setState(() {
-            _listening = false;
-            _status = _friendlySpeechError('$error');
-          });
-        },
-        onStatus: (status) {
-          if (!mounted) return;
-          final listening = status == 'listening';
-          setState(() {
-            _listening = listening;
-            if (!_sending) {
-              _status = listening ? '聆听中，停顿 1 秒自动提交' : '语音已暂停，点击小球重试';
-            }
-          });
-        },
-      );
+      if (kIsWeb) {
+        // web：浏览器 speech_to_text（临时测试用，非正式功能点）
+        _speechAvailable = await _speech.initialize(
+          onError: (error) {
+            _initError = '$error';
+            debugPrint('[voice] speech error: $error'); // 原始错误供排查
+            if (!mounted) return;
+            setState(() {
+              _listening = false;
+              _status = _friendlySpeechError('$error');
+            });
+          },
+          onStatus: (status) {
+            if (!mounted) return;
+            final listening = status == 'listening';
+            setState(() {
+              _listening = listening;
+              if (!_sending) {
+                _status = listening ? '聆听中，停顿 1 秒自动提交' : '语音已暂停，点击小球重试';
+              }
+            });
+          },
+        );
+      } else {
+        // 原生（APK）：sherpa-onnx 离线识别
+        _speechAvailable = await OfflineStt.isAvailable();
+        if (!_speechAvailable) _initError = 'offline-stt-unavailable';
+      }
     } catch (e) {
       _speechAvailable = false;
       _initError = '$e'; // MissingPluginException = web 插件没注册（多半跑了旧 bundle）
@@ -175,24 +192,52 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       return;
     }
     try {
-      await _speech.listen(
-        onResult: (result) {
-          if (!mounted || !_active) return;
-          final next = result.recognizedWords.trim();
-          if (next.isEmpty) return;
+      if (kIsWeb) {
+        await _speech.listen(
+          onResult: (result) {
+            if (!mounted || !_active) return;
+            final next = result.recognizedWords.trim();
+            if (next.isEmpty) return;
+            setState(() {
+              _recognized = next;
+              _status = '聆听中，停顿 1 秒自动提交';
+            });
+            _scheduleAutoSubmit(result.finalResult);
+          },
+          listenOptions: SpeechListenOptions(
+            partialResults: true,
+            cancelOnError: false,
+            listenMode: ListenMode.dictation,
+            localeId: 'zh_CN',
+          ),
+        );
+      } else {
+        final ok = await OfflineStt.start(
+          onText: (text) {
+            if (!mounted || !_active) return;
+            final next = text.trim();
+            if (next.isEmpty) return;
+            setState(() {
+              _recognized = next;
+              _status = '聆听中，停顿 1 秒自动提交';
+            });
+            _scheduleAutoSubmit(false); // 兜底：onEndpoint 没来时仍按静音计时提交
+          },
+          onEndpoint: (_) {
+            // sherpa 端点检测（静音停顿）= 一句说完，立即提交
+            if (!mounted || !_active) return;
+            unawaited(_submitRecognized(auto: true));
+          },
+        );
+        if (!ok) {
+          if (!mounted) return;
           setState(() {
-            _recognized = next;
-            _status = '聆听中，停顿 1 秒自动提交';
+            _listening = false;
+            _status = _friendlySpeechError('offline-stt-unavailable');
           });
-          _scheduleAutoSubmit(result.finalResult);
-        },
-        listenOptions: SpeechListenOptions(
-          partialResults: true,
-          cancelOnError: false,
-          listenMode: ListenMode.dictation,
-          localeId: 'zh_CN',
-        ),
-      );
+          return;
+        }
+      }
       if (!mounted) return;
       setState(() {
         _listening = true;
@@ -226,7 +271,11 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     _silenceTimer?.cancel();
     _lastSubmitted = text;
     try {
-      await _speech.stop();
+      if (kIsWeb) {
+        await _speech.stop();
+      } else {
+        await OfflineStt.stop();
+      }
     } catch (_) {}
     if (!mounted) return;
     setState(() {

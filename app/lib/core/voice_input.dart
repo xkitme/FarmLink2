@@ -1,16 +1,19 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import 'constants.dart';
+import 'offline_stt.dart';
 import '../widgets/common.dart';
 
 /// 语音输入辅助：封装「点击说话 → 中文识别 → 回填文本」的全流程。
 ///
 /// 设计要点：
-/// - 不可用时优雅降级，绝不崩溃（Web 端依赖浏览器语音能力，可能不可用）。
-/// - 识别中文（locale `zh_CN`，缺省回退到设备默认中文）。
+/// - **原生（APK）走 sherpa-onnx 离线识别**（完全本地，不依赖网络/后端）；
+///   **web 走浏览器 `speech_to_text`**（临时测试用，非正式功能点）。
+/// - 不可用时优雅降级，绝不崩溃。
 /// - 通过底部弹层展示聆听状态与实时文字，用户点「完成」确认回填。
 class VoiceInput {
   VoiceInput._();
@@ -24,10 +27,9 @@ class VoiceInput {
     if (_initTried) return _available;
     _initTried = true;
     try {
-      _available = await _speech.initialize(
-        onError: (_) {},
-        onStatus: (_) {},
-      );
+      _available = kIsWeb
+          ? await _speech.initialize(onError: (_) {}, onStatus: (_) {})
+          : await OfflineStt.isAvailable();
     } catch (_) {
       _available = false;
     }
@@ -80,18 +82,31 @@ class _VoiceListenSheetState extends State<_VoiceListenSheet> {
 
   Future<void> _start() async {
     try {
-      await _speech.listen(
-        onResult: (result) {
-          if (!mounted) return;
-          setState(() => _recognized = result.recognizedWords);
-        },
-        listenOptions: SpeechListenOptions(
-          partialResults: true,
-          cancelOnError: true,
-          listenMode: ListenMode.dictation,
-          localeId: 'zh_CN',
-        ),
-      );
+      if (kIsWeb) {
+        await _speech.listen(
+          onResult: (result) {
+            if (!mounted) return;
+            setState(() => _recognized = result.recognizedWords);
+          },
+          listenOptions: SpeechListenOptions(
+            partialResults: true,
+            cancelOnError: true,
+            listenMode: ListenMode.dictation,
+            localeId: 'zh_CN',
+          ),
+        );
+      } else {
+        final ok = await OfflineStt.start(
+          onText: (text) {
+            if (!mounted) return;
+            setState(() => _recognized = text);
+          },
+        );
+        if (!ok) {
+          if (mounted) setState(() => _failed = true);
+          return;
+        }
+      }
       if (mounted) setState(() => _listening = true);
     } catch (_) {
       if (mounted) setState(() => _failed = true);
@@ -99,25 +114,36 @@ class _VoiceListenSheetState extends State<_VoiceListenSheet> {
   }
 
   Future<void> _stopAndReturn() async {
+    var text = _recognized;
     try {
-      await _speech.stop();
+      if (kIsWeb) {
+        await _speech.stop();
+      } else {
+        text = await OfflineStt.stop();
+      }
     } catch (_) {}
     if (!mounted) return;
-    final text = _recognized.trim();
+    text = text.trim();
     Navigator.pop(context, text.isEmpty ? null : text);
   }
 
   Future<void> _cancel() async {
     try {
-      await _speech.cancel();
+      if (kIsWeb) {
+        await _speech.cancel();
+      } else {
+        await OfflineStt.stop();
+      }
     } catch (_) {}
     if (mounted) Navigator.pop(context);
   }
 
   @override
   void dispose() {
-    if (_speech.isListening) {
-      _speech.stop();
+    if (kIsWeb) {
+      if (_speech.isListening) _speech.stop();
+    } else {
+      OfflineStt.stop();
     }
     super.dispose();
   }
