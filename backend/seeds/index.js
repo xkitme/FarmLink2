@@ -461,6 +461,8 @@ async function main() {
       { sellerId: bigfarmer.id, title: '李大姐有机蔬菜礼盒',        category: '蔬菜', price: 68,  unit: '盒', stock: 60,  soldCount: 42, traceCode: 'TRACE-SH-2026-VEG-LGL', regionCode: VILLAGE, images: '["assets/images/generated/product-vegetable-box.jpg"]', description: '当季8种蔬菜混装，田间采摘后统一分级包装。' },
       { sellerId: farmer.id,    title: '农家自晒红薯干',            category: '其他', price: 25,  unit: '袋', stock: 60,  soldCount: 21, regionCode: VILLAGE, images: '["assets/images/generated/product-sweet-potato.jpg"]', description: '传统工艺日晒，软糯香甜。' },
       { sellerId: merchant.id,  title: '生态散养土鸡蛋（30枚）',    category: '畜禽', price: 45,  unit: '箱', stock: 80,  soldCount: 32, regionCode: VILLAGE, images: '["assets/images/generated/product-eggs.jpg"]', description: '自家散养土鸡所产，无添加，营养健康。' },
+      { sellerId: merchant.id,  title: '环保编织手链',              category: '文创', price: 19,  unit: '条', stock: 200, soldCount: 64, regionCode: VILLAGE, description: '村合作社手工编织，环保棉麻线材，多色可选，适合伴手礼。' },
+      { sellerId: merchant.id,  title: '乡村文创玩偶',              category: '文创', price: 39,  unit: '个', stock: 120, soldCount: 38, regionCode: VILLAGE, description: '以本地农耕形象设计的手作布偶，村妇女手工坊出品。' },
     ],
   })
 

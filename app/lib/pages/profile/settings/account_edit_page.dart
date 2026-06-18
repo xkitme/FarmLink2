@@ -29,6 +29,7 @@ class _AccountEditPageState extends State<AccountEditPage> {
   late final TextEditingController _realName;
   late final TextEditingController _phone;
   late final TextEditingController _village;
+  late final TextEditingController _address;
 
   String? _avatarUrl;
   String? _bannerUrl;
@@ -45,6 +46,7 @@ class _AccountEditPageState extends State<AccountEditPage> {
     _realName = TextEditingController(text: user?.realName ?? '');
     _phone = TextEditingController(text: user?.phone ?? '');
     _village = TextEditingController(text: user?.villageName ?? '');
+    _address = TextEditingController(text: user?.shippingAddress ?? '');
     _avatarUrl = user?.avatarUrl;
     _bannerUrl = user?.bannerUrl;
   }
@@ -56,6 +58,7 @@ class _AccountEditPageState extends State<AccountEditPage> {
     _realName.dispose();
     _phone.dispose();
     _village.dispose();
+    _address.dispose();
     super.dispose();
   }
 
@@ -132,6 +135,7 @@ class _AccountEditPageState extends State<AccountEditPage> {
         'realName': _realName.text.trim(),
         'phone': phone,
         'villageName': _village.text.trim(),
+        'shippingAddress': _address.text.trim(),
         'avatarUrl': _avatarUrl ?? '',
         'bannerUrl': _bannerUrl ?? '',
       });
@@ -217,6 +221,12 @@ class _AccountEditPageState extends State<AccountEditPage> {
                   label: '所属村',
                   hint: '如：青禾村',
                   maxLength: 40,
+                ),
+                _field(
+                  controller: _address,
+                  label: '收货地址',
+                  hint: '集市下单与语音助手下单的默认收货地址',
+                  maxLength: 80,
                 ),
                 const SizedBox(height: 12),
                 SizedBox(

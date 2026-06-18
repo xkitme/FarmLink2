@@ -280,6 +280,12 @@ class _MarketPageState extends State<MarketPage> {
       backgroundColor: AppColors.background,
       appBar: FarmAppBar(title: '乡村集市', showBack: true, actions: [
         IconButton(
+          tooltip: '我的订单',
+          onPressed: () => context.push('/market/orders'),
+          icon: const Icon(Icons.receipt_long_outlined,
+              color: AppColors.onSurfaceVariant),
+        ),
+        IconButton(
           tooltip: '流通服务',
           onPressed: () => context.push('/market/service'),
           icon: const Icon(Icons.dashboard_customize_outlined,

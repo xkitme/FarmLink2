@@ -106,11 +106,12 @@ function sanitizeCommand(command, availableProductIds) {
   if (type === 'create_order') {
     const productId = positiveInt(params.productId)
     const quantity = quantityOf(params.quantity)
-    const receiverInfo = sanitizeReceiverInfo(params.receiverInfo)
-    if (!productId || !availableProductIds.has(productId) || !quantity || !receiverInfo) {
+    if (!productId || !availableProductIds.has(productId) || !quantity) {
       return null
     }
-    return { type, params: { productId, quantity, receiverInfo } }
+    // receiverInfo 可选：App 用登录用户资料里的收货地址兜底填充；模型给了就一并透传。
+    const receiverInfo = sanitizeReceiverInfo(params.receiverInfo)
+    return { type, params: { productId, quantity, ...(receiverInfo ? { receiverInfo } : {}) } }
   }
   if (type === 'mock_pay') {
     const orderId = positiveInt(params.orderId)

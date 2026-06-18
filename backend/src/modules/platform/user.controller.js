@@ -30,12 +30,13 @@ export async function getGrowth(req, res) {
 
 /** 更新个人资料 */
 export async function updateProfile(req, res) {
-  const { username, nickname, avatarUrl, bannerUrl, realName, phone, villageName, regionCode, isElderMode } = req.body
+  const { username, nickname, avatarUrl, bannerUrl, realName, phone, villageName, regionCode, isElderMode, shippingAddress } = req.body
   const data = {}
   if (nickname !== undefined) data.nickname = nickname
   if (avatarUrl !== undefined) data.avatarUrl = avatarUrl
   if (bannerUrl !== undefined) data.bannerUrl = bannerUrl
   if (realName !== undefined) data.realName = realName
+  if (shippingAddress !== undefined) data.shippingAddress = (shippingAddress || '').trim() || null
   if (villageName !== undefined) data.villageName = villageName
   if (regionCode !== undefined) data.regionCode = regionCode
   if (isElderMode !== undefined) data.isElderMode = !!isElderMode

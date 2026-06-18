@@ -9,6 +9,7 @@ class AppUser {
   final String role;
   final String? regionCode;
   final String? villageName;
+  final String? shippingAddress;
   final int points;
   final int growth;
   final bool isElderMode;
@@ -24,6 +25,7 @@ class AppUser {
     this.role = 'FARMER',
     this.regionCode,
     this.villageName,
+    this.shippingAddress,
     this.points = 0,
     this.growth = 0,
     this.isElderMode = false,
@@ -42,6 +44,7 @@ class AppUser {
         role: j['role'] as String? ?? 'FARMER',
         regionCode: j['regionCode'] as String?,
         villageName: j['villageName'] as String?,
+        shippingAddress: j['shippingAddress'] as String?,
         points: (j['points'] as int?) ?? 0,
         growth: (j['growth'] as int?) ?? 0,
         isElderMode: (j['isElderMode'] as bool?) ?? false,
@@ -58,6 +61,7 @@ class AppUser {
         'role': role,
         'regionCode': regionCode,
         'villageName': villageName,
+        'shippingAddress': shippingAddress,
         'points': points,
         'growth': growth,
         'isElderMode': isElderMode,

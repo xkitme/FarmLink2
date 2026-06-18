@@ -4,9 +4,11 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../core/api_client.dart';
+import '../core/auth_state.dart';
 import '../core/constants.dart';
 import '../core/offline_stt.dart';
 import '../core/tts_service.dart';
@@ -365,8 +367,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
         final routeKey = _text(params['routeKey']);
         final path = _pathFor(routeKey);
         if (path == null) throw ApiException(40001, '暂不支持打开该页面');
-        setState(
-            () => _status = routeKey == 'orders' ? '订单页将在下一阶段接入' : '正在打开页面');
+        setState(() => _status = routeKey == 'orders' ? '正在打开我的订单' : '正在打开页面');
         context.go(path);
         return {'routeKey': routeKey, 'path': path};
       case 'show_products':
@@ -382,18 +383,37 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       case 'show_order_confirm':
         final productId = _int(params['productId']);
         final quantity = _int(params['quantity'], fallback: 1);
+        final r = _receiverInfo();
         setState(() {
           _status = '正在确认订单';
-          _replyMarkdown =
-              '已为您准备订单确认：商品 $productId，数量 $quantity。P1 会接入收货地址确认页。';
+          if (r == null) {
+            _replyMarkdown =
+                '下单前请先填写**收货地址**：到「我的 - 编辑资料」补全后，再说一次「下单」即可。';
+          } else {
+            _replyMarkdown = '请确认订单：\n\n'
+                '- 商品编号：$productId\n'
+                '- 数量：$quantity\n'
+                '- 收货人：${r['realName']}${(r['phone'] as String).isEmpty ? '' : '（${r['phone']}）'}\n'
+                '- 收货地址：${r['address']}\n\n'
+                '说「确认下单」即可提交。';
+          }
         });
-        return {'productId': productId, 'quantity': quantity};
+        return {
+          'productId': productId,
+          'quantity': quantity,
+          'hasAddress': r != null,
+        };
       case 'create_order':
+        final receiver = _receiverInfo();
+        if (receiver == null) {
+          setState(() => _status = '缺少收货地址');
+          throw ApiException(40001, '请先在「我的 - 编辑资料」填写收货地址');
+        }
         setState(() => _status = '正在创建订单');
         final order = await ApiClient.post('/market/order', body: {
           'productId': params['productId'],
           'quantity': params['quantity'],
-          'receiverInfo': params['receiverInfo'],
+          'receiverInfo': receiver,
           'remark': 'AI 语音助手下单',
         });
         final orderMap = _mapOf(order);
@@ -430,6 +450,19 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     }
   }
 
+  /// 从当前登录用户资料组装收货信息（下单 receiverInfo）。
+  /// 收货地址为空返回 null —— 调用方据此引导用户先补全地址。
+  Map<String, dynamic>? _receiverInfo() {
+    final user = context.read<AuthState>().user;
+    final address = (user?.shippingAddress ?? '').trim();
+    if (address.isEmpty) return null;
+    return {
+      'realName': (user?.realName ?? user?.nickname ?? '').trim(),
+      'phone': (user?.phone ?? '').trim(),
+      'address': address,
+    };
+  }
+
   String? _pathFor(String routeKey) {
     switch (routeKey) {
       case 'home':
@@ -437,8 +470,9 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       case 'ai':
         return '/ai';
       case 'market':
-      case 'orders':
         return '/market';
+      case 'orders':
+        return '/market/orders';
       case 'publish':
         return '/publish';
       case 'messages':
