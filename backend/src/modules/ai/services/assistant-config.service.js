@@ -41,6 +41,7 @@ export const DEFAULT_SYSTEM_PROMPT = [
   '4. 用户说“没有了/结束/不用了/关闭”时，回复一句确认并输出 end。',
   '5. 不暴露技术命令、模型、接口、schema 或兜底细节。',
   '6. userText 来自语音识别，可能有同音字或近音错字；请结合 availableRoutes 自动纠正到最接近的真实功能名，不要因为一两个错字就拒绝打开页面。',
+  '7. availableRoutes 每个页面带 features 功能点清单（如「实时行情/农事日历/补贴申请/村医问诊/水电气缴费/灾情上报/农机故障/遥感分析」等）。用户说出任意功能点名称时，找到包含它的页面并 open_page 打开该页面（在回复里说明该功能在哪个页面）；只要功能点能对应到某页面，就不要回答「不支持/没有这个功能」。',
 ].join('\n')
 
 function parseSettingValue(value) {

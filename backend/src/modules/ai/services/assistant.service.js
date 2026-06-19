@@ -44,6 +44,45 @@ const ROUTE_CATALOG = [
 
 const ALLOWED_ROUTE_KEYS = new Set(ROUTE_CATALOG.map(([key]) => key))
 
+// 每个页面 routeKey 实际承载的「功能点」别名（与 App 端 feature_catalog.dart 对齐）。
+// 语音助手只认页面名时，用户说「查行情」「农事日历」「交水电费」等细粒度功能会「不认识」；
+// 把功能点喂给模型，它就能把用户口语的功能名映射到所属页面再 open_page。
+const ROUTE_FEATURES = {
+  agri_diagnose: ['病虫害识别', '拍照识病', '叶片识别', '植保诊断'],
+  agri: [
+    '作物长势监测', '杂草识别', '种子检测', '智能施肥', '施肥配方', '灌溉计划', '浇水',
+    '产量预测', '农事日历', '节气农时', '农药安全查询', '用药间隔', '地块管理', '田块',
+    '农事记录', '打药记录', '碳排放核算',
+  ],
+  iot: ['智能物联', '物联网', '传感器', '设备监测', '田间监测', '设备联动', '自动灌溉', '联动规则'],
+  market: ['乡村集市', '商城', '买卖下单', '实时行情', '农产品价格', '报价'],
+  market_service: [
+    '价格预测', '期货行情', '出口合规', '收购站地图', '农资团购', 'AI质量分级', '品控',
+    '直播话术', '带货', '包装文案', '溯源码', '追溯', '物流查询', '快递运输',
+  ],
+  machinery: ['农机租赁', '拖拉机', '收割机', '找农机'],
+  machinery_service: [
+    '维保提醒', '保养', '故障诊断', '农机维修', '作业轨迹', '成本核算', '土地流转',
+    '机手认证', '农机保险',
+  ],
+  disaster: [
+    '极端天气预警', '天气预报', '气象', '暴雨', '灾情上报', '受灾', '保险理赔', '应急预案',
+    '冻害防护', '霜冻', '火险预警', '干旱指数', '旱情', '一键求助', 'SOS', '紧急求助',
+  ],
+  policy: ['政策推送', '惠农政策', '三农', '党建学习', '村务公开', '文明乡风榜'],
+  policy_service: ['补贴申请', '补助', '政策AI问答', '法律咨询', '普法维权', '职业农民培训', '课程'],
+  life: [
+    '村医问诊', '看病健康', '快递代收', '取件', '就业平台', '招工找工作', '水电气缴费',
+    '水费电费', '乡村旅游', '农家乐', '养老关爱', '农业贷款', '金融借款', '教育辅导',
+    '邻里互助', '二手交易', '闲置转让', '民俗记录', '非遗文化', '环境举报', '污染举报',
+  ],
+  data: ['农情数据看板', '驾驶舱', '遥感分析', '卫星NDVI'],
+  data_service: ['农事年度报告', '统计上报', '数据同步'],
+  ai_chat: ['AI智能问答', 'AI助手', '聊天咨询'],
+  ai: ['AI对话历史', '历史记录'],
+  orders: ['我的订单', '订单查询', '查快递', '订单状态'],
+}
+
 const ALLOWED_COMMANDS = new Set([
   'open_page',
   'show_products',
@@ -234,7 +273,10 @@ function buildUserPrompt({ text, route, context, commandResult, user, products, 
       : null,
     availableProducts: products,
     recentOrders: orders,
-    availableRoutes: ROUTE_CATALOG.map(([key, label]) => ({ key, label })),
+    availableRoutes: ROUTE_CATALOG.map(([key, label]) => {
+      const features = ROUTE_FEATURES[key]
+      return features && features.length ? { key, label, features } : { key, label }
+    }),
   })
 }
 

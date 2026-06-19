@@ -64,7 +64,6 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   bool _listening = false;
   bool _sending = false;
   bool _hasReply = false; // 收到首轮 AI 回复后才显示回复气泡，纯聆听态保持图示的简洁
-  int _commandResultDepth = 0;
   String _recognized = '';
   String _lastSubmitted = '';
   String _replyMarkdown = '您好，我是 AI 语音助手。说出想做的事，我会帮您打开页面、推荐商品或继续对话。';
@@ -173,7 +172,6 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       _hasReply = false;
       _lastSubmitted = '';
       _status = '已关闭语音助手';
-      _commandResultDepth = 0;
     });
   }
 
@@ -345,10 +343,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     }
   }
 
-  Future<void> _applyAssistantResponse(
-    Map<String, dynamic> data, {
-    bool speakAfterCommands = true,
-  }) async {
+  Future<void> _applyAssistantResponse(Map<String, dynamic> data) async {
     final reply = _text(data['replyMarkdown'], fallback: '我听到了，请继续说。');
     final statusText = _text(data['statusText']);
     final commands = _commandsOf(data['commands']);
@@ -358,7 +353,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       if (statusText.isNotEmpty) _status = statusText;
     });
     await _executeCommands(commands);
-    if (!mounted || !_active || !speakAfterCommands) return;
+    if (!mounted || !_active) return;
     final visibleReply = _replyMarkdown.trim();
     if (visibleReply.isNotEmpty) {
       setState(() => _status = '正在播报，稍后继续聆听');
@@ -371,40 +366,17 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
 
   Future<void> _executeCommands(List<Map<String, dynamic>> commands) async {
     if (commands.isEmpty) return;
-    final results = <Map<String, dynamic>>[];
+    // 只执行命令、不再回传 /command-result 触发第二轮 LLM：
+    // 那会用第二个回答覆盖并重读第一个回答（表现为「AI 输出后又生成第二个答案」）。
+    // 事务类命令（create_order/mock_pay）已在 _executeCommand 内就地写好结果文案，足够反馈。
     for (final command in commands) {
       if (!_active) return;
       final type = _text(command['type']);
       final params = _mapOf(command['params']);
       try {
-        final result = await _executeCommand(type, params);
-        results.add({'command': type, 'ok': true, 'result': result});
+        await _executeCommand(type, params);
       } catch (e) {
-        results.add(
-            {'command': type, 'ok': false, 'message': serviceErrorMessage(e)});
         if (mounted) setState(() => _status = serviceErrorMessage(e));
-      }
-    }
-    if (results.isNotEmpty && _commandResultDepth < 1 && _active) {
-      _commandResultDepth++;
-      try {
-        final data =
-            await ApiClient.post('/ai/assistant/command-result', body: {
-          'text': '命令执行结果',
-          'route': widget.location,
-          'context': {'lastReply': _replyMarkdown},
-          'result': {'items': results},
-        });
-        if (mounted && _active) {
-          await _applyAssistantResponse(
-            _mapOf(data),
-            speakAfterCommands: false,
-          );
-        }
-      } catch (_) {
-        // Command feedback is best effort; the user already saw the local state.
-      } finally {
-        _commandResultDepth--;
       }
     }
   }

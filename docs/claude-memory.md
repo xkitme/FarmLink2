@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-06-19 · Claude 修语音助手「接入不完全 / 第二个答案 / TTS 噪音」(doc103)
+
+### 状态：本会话 1 处代码批次，**未提交**（待 commit+push）。后端 8000 由 **nodemon** 跑（PID 38332，改动已热载）；ollama 11434 未起，但语音助手 provider=auto 走 **DeepSeek(deepseek-v4-flash)** 优先，已配置可用。工作树另有**非本会话**的 `backend/uploads/site/auth-hero.jpg`（历史遗留，没动）。
+
+用户报三连：①ai 接入不完全 ②ai 输出后又生成第二个答案 ③tts 生成有噪音。**环境=APK 模拟器**，DeepSeek 已配。澄清后「接入不完全」真意=**功能点接入不完全，很多 App 自带功能助手不认识**。
+
+**根因 + 修法（doc103，改 3 文件）**：
+1. **功能点不认识**：doc101 的 `open_page` 只喂模型 **35 个静态页面名**（ROUTE_CATALOG）；但 `app/lib/core/feature_catalog.dart` 有 **69 个功能点**（实时行情/农事日历/补贴申请/村医问诊/交水电费/灾情上报/农机故障/遥感分析…），从没喂给模型。**所有 feature route 都能映射回助手现有 routeKey、前端 `_routePaths` 已支持**，只需喂功能点。→ 后端 `assistant.service.js` 新增 `ROUTE_FEATURES`（routeKey→功能点中文别名数组，含口语别名）、`buildUserPrompt` 的 availableRoutes 每项带 `features`；`assistant-config.service.js` 的 DEFAULT_SYSTEM_PROMPT 加规则7（说功能点名就开所属页面，别回「不支持」）。
+2. **第二个答案**：`voice_assistant_layer.dart` 的 `_executeCommands` 执行完任意命令后会回传 `/ai/assistant/command-result` 跑**第二轮 LLM**，其回复**覆盖**第一轮气泡文案。doc102 只把「播报」收敛成一次，但**文案仍被覆盖**=视觉上答两次。导航(open_page)最常见、且本批功能点映射让几乎所有指令都产 open_page，故必须去除。→ **移除** `_executeCommands` 里整段 command-result 回传逻辑（事务命令 create_order/mock_pay 已在 `_executeCommand` 就地写结果文案）；删 `_commandResultDepth`；`_applyAssistantResponse` 去掉只剩默认值的 `speakAfterCommands` 参数。**`/ai/assistant/command-result` 后端端点保留，只是 App 不再调。**
+3. **TTS 噪音**：APK **模拟器**音频 HAL 杂音是常见伪影；提交→网络往返→朗读之间录音器早已释放，代码层无录音/播放重叠。**没盲改播放代码**，建议真机复验。
+
+**验证**：farmer/123456 登录 DeepSeek 端到端 5 条功能指令映射全对（实时行情→market、农事日历→agri、交水电费→life、我的订单→orders、农机维修→machinery_service）；node --check + flutter analyze 通过。**第二个答案的去除是纯前端逻辑改，语音整链路只能 APK 真机最终验。**
+
+### ⚠️ 下个 session 注意
+- `ROUTE_FEATURES`(后端) 是 `feature_catalog.dart`(前端) 的镜像，前端功能墙增删功能点要同步后端这份。
+- 本批没改 STT/TTS 实现、没改路由表/命令白名单。
+- 工作树那个 `auth-hero.jpg` 不是我动的，用户自己定要不要提交。
+
+---
+
 ## 2026-06-18 · Claude 语音全链路本地离线化 + AI 语音助手 P1 业务闭环
 
 ### 状态：origin/main 在 `f29fdd49`(已 push)。本会话 5 commit:`53bb3bc9`(97 TTS)+`7c42c5a9`(98 STT)+`a8f79c8d`(交接簿)+`f29fdd49`(99 助手P1)。工作树仍有**非本会话**改动未提交:`backend/uploads/site/auth-hero.jpg`(图变大,不是我动的)。**会话末重启过 `npm run dev` 栈**(为 prisma generate 停过、已重启,后端:8000/admin vite 在跑;web :5000 serve_web 独立进程全程没动)。web build 产物新(release)。
