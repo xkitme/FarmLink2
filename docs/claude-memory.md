@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-06-19(续) · 「又生成第二个答案」真根因=TTS 回声自激环 (doc104)
+
+用户重打 APK 后报 doc103 的去重**没用**：悬浮语音助手一条指令仍出**两个答案**、「上一个气泡还保留着」。→ doc103 的 command-result 不是主因。结合「TTS 有噪音」+ 模拟器 + `offline_stt_io.dart` 的 `echoCancel:false/noiseSuppress:false`，真根因=**回声自激**：助手朗读完→finally 自动开麦→**麦克风录到自己刚朗读的 TTS**→sherpa 转文字→静音后自动提交→又回答一轮。代码触发点多半是 flutter_tts 在模拟器上「播放完成」回调提前触发，`speakAndWait` 提前返回、在 TTS 仍出声时就开了麦。
+
+**修法(doc104，两道防线，保留连续聆听)**：
+1. `tts_service.dart` `speakAndWait`：即使完成回调提前来，也至少阻塞到按字数预估的播放时长(中文~260ms/字)再返回→开麦时 TTS 已静音。只影响 speakAndWait，不影响聊天页 speak。
+2. `voice_assistant_layer.dart`：`_muteAutoSubmitUntil`(每轮结束开麦前 900ms 静默窗) + `_looksLikeSpokenEcho`/`_lastSpokenPlain`(识别文本≈刚朗读回复→子串或长度相当且≥80%字命中→判回声)。**两判据只拦 auto 自动提交，人工点「提交」不拦**。
+
+**验收**：analyze 通过；**回声/TTS 链路只能 APK 设备复验**——说一条指令应只回一个答案、只朗读一次、不被自己朗读触发第二轮。
+- ⚠️ 若设备仍复现：退路=**取消「朗读后自动重开麦」**，改用户点小球/提交再说下句（彻底断环，代价失连续免提）。
+- ⚠️ doc103/104 都是前端改，**必须重打 APK**；后端功能点映射(doc103)是 nodemon 热载已生效。
+
+---
+
 ## 2026-06-19 · Claude 修语音助手「接入不完全 / 第二个答案 / TTS 噪音」(doc103)
 
 ### 状态：本会话 1 处代码批次，**未提交**（待 commit+push）。后端 8000 由 **nodemon** 跑（PID 38332，改动已热载）；ollama 11434 未起，但语音助手 provider=auto 走 **DeepSeek(deepseek-v4-flash)** 优先，已配置可用。工作树另有**非本会话**的 `backend/uploads/site/auth-hero.jpg`（历史遗留，没动）。

@@ -117,6 +117,12 @@ class TtsService {
         return false;
       }
       if (waiter != null) {
+        final startedAt = DateTime.now();
+        // 预估播放时长（中文按 ~260ms/字，rate 0.5）。某些引擎（尤其 Android 模拟器）
+        // 的「播放完成」回调会在音频还没放完时就提前触发；若调用方(语音助手)据此立刻开麦，
+        // 麦克风会录到助手自己的朗读→二次识别→「又生成第二个答案」。这里即使完成回调提前来，
+        // 也至少阻塞到预估播放时长，确保返回时 TTS 已真正静音。
+        final estMs = (content.runes.length * 260).clamp(800, 60000).toInt();
         final timeoutSeconds =
             (content.runes.length ~/ 2 + 15).clamp(15, 300).toInt();
         try {
@@ -125,6 +131,12 @@ class TtsService {
           await _tts.stop();
           if (mySeq == _seq) _finishUtterance();
           return false;
+        }
+        if (mySeq != _seq) return false;
+        final elapsed = DateTime.now().difference(startedAt).inMilliseconds;
+        if (elapsed < estMs) {
+          await Future<void>.delayed(Duration(milliseconds: estMs - elapsed));
+          if (mySeq != _seq) return false;
         }
       }
       return true;

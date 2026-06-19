@@ -66,6 +66,11 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   bool _hasReply = false; // 收到首轮 AI 回复后才显示回复气泡，纯聆听态保持图示的简洁
   String _recognized = '';
   String _lastSubmitted = '';
+  // 朗读结束后的静默窗：此刻之前的自动提交一律忽略，挡掉麦克风录到的 TTS 残响/混响尾音
+  // （回声自激→「又生成第二个答案」）。手动点「提交」不受此限制。
+  DateTime _muteAutoSubmitUntil = DateTime.fromMillisecondsSinceEpoch(0);
+  // 最近一次朗读出去的纯文本（去标点空白），用于判别麦克风是否录到了助手自己的朗读=回声。
+  String _lastSpokenPlain = '';
   String _replyMarkdown = '您好，我是 AI 语音助手。说出想做的事，我会帮您打开页面、推荐商品或继续对话。';
   String _status = '正在准备语音助手';
 
@@ -301,6 +306,16 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
 
   Future<void> _submitRecognized({bool auto = false}) async {
     final text = _recognized.trim();
+    // 自动提交挡两种回声：① 朗读刚结束的静默窗内；② 识别文本≈刚朗读的回复（麦克风录到了 TTS）。
+    // 人工点「提交」不拦。命中即丢弃并继续聆听，不触发新一轮。
+    if (auto &&
+        (DateTime.now().isBefore(_muteAutoSubmitUntil) ||
+            _looksLikeSpokenEcho(text))) {
+      _silenceTimer?.cancel();
+      _recognized = '';
+      _lastSubmitted = '';
+      return;
+    }
     if (!_active || _sending || text.isEmpty || text == _lastSubmitted) {
       if (!_sending && _active && !_listening) unawaited(_startListening());
       return;
@@ -338,6 +353,8 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     } finally {
       if (mounted && _active) {
         setState(() => _sending = false);
+        // 本轮（含朗读）已结束，开麦前开一个静默窗，吞掉 TTS 残响尾音，避免回声自激成第二轮。
+        _muteAutoSubmitUntil = DateTime.now().add(const Duration(milliseconds: 900));
         unawaited(_startListening());
       }
     }
@@ -356,12 +373,35 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     if (!mounted || !_active) return;
     final visibleReply = _replyMarkdown.trim();
     if (visibleReply.isNotEmpty) {
+      _lastSpokenPlain = _normForEcho(visibleReply);
       setState(() => _status = '正在播报，稍后继续聆听');
       await TtsService.speakAndWait(
         visibleReply,
         id: 'assistant_${DateTime.now().millisecondsSinceEpoch}',
       );
     }
+  }
+
+  // 去标点/空白后的可比对文本（朗读内容与识别文本统一口径）。
+  static String _normForEcho(String s) =>
+      s.replaceAll(RegExp(r'[\s\p{P}\p{S}]+', unicode: true), '');
+
+  /// 识别文本是否≈刚朗读出去的回复（麦克风录到了助手自己的 TTS = 回声）。
+  /// 判据：朗读整段读出来，录到的回声会是「和回复一样长、字几乎都在回复里」的一长串；
+  /// 用户的新指令通常更短、内容不同。据此区分，避免误伤真实指令。
+  bool _looksLikeSpokenEcho(String recognized) {
+    final spoken = _lastSpokenPlain;
+    if (spoken.isEmpty) return false;
+    final r = _normForEcho(recognized);
+    if (r.length < 6) return false; // 太短不像整段回声，按真实指令处理
+    if (spoken.contains(r)) return true; // 识别文本是回复的子串=回声
+    // 长度与回复相当，且绝大多数字都出现在回复里 → 判为回声
+    if (r.length < spoken.length * 0.5) return false;
+    var hit = 0;
+    for (final ch in r.runes) {
+      if (spoken.contains(String.fromCharCode(ch))) hit++;
+    }
+    return hit / r.runes.length >= 0.8;
   }
 
   Future<void> _executeCommands(List<Map<String, dynamic>> commands) async {
