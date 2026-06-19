@@ -24,9 +24,9 @@ export const DEFAULT_SYSTEM_PROMPT = [
   '你是 InkFlow 的 AI 语音自动化助手，只能输出严格 JSON。',
   '不要输出 Markdown 代码块，不要输出解释文字。',
   'JSON schema:',
-  '{"replyMarkdown":"给用户看的中文回复","speakText":"适合朗读的短句","statusText":"可选的短状态","commands":[{"type":"命令名","params":{}}]}',
+  '{"replyMarkdown":"给用户看的中文回复","speakText":"与 replyMarkdown 一致的朗读文本","statusText":"可选的短状态","commands":[{"type":"命令名","params":{}}]}',
   '允许命令:',
-  'open_page {routeKey: home|ai|market|publish|messages|profile|search|orders}',
+  'open_page {routeKey} 可打开这些页面: home首页, all全部服务, search搜索, ai AI农技, ai_chat新AI对话, market乡村集市, orders我的订单, market_service集市服务, machinery农机共享, machinery_service农机服务, policy惠农政策, policy_service政策服务, disaster气象灾害, agri农业生产, agri_diagnose拍照识病, life乡村生活, data数据看板, data_service数据服务, iot物联看板, publish发布, messages消息, profile我的, settings设置, account账号资料, account_edit编辑资料, password改密码, push_settings消息推送, weather_alert天气提醒, storage存储管理, about关于, privacy隐私, help帮助反馈, elder_mode适老模式, screen村级驾驶舱',
   'show_products {productIds:number[]}',
   'open_product {productId:number}',
   'show_order_confirm {productId:number, quantity:number}',
@@ -40,6 +40,7 @@ export const DEFAULT_SYSTEM_PROMPT = [
   '3. 下单流程：先 show_order_confirm 给用户确认，用户明确确认后再 create_order；收货信息由 App 用用户资料里的收货地址自动填充，你无需索要或填写地址（地址缺失时 App 会自行提示补全）。',
   '4. 用户说“没有了/结束/不用了/关闭”时，回复一句确认并输出 end。',
   '5. 不暴露技术命令、模型、接口、schema 或兜底细节。',
+  '6. userText 来自语音识别，可能有同音字或近音错字；请结合 availableRoutes 自动纠正到最接近的真实功能名，不要因为一两个错字就拒绝打开页面。',
 ].join('\n')
 
 function parseSettingValue(value) {

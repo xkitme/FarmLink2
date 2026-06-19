@@ -70,6 +70,43 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   String _replyMarkdown = '您好，我是 AI 语音助手。说出想做的事，我会帮您打开页面、推荐商品或继续对话。';
   String _status = '正在准备语音助手';
 
+  static const Map<String, String> _routePaths = {
+    'home': '/home',
+    'all': '/all',
+    'search': '/search',
+    'ai': '/ai',
+    'ai_chat': '/ai/chat/new',
+    'market': '/market',
+    'orders': '/market/orders',
+    'market_service': '/market/service',
+    'machinery': '/machinery',
+    'machinery_service': '/machinery/service',
+    'policy': '/policy',
+    'policy_service': '/policy/service',
+    'disaster': '/disaster',
+    'agri': '/agri',
+    'agri_diagnose': '/agri/diagnose',
+    'life': '/life',
+    'data': '/data',
+    'data_service': '/data/service',
+    'iot': '/iot',
+    'publish': '/publish',
+    'messages': '/messages',
+    'profile': '/profile',
+    'settings': '/profile/settings',
+    'account': '/profile/settings/account',
+    'account_edit': '/profile/settings/account/edit',
+    'password': '/profile/settings/password',
+    'push_settings': '/profile/settings/push',
+    'weather_alert': '/profile/settings/weather',
+    'storage': '/profile/settings/storage',
+    'about': '/profile/settings/about',
+    'privacy': '/profile/settings/privacy',
+    'help': '/profile/settings/help',
+    'elder_mode': '/profile/settings/elder',
+    'screen': '/screen',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -310,7 +347,6 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
 
   Future<void> _applyAssistantResponse(Map<String, dynamic> data) async {
     final reply = _text(data['replyMarkdown'], fallback: '我听到了，请继续说。');
-    final speakText = _text(data['speakText'], fallback: reply);
     final statusText = _text(data['statusText']);
     final commands = _commandsOf(data['commands']);
     setState(() {
@@ -318,11 +354,16 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       _hasReply = true;
       if (statusText.isNotEmpty) _status = statusText;
     });
-    if (speakText.isNotEmpty) {
-      unawaited(TtsService.speak(speakText,
-          id: 'assistant_${DateTime.now().millisecondsSinceEpoch}'));
-    }
     await _executeCommands(commands);
+    if (!mounted || !_active) return;
+    final visibleReply = _replyMarkdown.trim();
+    if (visibleReply.isNotEmpty) {
+      setState(() => _status = '正在播报，稍后继续聆听');
+      await TtsService.speakAndWait(
+        visibleReply,
+        id: 'assistant_${DateTime.now().millisecondsSinceEpoch}',
+      );
+    }
   }
 
   Future<void> _executeCommands(List<Map<String, dynamic>> commands) async {
@@ -387,8 +428,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
         setState(() {
           _status = '正在确认订单';
           if (r == null) {
-            _replyMarkdown =
-                '下单前请先填写**收货地址**：到「我的 - 编辑资料」补全后，再说一次「下单」即可。';
+            _replyMarkdown = '下单前请先填写**收货地址**：到「我的 - 编辑资料」补全后，再说一次「下单」即可。';
           } else {
             _replyMarkdown = '请确认订单：\n\n'
                 '- 商品编号：$productId\n'
@@ -437,10 +477,6 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       case 'show_message':
         final markdown = _text(params['markdown']);
         if (markdown.isNotEmpty) setState(() => _replyMarkdown = markdown);
-        if (params['speak'] == true && markdown.isNotEmpty) {
-          unawaited(TtsService.speak(markdown,
-              id: 'assistant_message_${DateTime.now().millisecondsSinceEpoch}'));
-        }
         return {'shown': markdown.isNotEmpty};
       case 'end':
         await _deactivate();
@@ -464,26 +500,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   }
 
   String? _pathFor(String routeKey) {
-    switch (routeKey) {
-      case 'home':
-        return '/home';
-      case 'ai':
-        return '/ai';
-      case 'market':
-        return '/market';
-      case 'orders':
-        return '/market/orders';
-      case 'publish':
-        return '/publish';
-      case 'messages':
-        return '/messages';
-      case 'profile':
-        return '/profile';
-      case 'search':
-        return '/search';
-      default:
-        return null;
-    }
+    return _routePaths[routeKey];
   }
 
   @override

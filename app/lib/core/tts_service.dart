@@ -21,6 +21,7 @@ class TtsService {
   static final FlutterTts _tts = FlutterTts();
   static bool _wired = false;
   static String? _speakingId;
+  static Completer<void>? _completionWaiter;
   // 防并发：切到新朗读时自增；旧 utterance 的完成/取消回调只在仍是当前序号时清状态。
   static int _seq = 0;
 
@@ -41,12 +42,19 @@ class TtsService {
     } catch (_) {
       // 引擎设置失败不致命，后续 speak 仍可尝试。
     }
-    _tts.setCompletionHandler(_clear);
-    _tts.setCancelHandler(_clear);
-    _tts.setErrorHandler((_) => _clear());
+    _tts.setCompletionHandler(_finishUtterance);
+    _tts.setCancelHandler(_finishUtterance);
+    _tts.setErrorHandler((_) => _finishUtterance());
   }
 
   static void _clear() => _speakingId = null;
+
+  static void _finishUtterance() {
+    final waiter = _completionWaiter;
+    if (waiter != null && !waiter.isCompleted) waiter.complete();
+    _completionWaiter = null;
+    _clear();
+  }
 
   /// 朗读前把 Markdown 清成口播纯文本，避免把 `**`、`#`、`-`、`` ` `` 等符号念出来。
   static String _plainText(String md) {
@@ -54,7 +62,8 @@ class TtsService {
     // 代码块 ```...``` → 去围栏留内容
     t = t.replaceAll(RegExp(r'```[a-zA-Z]*\n?'), ' ');
     // 图片 ![alt](url) → alt；链接 [text](url) → text
-    t = t.replaceAllMapped(RegExp(r'!\[([^\]]*)\]\([^)]*\)'), (m) => m[1] ?? '');
+    t = t.replaceAllMapped(
+        RegExp(r'!\[([^\]]*)\]\([^)]*\)'), (m) => m[1] ?? '');
     t = t.replaceAllMapped(RegExp(r'\[([^\]]*)\]\([^)]*\)'), (m) => m[1] ?? '');
     // 行内代码 `code` → code
     t = t.replaceAllMapped(RegExp(r'`([^`]*)`'), (m) => m[1] ?? '');
@@ -74,7 +83,20 @@ class TtsService {
 
   /// 朗读指定文本。[id] 用于标记「这一条」是否在朗读中。
   /// 返回 true 表示已开始朗读，false 表示不可用/失败。
-  static Future<bool> speak(String text, {required String id}) async {
+  static Future<bool> speak(String text, {required String id}) {
+    return _speak(text, id: id, waitForCompletion: false);
+  }
+
+  /// 朗读并等待系统 TTS 播放完成。语音助手用它避免播报时继续开麦。
+  static Future<bool> speakAndWait(String text, {required String id}) {
+    return _speak(text, id: id, waitForCompletion: true);
+  }
+
+  static Future<bool> _speak(
+    String text, {
+    required String id,
+    required bool waitForCompletion,
+  }) async {
     final content = _plainText(text);
     if (content.isEmpty) return false;
     await _ensureWired();
@@ -83,18 +105,31 @@ class TtsService {
       await _tts.stop(); // 打断上一条
     } catch (_) {}
     if (mySeq != _seq) return false;
+    final waiter = waitForCompletion ? Completer<void>() : null;
+    _completionWaiter = waiter;
     _speakingId = id;
     try {
       // flutter_tts.speak 成功返回 1；引擎自身负责长文本排队与连读。
       final result = await _tts.speak(content);
       if (mySeq != _seq) return false;
       if (result == 0) {
-        _speakingId = null;
+        _finishUtterance();
         return false;
+      }
+      if (waiter != null) {
+        final timeoutSeconds =
+            (content.runes.length ~/ 2 + 15).clamp(15, 300).toInt();
+        try {
+          await waiter.future.timeout(Duration(seconds: timeoutSeconds));
+        } on TimeoutException {
+          await _tts.stop();
+          if (mySeq == _seq) _finishUtterance();
+          return false;
+        }
       }
       return true;
     } catch (_) {
-      if (mySeq == _seq) _speakingId = null;
+      if (mySeq == _seq) _finishUtterance();
       return false;
     }
   }
@@ -102,7 +137,7 @@ class TtsService {
   /// 停止朗读。
   static Future<void> stop() async {
     _seq++; // 作废进行中的朗读，回调不再清新状态
-    _speakingId = null;
+    _finishUtterance();
     try {
       await _tts.stop();
     } catch (_) {}

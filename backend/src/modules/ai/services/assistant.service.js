@@ -5,16 +5,44 @@ import { generateText } from './ollama.service.js'
 import { loadAssistantConfig, providerPlan } from './assistant-config.service.js'
 import { deepseekGenerate } from './deepseek.service.js'
 
-const ALLOWED_ROUTE_KEYS = new Set([
-  'home',
-  'ai',
-  'market',
-  'publish',
-  'messages',
-  'profile',
-  'search',
-  'orders',
-])
+const ROUTE_CATALOG = [
+  ['home', '首页'],
+  ['all', '全部服务'],
+  ['search', '全局搜索'],
+  ['ai', 'AI 农技'],
+  ['ai_chat', '新建 AI 对话'],
+  ['market', '乡村集市'],
+  ['orders', '我的订单'],
+  ['market_service', '集市服务工具'],
+  ['machinery', '农机共享'],
+  ['machinery_service', '农机服务工具'],
+  ['policy', '惠农政策'],
+  ['policy_service', '政策服务工具'],
+  ['disaster', '气象灾害'],
+  ['agri', '农业生产'],
+  ['agri_diagnose', '拍照识病'],
+  ['life', '乡村生活'],
+  ['data', '数据看板'],
+  ['data_service', '数据服务工具'],
+  ['iot', '模拟 IoT 看板'],
+  ['publish', '发布'],
+  ['messages', '消息'],
+  ['profile', '我的'],
+  ['settings', '设置中心'],
+  ['account', '账号资料'],
+  ['account_edit', '编辑资料'],
+  ['password', '修改密码'],
+  ['push_settings', '消息推送设置'],
+  ['weather_alert', '天气提醒设置'],
+  ['storage', '存储管理'],
+  ['about', '关于田园通'],
+  ['privacy', '隐私设置'],
+  ['help', '帮助与反馈'],
+  ['elder_mode', '适老模式'],
+  ['screen', '村级数字驾驶舱'],
+]
+
+const ALLOWED_ROUTE_KEYS = new Set(ROUTE_CATALOG.map(([key]) => key))
 
 const ALLOWED_COMMANDS = new Set([
   'open_page',
@@ -140,7 +168,7 @@ function sanitizeAssistantOutput(parsed, products) {
     parsed.replyMarkdown || parsed.reply || parsed.message || '我听到了，请继续说。',
     1600,
   )
-  const speakText = cleanText(parsed.speakText || replyMarkdown.replace(/[#*_`>-]/g, ''), 800)
+  const speakText = replyMarkdown
   const statusText = cleanText(parsed.statusText, 80)
   return {
     replyMarkdown,
@@ -206,6 +234,7 @@ function buildUserPrompt({ text, route, context, commandResult, user, products, 
       : null,
     availableProducts: products,
     recentOrders: orders,
+    availableRoutes: ROUTE_CATALOG.map(([key, label]) => ({ key, label })),
   })
 }
 

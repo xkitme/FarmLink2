@@ -85,9 +85,14 @@ class OfflineStt {
           encoder: AudioEncoder.pcm16bits,
           sampleRate: _sampleRate,
           numChannels: 1,
-          // 回声/噪声抑制有助于在朗读 TTS 时减少误拾（连续对话场景）。
-          echoCancel: true,
-          noiseSuppress: true,
+          // TTS 已严格播完再开麦；这里保留原始麦克风信号，避免虚拟机的软件
+          // 回声消除/降噪把人声一并压掉。
+          echoCancel: false,
+          noiseSuppress: false,
+          androidConfig: AndroidRecordConfig(
+            manageBluetooth: false,
+            audioSource: AndroidAudioSource.mic,
+          ),
         ),
       );
       _listening = true;
@@ -105,10 +110,13 @@ class OfflineStt {
 
   /// 停止识别，返回完整识别文本。
   static Future<String> stop() async {
-    await _teardownAudio();
+    _listening = false;
+    await _stopRecorder();
+    _flushStream();
     final text = _fullText();
     _onText = null;
     _onEndpoint = null;
+    await _freeStream();
     return text;
   }
 
@@ -234,6 +242,11 @@ class OfflineStt {
 
   static Future<void> _teardownAudio() async {
     _listening = false;
+    await _stopRecorder();
+    await _freeStream();
+  }
+
+  static Future<void> _stopRecorder() async {
     try {
       await _audioSub?.cancel();
     } catch (_) {}
@@ -241,6 +254,23 @@ class OfflineStt {
     try {
       if (await _recorder.isRecording()) await _recorder.stop();
     } catch (_) {}
+  }
+
+  /// 手动停止时把最后一小段音频刷进识别器，否则短句容易还没出 partial 就被释放。
+  static void _flushStream() {
+    final recognizer = _recognizer;
+    final stream = _stream;
+    if (recognizer == null || stream == null) return;
+    try {
+      stream.inputFinished();
+      while (recognizer.isReady(stream)) {
+        recognizer.decode(stream);
+      }
+      _partial = recognizer.getResult(stream).text;
+    } catch (_) {}
+  }
+
+  static Future<void> _freeStream() async {
     try {
       _stream?.free();
     } catch (_) {}
