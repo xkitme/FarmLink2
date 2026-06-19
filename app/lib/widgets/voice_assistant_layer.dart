@@ -345,7 +345,10 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     }
   }
 
-  Future<void> _applyAssistantResponse(Map<String, dynamic> data) async {
+  Future<void> _applyAssistantResponse(
+    Map<String, dynamic> data, {
+    bool speakAfterCommands = true,
+  }) async {
     final reply = _text(data['replyMarkdown'], fallback: '我听到了，请继续说。');
     final statusText = _text(data['statusText']);
     final commands = _commandsOf(data['commands']);
@@ -355,7 +358,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       if (statusText.isNotEmpty) _status = statusText;
     });
     await _executeCommands(commands);
-    if (!mounted || !_active) return;
+    if (!mounted || !_active || !speakAfterCommands) return;
     final visibleReply = _replyMarkdown.trim();
     if (visibleReply.isNotEmpty) {
       setState(() => _status = '正在播报，稍后继续聆听');
@@ -392,7 +395,12 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
           'context': {'lastReply': _replyMarkdown},
           'result': {'items': results},
         });
-        if (mounted && _active) await _applyAssistantResponse(_mapOf(data));
+        if (mounted && _active) {
+          await _applyAssistantResponse(
+            _mapOf(data),
+            speakAfterCommands: false,
+          );
+        }
       } catch (_) {
         // Command feedback is best effort; the user already saw the local state.
       } finally {
