@@ -63,6 +63,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   String _initError = ''; // 诊断：保留 initialize 失败的真实原因（被吞前抓住）
   bool _listening = false;
   bool _sending = false;
+  bool _speaking = false; // TTS 正在朗读回复（此时左下角按钮变「打断说话」，点击即停播回到聆听）
   bool _hasReply = false; // 收到首轮 AI 回复后才显示回复气泡，纯聆听态保持图示的简洁
   String _recognized = '';
   String _lastSubmitted = '';
@@ -173,6 +174,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       _active = false;
       _listening = false;
       _sending = false;
+      _speaking = false;
       _recognized = '';
       _hasReply = false;
       _lastSubmitted = '';
@@ -374,12 +376,24 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     final visibleReply = _replyMarkdown.trim();
     if (visibleReply.isNotEmpty) {
       _lastSpokenPlain = _normForEcho(visibleReply);
-      setState(() => _status = '正在播报，稍后继续聆听');
+      setState(() {
+        _speaking = true;
+        _status = '正在播报，点左下角可打断并说话';
+      });
       await TtsService.speakAndWait(
         visibleReply,
         id: 'assistant_${DateTime.now().millisecondsSinceEpoch}',
       );
+      if (mounted) setState(() => _speaking = false);
     }
+  }
+
+  // 朗读途中点左下角「打断说话」：立即停播 TTS 并回到聆听（barge-in 插话）。
+  // TtsService.stop() 会让正在 await 的 speakAndWait 立刻返回，_submitRecognized 的
+  // finally 随即重新开麦，状态从「播报」切回「聆听」，无需在此手动开麦。
+  Future<void> _interruptAndListen() async {
+    await TtsService.stop();
+    if (mounted) setState(() => _speaking = false);
   }
 
   // 去标点/空白后的可比对文本（朗读内容与识别文本统一口径）。
@@ -624,11 +638,13 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     final transcript = _recognized.trim();
     final centerText = transcript.isNotEmpty
         ? transcript
-        : _sending
-            ? '正在理解…'
-            : _listening
-                ? '聆听中…'
-                : _status;
+        : _speaking
+            ? '正在播报，点左下角可打断说话'
+            : _sending
+                ? '正在理解…'
+                : _listening
+                    ? '聆听中…'
+                    : _status;
     return GestureDetector(
       onTap: () {}, // 吸收点击，避免误触关闭
       child: Container(
@@ -645,9 +661,11 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
           child: Row(
             children: [
               _circleButton(
-                icon: Icons.auto_awesome,
-                label: '提交',
-                onTap: () => _submitRecognized(auto: false),
+                icon: _speaking ? Icons.mic_rounded : Icons.auto_awesome,
+                label: _speaking ? '打断说话' : '提交',
+                onTap: _speaking
+                    ? _interruptAndListen
+                    : () => _submitRecognized(auto: false),
               ),
               Expanded(
                 child: Padding(
