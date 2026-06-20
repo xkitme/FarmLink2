@@ -83,7 +83,11 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
           routes: [
             GoRoute(path: '/home', builder: (_, __) => const HomePage()),
             GoRoute(path: '/all', builder: (_, __) => const AllFeaturesPage()),
-            GoRoute(path: '/search', builder: (_, __) => const SearchPage()),
+            GoRoute(
+              path: '/search',
+              builder: (_, state) =>
+                  SearchPage(initialQuery: state.uri.queryParameters['q']),
+            ),
             GoRoute(
               path: '/detail/info',
               builder: (_, state) {

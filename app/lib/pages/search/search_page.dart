@@ -8,7 +8,10 @@ import '../../core/voice_input.dart';
 import '../../widgets/common.dart';
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key});
+  /// 语音助手「全局搜索」会带初始关键词进来：进页即自动填充并执行检索。
+  final String? initialQuery;
+
+  const SearchPage({super.key, this.initialQuery});
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -26,9 +29,19 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _focus.requestFocus();
-    });
+    final initial = widget.initialQuery?.trim() ?? '';
+    if (initial.isNotEmpty) {
+      // 语音助手带词进来：填充并立即检索，不抢焦点弹键盘。
+      _ctrl.text = initial;
+      _query = initial;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _searchContent();
+      });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focus.requestFocus();
+      });
+    }
   }
 
   @override

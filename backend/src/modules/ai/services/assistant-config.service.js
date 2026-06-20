@@ -27,11 +27,13 @@ export const DEFAULT_SYSTEM_PROMPT = [
   '{"replyMarkdown":"给用户看的中文回复","speakText":"与 replyMarkdown 一致的朗读文本","statusText":"可选的短状态","commands":[{"type":"命令名","params":{}}]}',
   '允许命令:',
   'open_page {routeKey} 可打开这些页面: home首页, all全部服务, search搜索, ai AI农技, ai_chat新AI对话, market乡村集市, orders我的订单, market_service集市服务, machinery农机共享, machinery_service农机服务, policy惠农政策, policy_service政策服务, disaster气象灾害, agri农业生产, agri_diagnose拍照识病, life乡村生活, data数据看板, data_service数据服务, iot物联看板, publish发布, messages消息, profile我的, settings设置, account账号资料, account_edit编辑资料, password改密码, push_settings消息推送, weather_alert天气提醒, storage存储管理, about关于, privacy隐私, help帮助反馈, elder_mode适老模式, screen村级驾驶舱',
+  'search {keyword} 打开全局搜索页并立即检索关键词（搜功能/政策/农技/商品/招工/课程）',
   'show_products {productIds:number[]}',
   'open_product {productId:number}',
   'show_order_confirm {productId:number, quantity:number}',
   'create_order {productId:number, quantity:number}',
   'mock_pay {orderId:number}',
+  'toggle_linkage {ruleName, enabled:boolean} 启用/停用 IoT 设备联动规则。ruleName 必须取以下原文之一: 墒情自动滴灌、虫情活跃·植保预警、棚室高温通风、低温霜冻保温、水位过高排涝',
   'show_message {markdown:string, speak:boolean}',
   'end {}',
   '规则:',
@@ -42,6 +44,9 @@ export const DEFAULT_SYSTEM_PROMPT = [
   '5. 不暴露技术命令、模型、接口、schema 或兜底细节。',
   '6. userText 来自语音识别，可能有同音字或近音错字；请结合 availableRoutes 自动纠正到最接近的真实功能名，不要因为一两个错字就拒绝打开页面。',
   '7. availableRoutes 每个页面带 features 功能点清单（如「实时行情/农事日历/补贴申请/村医问诊/水电气缴费/灾情上报/农机故障/遥感分析」等）。用户说出任意功能点名称时，找到包含它的页面并 open_page 打开该页面（在回复里说明该功能在哪个页面）；只要功能点能对应到某页面，就不要回答「不支持/没有这个功能」。',
+  '8. 用户问的是知识性/农技/政策/常识类问题（如“番茄叶子发黄怎么办”“低保怎么申请”），直接在 replyMarkdown 给出简洁、口语化、可朗读的回答，不要输出任何命令。回答控制在 3 句话以内，必要时再 open_page 引导到对应页面。',
+  '9. 用户说“搜索/查一下/找一找 XX”等检索意图时，用 search 命令并把要查的词放进 keyword（去掉“搜索/帮我查”等动词，只留关键词）。',
+  '10. 用户说“打开/启用/关闭/停用 XX 联动/规则”时用 toggle_linkage，ruleName 取最接近的可控规则名，enabled=true 表示启用、false 表示停用；执行前可先 open_page iot 让用户看到联动看板。',
 ].join('\n')
 
 function parseSettingValue(value) {

@@ -462,6 +462,15 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
         setState(() => _status = routeKey == 'orders' ? '正在打开我的订单' : '正在打开页面');
         context.go(path);
         return {'routeKey': routeKey, 'path': path};
+      case 'search':
+        // 语音全局搜索：带关键词进搜索页并即时检索。
+        final keyword = _text(params['keyword']);
+        if (keyword.isEmpty) throw ApiException(40001, '没听清要搜索什么');
+        setState(() => _status = '正在搜索「$keyword」');
+        context.go('/search?q=${Uri.encodeQueryComponent(keyword)}');
+        return {'keyword': keyword};
+      case 'toggle_linkage':
+        return await _toggleLinkage(params);
       case 'show_products':
         setState(() => _status = '正在打开集市商品');
         context.go('/market');
@@ -533,6 +542,57 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       default:
         throw ApiException(40001, '暂不支持该操作');
     }
+  }
+
+  /// 页面内动作：启用/停用 IoT 设备联动规则。
+  /// 先打开联动看板，再按规则名解析出真实 id 调后端 toggle —— 真执行，不是只导航。
+  Future<Map<String, dynamic>> _toggleLinkage(
+      Map<String, dynamic> params) async {
+    final ruleName = _text(params['ruleName']);
+    final enabled = params['enabled'] != false && params['enabled'] != 'false';
+    if (ruleName.isEmpty) throw ApiException(40001, '未指定要操作的联动规则');
+    setState(() => _status = '正在打开设备联动');
+    context.go('/iot');
+    final rules = await ApiClient.get('/iot/linkage/rules');
+    final list = rules is List ? rules : const [];
+    final match = _resolveLinkageRule(list, ruleName);
+    if (match == null) {
+      throw ApiException(40001, '没有找到「$ruleName」这条联动规则');
+    }
+    final id = _text(match['id']);
+    final name = _text(match['name'], fallback: ruleName);
+    setState(() => _status = enabled ? '正在启用联动' : '正在停用联动');
+    await ApiClient.post('/iot/linkage/rules/$id/toggle',
+        body: {'enabled': enabled});
+    return {
+      'ruleId': id,
+      'enabled': enabled,
+      'reply': '${enabled ? '已启用' : '已停用'}设备联动规则「$name」。',
+    };
+  }
+
+  /// 把模型给的规则名解析到真实规则：优先包含匹配，否则取字重叠率最高且达标的一条。
+  Map<String, dynamic>? _resolveLinkageRule(List<dynamic> rules, String spoken) {
+    final want = _normForEcho(spoken);
+    if (want.isEmpty) return null;
+    Map<String, dynamic>? best;
+    double bestScore = 0;
+    for (final raw in rules) {
+      final rule = _mapOf(raw);
+      final name = _normForEcho(_text(rule['name']));
+      if (name.isEmpty) continue;
+      if (name.contains(want) || want.contains(name)) return rule; // 强匹配直接命中
+      var hit = 0;
+      for (final ch in want.runes) {
+        if (name.contains(String.fromCharCode(ch))) hit++;
+      }
+      final score = hit / want.runes.length;
+      if (score > bestScore) {
+        bestScore = score;
+        best = rule;
+      }
+    }
+    return bestScore >= 0.6 ? best : null;
   }
 
   /// 从当前登录用户资料组装收货信息（下单 receiverInfo）。

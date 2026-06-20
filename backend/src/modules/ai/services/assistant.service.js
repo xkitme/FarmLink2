@@ -85,11 +85,13 @@ const ROUTE_FEATURES = {
 
 const ALLOWED_COMMANDS = new Set([
   'open_page',
+  'search',
   'show_products',
   'open_product',
   'show_order_confirm',
   'create_order',
   'mock_pay',
+  'toggle_linkage',
   'show_message',
   'end',
 ])
@@ -150,6 +152,12 @@ function sanitizeCommand(command, availableProductIds) {
     if (!ALLOWED_ROUTE_KEYS.has(routeKey)) return null
     return { type, params: { routeKey } }
   }
+  if (type === 'search') {
+    // 语音全局搜索：把用户要查的词带到搜索页并即时执行检索。
+    const keyword = cleanText(params.keyword || params.query || params.text, 50)
+    if (!keyword) return null
+    return { type, params: { keyword } }
+  }
   if (type === 'show_products') {
     const ids = Array.isArray(params.productIds) ? params.productIds : []
     const productIds = ids
@@ -184,6 +192,13 @@ function sanitizeCommand(command, availableProductIds) {
     const orderId = positiveInt(params.orderId)
     if (!orderId) return null
     return { type, params: { orderId } }
+  }
+  if (type === 'toggle_linkage') {
+    // 页面内动作：启用/停用 IoT 设备联动规则（按规则名匹配，App 端解析到真实规则 id）。
+    const ruleName = cleanText(params.ruleName || params.name, 40)
+    if (!ruleName) return null
+    const enabled = params.enabled !== false && params.enabled !== 'false'
+    return { type, params: { ruleName, enabled } }
   }
   if (type === 'show_message') {
     const markdown = cleanText(params.markdown || raw.markdown, 1200)

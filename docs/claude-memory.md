@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-06-20 · 语音助手「四级全功能接入」(doc107)
+
+用户拍板四级全做：①AI 问答直接答 ②语音全局搜索 ③页面内动作真执行 ④导航全覆盖。
+
+**状态**：改 4 文件（后端 `assistant.service.js`+`assistant-config.service.js`、前端 `voice_assistant_layer.dart`+`search_page.dart`+`router.dart`），**未提交**（待 commit+push）。后端 8000 由本会话裸 `node src/server.js` 跑着（日志 `.voice-verify.log`，非 nodemon，改后端要手动重启）；ollama 11434 down，provider=auto 走 DeepSeek 已端到端验过。
+
+**做了**：新增命令 `search{keyword}`（带词进 `/search?q=` 自动检索，SearchPage 加 initialQuery）、`toggle_linkage{ruleName,enabled}`（按名解析真实规则 id→真调 `/iot/linkage/rules/:id/toggle`，前端 `_resolveLinkageRule` 去标点空白做强匹配+字重叠兜底）；DEFAULT 提示词加规则 8/9/10（直接答/搜索/启停联动）。L4 导航本就到位（`availableRoutes` 走用户提示词）。
+
+**⚠️ 最大坑（务必记住）**：DB `SiteSetting:ai_assistant_config` 里存了一份**陈旧 systemPrompt**（老 FarmLink 版/8 路由/无 features），`loadAssistantConfig` 是「库里有就用库里、否则 DEFAULT」，所以**改 DEFAULT 不生效**！我已把库里 systemPrompt 清空（`=''`）回落 DEFAULT。seeds 不写这个键→全新比赛机本就用 DEFAULT 不受影响；只有本机历史 admin 存值脏。**以后改助手提示词先确认 DB 没存自定义 prompt。**
+
+**验收**：DeepSeek 四级命令映射全对（search/直接答空命令/toggle_linkage 两向/open_page agri）+ IoT toggle 真改状态 round-trip + node --check + analyze。**语音 STT(sherpa=APK only)+覆盖层 UI 下的导航/搜索自动检索/朗读只能 APK 真机验**；前端改动**必须重打 APK**。
+
+---
+
 ## 2026-06-19(续3) · 重构语音助手回复逻辑（用户不让再打补丁）(doc105+106)
 
 用户怒：①上次 AI 回答还残留在回复框 ②仍先出一个答案又被第二个替换 ③「不想修这个BUG了，叫你重构」。期间还插了个**功能点请求**（doc105，已做）：朗读时点左下角=打断并切回聆听（`_interruptAndListen`→`TtsService.stop()`）。
