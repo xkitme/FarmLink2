@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-06-19(续3) · 重构语音助手回复逻辑（用户不让再打补丁）(doc105+106)
+
+用户怒：①上次 AI 回答还残留在回复框 ②仍先出一个答案又被第二个替换 ③「不想修这个BUG了，叫你重构」。期间还插了个**功能点请求**（doc105，已做）：朗读时点左下角=打断并切回聆听（`_interruptAndListen`→`TtsService.stop()`）。
+
+**doc106 重构（改 voice_assistant_layer.dart + tts_service.dart，不是补丁）**：
+- 根因：`_replyMarkdown` 单字段跨轮持有、一轮内被多次写（模型回复→命令 show_message/create_order 等覆盖→回声二轮），且提交不清空。TTS `speakAndWait` 依赖引擎完成回调，模拟器上不可靠（不触发→等到 15s 超时=麦克风留守识别不到；提前触发→开麦时还在响=回声）。
+- **回复装配改一轮一答只写一次**：`_submitRecognized` 提交即清空 `_replyMarkdown`/`_hasReply`（治残留）；命令不再就地写 `_replyMarkdown`，改在返回值带 `reply`；`_executeCommands` 收集 reply 覆盖列表；`_applyAssistantResponse` 先执行命令再决定唯一答案(命令覆盖取最后一条 else 模型 replyMarkdown)、**只 setState 一次**；气泡仅 `_hasReply && 非空` 时显示。
+- **TTS 等待重写**：不再 await 完成回调，改按字数预估时长(中文 240ms/字, clamp 900ms~30s)轮询、每 80ms 查 `_seq` 可被打断。等待窗口=朗读时长，治留守(不空等15s)+回声(朗读期间麦克风关)。
+- ⚠️ 仍是前端改，**必须重打 APK**。analyze 通过，回声/TTS/识别链路只能设备验。
+- ⚠️「第一次(助手没朗读时)就识别不到」若还在=模拟器没把真麦克风喂给 sherpa（开 "Virtual microphone uses host audio input" 或真机），非代码问题。
+- 退路（设备仍偶发回声）：朗读后取消自动开麦、改点按再聆听。
+
+---
+
 ## 2026-06-19(续) · 「又生成第二个答案」真根因=TTS 回声自激环 (doc104)
 
 用户重打 APK 后报 doc103 的去重**没用**：悬浮语音助手一条指令仍出**两个答案**、「上一个气泡还保留着」。→ doc103 的 command-result 不是主因。结合「TTS 有噪音」+ 模拟器 + `offline_stt_io.dart` 的 `echoCancel:false/noiseSuppress:false`，真根因=**回声自激**：助手朗读完→finally 自动开麦→**麦克风录到自己刚朗读的 TTS**→sherpa 转文字→静音后自动提交→又回答一轮。代码触发点多半是 flutter_tts 在模拟器上「播放完成」回调提前触发，`speakAndWait` 提前返回、在 TTS 仍出声时就开了麦。

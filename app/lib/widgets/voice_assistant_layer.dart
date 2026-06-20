@@ -332,17 +332,21 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       }
     } catch (_) {}
     if (!mounted) return;
+    final lastReply = _replyMarkdown; // 作为上下文传给后端后即清空本地展示
     setState(() {
       _sending = true;
       _listening = false;
       _recognized = ''; // 提交后清空，底栏回到「正在理解…」而非停留在已提交文本
+      // 一提交就清掉上一轮答案：杜绝「上次回答还留在回复框」。新答案在本轮末一次性写入。
+      _replyMarkdown = '';
+      _hasReply = false;
       _status = auto ? '已自动提交，正在理解' : '正在理解您的指令';
     });
     try {
       final data = await ApiClient.post('/ai/assistant/turn', body: {
         'text': text,
         'route': widget.location,
-        'context': {'lastReply': _replyMarkdown},
+        'context': {'lastReply': lastReply},
       });
       if (!mounted || !_active) return;
       await _applyAssistantResponse(_mapOf(data));
@@ -350,6 +354,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       if (!mounted) return;
       setState(() {
         _replyMarkdown = serviceErrorMessage(e);
+        _hasReply = true;
         _status = '助手暂时不可用';
       });
     } finally {
@@ -362,30 +367,35 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     }
   }
 
+  /// 一轮的唯一答案在这里**一次性**决定并展示：
+  /// 先（不显示模型回复地）执行命令，命令若产出结果文案（下单/确认/消息/错误）则以最后一条为准，
+  /// 否则用模型 replyMarkdown。全程只 setState 一次 _replyMarkdown → 不存在「先显示一个又被替换」。
   Future<void> _applyAssistantResponse(Map<String, dynamic> data) async {
     final reply = _text(data['replyMarkdown'], fallback: '我听到了，请继续说。');
     final statusText = _text(data['statusText']);
     final commands = _commandsOf(data['commands']);
-    setState(() {
-      _replyMarkdown = reply;
-      _hasReply = true;
-      if (statusText.isNotEmpty) _status = statusText;
-    });
-    await _executeCommands(commands);
-    if (!mounted || !_active) return;
-    final visibleReply = _replyMarkdown.trim();
-    if (visibleReply.isNotEmpty) {
-      _lastSpokenPlain = _normForEcho(visibleReply);
-      setState(() {
-        _speaking = true;
-        _status = '正在播报，点左下角可打断并说话';
-      });
-      await TtsService.speakAndWait(
-        visibleReply,
-        id: 'assistant_${DateTime.now().millisecondsSinceEpoch}',
-      );
-      if (mounted) setState(() => _speaking = false);
+    if (statusText.isNotEmpty && mounted) {
+      setState(() => _status = statusText); // 仅更新底栏状态，不写回复框
     }
+    final overrides = await _executeCommands(commands);
+    if (!mounted || !_active) return;
+    // end 命令已关闭助手；若已不在活动态则不再展示。
+    final finalReply = (overrides.isNotEmpty ? overrides.last : reply).trim();
+    setState(() {
+      _replyMarkdown = finalReply;
+      _hasReply = finalReply.isNotEmpty;
+    });
+    if (finalReply.isEmpty) return;
+    _lastSpokenPlain = _normForEcho(finalReply);
+    setState(() {
+      _speaking = true;
+      _status = '正在播报，点左下角可打断并说话';
+    });
+    await TtsService.speakAndWait(
+      finalReply,
+      id: 'assistant_${DateTime.now().millisecondsSinceEpoch}',
+    );
+    if (mounted) setState(() => _speaking = false);
   }
 
   // 朗读途中点左下角「打断说话」：立即停播 TTS 并回到聆听（barge-in 插话）。
@@ -418,21 +428,28 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     return hit / r.runes.length >= 0.8;
   }
 
-  Future<void> _executeCommands(List<Map<String, dynamic>> commands) async {
-    if (commands.isEmpty) return;
-    // 只执行命令、不再回传 /command-result 触发第二轮 LLM：
-    // 那会用第二个回答覆盖并重读第一个回答（表现为「AI 输出后又生成第二个答案」）。
-    // 事务类命令（create_order/mock_pay）已在 _executeCommand 内就地写好结果文案，足够反馈。
+  /// 执行命令，收集命令产出的「回复覆盖文案」（下单结果/订单确认/消息/错误），
+  /// 由调用方取最后一条作为本轮唯一答案。不在此处写 _replyMarkdown，避免中途出现第二个答案。
+  /// 不再回传 /command-result 触发第二轮 LLM。
+  Future<List<String>> _executeCommands(
+      List<Map<String, dynamic>> commands) async {
+    final overrides = <String>[];
     for (final command in commands) {
-      if (!_active) return;
+      if (!_active) break;
       final type = _text(command['type']);
       final params = _mapOf(command['params']);
       try {
-        await _executeCommand(type, params);
+        final result = await _executeCommand(type, params);
+        final reply = _text(result['reply']);
+        if (reply.isNotEmpty) overrides.add(reply);
       } catch (e) {
-        if (mounted) setState(() => _status = serviceErrorMessage(e));
+        final msg = serviceErrorMessage(e);
+        if (mounted) setState(() => _status = msg);
+        overrides.add(msg); // 命令失败：错误文案即本轮答案
+        break;
       }
     }
+    return overrides;
   }
 
   Future<Map<String, dynamic>> _executeCommand(
@@ -459,23 +476,20 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
         final productId = _int(params['productId']);
         final quantity = _int(params['quantity'], fallback: 1);
         final r = _receiverInfo();
-        setState(() {
-          _status = '正在确认订单';
-          if (r == null) {
-            _replyMarkdown = '下单前请先填写**收货地址**：到「我的 - 编辑资料」补全后，再说一次「下单」即可。';
-          } else {
-            _replyMarkdown = '请确认订单：\n\n'
+        setState(() => _status = '正在确认订单');
+        final confirmReply = r == null
+            ? '下单前请先填写**收货地址**：到「我的 - 编辑资料」补全后，再说一次「下单」即可。'
+            : '请确认订单：\n\n'
                 '- 商品编号：$productId\n'
                 '- 数量：$quantity\n'
                 '- 收货人：${r['realName']}${(r['phone'] as String).isEmpty ? '' : '（${r['phone']}）'}\n'
                 '- 收货地址：${r['address']}\n\n'
                 '说「确认下单」即可提交。';
-          }
-        });
         return {
           'productId': productId,
           'quantity': quantity,
           'hasAddress': r != null,
+          'reply': confirmReply,
         };
       case 'create_order':
         final receiver = _receiverInfo();
@@ -491,27 +505,28 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
           'remark': 'AI 语音助手下单',
         });
         final orderMap = _mapOf(order);
-        setState(() {
-          _replyMarkdown =
-              '订单已创建，订单号：${_text(orderMap['orderNo'], fallback: '待生成')}。';
-          _status = '订单已创建';
-        });
-        return orderMap;
+        setState(() => _status = '订单已创建');
+        return {
+          ...orderMap,
+          'reply': '订单已创建，订单号：${_text(orderMap['orderNo'], fallback: '待生成')}。',
+        };
       case 'mock_pay':
         final orderId = _int(params['orderId']);
         if (orderId <= 0) throw ApiException(40001, '订单不存在');
         setState(() => _status = '正在完成支付');
         final paid = await ApiClient.put('/market/order/$orderId/status',
             body: {'status': 'PAID'});
-        setState(() {
-          _replyMarkdown = '支付已完成，订单已更新为已支付。';
-          _status = '支付已完成';
-        });
-        return _mapOf(paid);
+        setState(() => _status = '支付已完成');
+        return {
+          ..._mapOf(paid),
+          'reply': '支付已完成，订单已更新为已支付。',
+        };
       case 'show_message':
         final markdown = _text(params['markdown']);
-        if (markdown.isNotEmpty) setState(() => _replyMarkdown = markdown);
-        return {'shown': markdown.isNotEmpty};
+        return {
+          'shown': markdown.isNotEmpty,
+          if (markdown.isNotEmpty) 'reply': markdown,
+        };
       case 'end':
         await _deactivate();
         return {'ended': true};
@@ -615,7 +630,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
                 ),
               ),
             ),
-            if (_hasReply || _sending)
+            if (_hasReply && _replyMarkdown.trim().isNotEmpty)
               Positioned(
                 left: 16,
                 right: 16,

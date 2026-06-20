@@ -105,8 +105,7 @@ class TtsService {
       await _tts.stop(); // 打断上一条
     } catch (_) {}
     if (mySeq != _seq) return false;
-    final waiter = waitForCompletion ? Completer<void>() : null;
-    _completionWaiter = waiter;
+    _completionWaiter = null;
     _speakingId = id;
     try {
       // flutter_tts.speak 成功返回 1；引擎自身负责长文本排队与连读。
@@ -116,28 +115,18 @@ class TtsService {
         _finishUtterance();
         return false;
       }
-      if (waiter != null) {
+      if (waitForCompletion) {
+        // **不依赖引擎「播放完成」回调**：它在 Android 模拟器上常不触发（导致 await 卡到
+        // 超时、十几秒麦克风留守、识别不到用户说话）或提前触发（开麦时 TTS 还在响→回声二次回答）。
+        // 改为按文本长度预估播放时长（中文 ~240ms/字）轮询等待，期间每 80ms 检查一次是否被
+        // 打断（stop()/新朗读使 _seq 变化）。等待窗口=朗读时长，可预期、可打断、不会空等。
+        final estMs = (content.runes.length * 240).clamp(900, 30000).toInt();
         final startedAt = DateTime.now();
-        // 预估播放时长（中文按 ~260ms/字，rate 0.5）。某些引擎（尤其 Android 模拟器）
-        // 的「播放完成」回调会在音频还没放完时就提前触发；若调用方(语音助手)据此立刻开麦，
-        // 麦克风会录到助手自己的朗读→二次识别→「又生成第二个答案」。这里即使完成回调提前来，
-        // 也至少阻塞到预估播放时长，确保返回时 TTS 已真正静音。
-        final estMs = (content.runes.length * 260).clamp(800, 60000).toInt();
-        final timeoutSeconds =
-            (content.runes.length ~/ 2 + 15).clamp(15, 300).toInt();
-        try {
-          await waiter.future.timeout(Duration(seconds: timeoutSeconds));
-        } on TimeoutException {
-          await _tts.stop();
-          if (mySeq == _seq) _finishUtterance();
-          return false;
+        while (DateTime.now().difference(startedAt).inMilliseconds < estMs) {
+          if (mySeq != _seq) return false; // 被打断或被新朗读取代
+          await Future<void>.delayed(const Duration(milliseconds: 80));
         }
-        if (mySeq != _seq) return false;
-        final elapsed = DateTime.now().difference(startedAt).inMilliseconds;
-        if (elapsed < estMs) {
-          await Future<void>.delayed(Duration(milliseconds: estMs - elapsed));
-          if (mySeq != _seq) return false;
-        }
+        if (mySeq == _seq) _finishUtterance(); // 预估时长到，标记朗读结束
       }
       return true;
     } catch (_) {
