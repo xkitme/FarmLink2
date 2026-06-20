@@ -389,7 +389,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     _lastSpokenPlain = _normForEcho(finalReply);
     setState(() {
       _speaking = true;
-      _status = '正在播报，点左下角可打断并说话';
+      _status = '正在解答，点左下角可打断说话';
     });
     await TtsService.speakAndWait(
       finalReply,
@@ -654,7 +654,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     final centerText = transcript.isNotEmpty
         ? transcript
         : _speaking
-            ? '正在播报，点左下角可打断说话'
+            ? '正在解答，点左下角可打断说话'
             : _sending
                 ? '正在理解…'
                 : _listening
