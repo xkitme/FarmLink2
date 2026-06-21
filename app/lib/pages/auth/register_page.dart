@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/auth_state.dart';
-import '../../core/constants.dart';
-import '../../core/site_images.dart';
 import '../../widgets/common.dart';
+import 'auth_widgets.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -14,6 +13,7 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  final _formKey = GlobalKey<FormState>();
   final _nickname = TextEditingController();
   final _username = TextEditingController();
   final _password = TextEditingController();
@@ -33,21 +33,17 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _register() async {
+    if (_loading) return;
+    FocusScope.of(context).unfocus();
+    final isValid = _formKey.currentState?.validate() ?? false;
+    if (!isValid) {
+      setState(() => _error = null);
+      return;
+    }
     final n = _nickname.text.trim();
     final u = _username.text.trim();
     final p = _password.text;
-    if (n.isEmpty || u.isEmpty || p.isEmpty) {
-      setState(() => _error = '请填写所有字段');
-      return;
-    }
-    if (p.length < 6) {
-      setState(() => _error = '密码至少 6 位');
-      return;
-    }
-    if (p != _confirmPassword.text) {
-      setState(() => _error = '两次输入的密码不一致');
-      return;
-    }
+    TextInput.finishAutofillContext();
     setState(() {
       _loading = true;
       _error = null;
@@ -56,6 +52,7 @@ class _RegisterPageState extends State<RegisterPage> {
       await context.read<AuthState>().register(u, p, n);
       if (mounted) context.go('/home');
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = serviceErrorMessage(e, fallback: '注册暂时不可用，请稍后重试');
         _loading = false;
@@ -63,224 +60,149 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  Widget _field({
-    required String label,
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    bool obscure = false,
-    Widget? suffix,
-    TextInputAction action = TextInputAction.next,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.onSurfaceVariant)),
-        TextField(
-          controller: controller,
-          obscureText: obscure,
-          textInputAction: action,
-          onSubmitted:
-              action == TextInputAction.done ? (_) => _register() : null,
-          decoration: InputDecoration(
-            filled: false,
-            hintText: hint,
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            prefixIcon: Icon(icon, color: AppColors.outline, size: 20),
-            prefixIconConstraints:
-                const BoxConstraints(minWidth: 28, minHeight: 20),
-            suffixIcon: suffix,
-            enabledBorder: const UnderlineInputBorder(
-                borderSide:
-                    BorderSide(color: AppColors.outlineVariant, width: 1)),
-            focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.primary, width: 2)),
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
+  void _clearError() {
+    if (_error != null) setState(() => _error = null);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.42,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const SiteImage('assets/images/generated/auth-hero.jpg',
-                    fit: BoxFit.cover,
-                    errorFallback: ColoredBox(color: Color(0xFF1F5E26))),
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xAA2A2E27), Color(0x332E7D32)],
-                    ),
-                  ),
-                ),
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        IconButton(
-                          icon:
-                              const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => context.go('/auth/login'),
-                        ),
-                        const SizedBox(width: 4),
-                        const Padding(
-                          padding: EdgeInsets.only(top: 10),
-                          child: Row(
-                            children: [
-                              Icon(Icons.agriculture,
-                                  color: Colors.white, size: 26),
-                              SizedBox(width: 8),
-                              Text('田园通',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              width: double.infinity,
-              constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height * 0.70,
+    return AuthScreenScaffold(
+      title: '田园通',
+      subtitle: '每一次绿色选择，都在为乡村成长赋能',
+      showBack: true,
+      backEnabled: !_loading,
+      brandTopGap: 70,
+      compactBrandTopGap: 34,
+      brandFormGap: 24,
+      child: Form(
+        key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: AutofillGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AuthTextField(
+                controller: _nickname,
+                hint: '昵称',
+                icon: Icons.badge_outlined,
+                enabled: !_loading,
+                onChanged: (_) => _clearError(),
+                autofillHints: const [AutofillHints.name],
+                validator: (value) {
+                  if ((value ?? '').trim().isEmpty) return '请输入昵称';
+                  return null;
+                },
               ),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                boxShadow: [
-                  BoxShadow(
-                      color: Color(0x142E7D32),
-                      blurRadius: 30,
-                      offset: Offset(0, -8)),
+              const SizedBox(height: 12),
+              AuthTextField(
+                controller: _username,
+                hint: '手机号 / 用户名',
+                icon: Icons.person_outline,
+                enabled: !_loading,
+                onChanged: (_) => _clearError(),
+                autofillHints: const [
+                  AutofillHints.username,
+                  AutofillHints.telephoneNumber,
                 ],
+                validator: (value) {
+                  if ((value ?? '').trim().isEmpty) return '请输入手机号/用户名';
+                  return null;
+                },
               ),
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text('注册账号',
-                        style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.onSurface)),
-                    const SizedBox(height: 4),
-                    const Text('创建账号后即可进入田园通',
-                        style: TextStyle(
-                            color: AppColors.onSurfaceVariant, fontSize: 16)),
-                    const SizedBox(height: 24),
-                    _field(
-                        label: '昵称',
-                        controller: _nickname,
-                        hint: '怎么称呼你',
-                        icon: Icons.badge_outlined),
-                    _field(
-                        label: '手机号/账号',
-                        controller: _username,
-                        hint: '请输入常用手机号或账号',
-                        icon: Icons.person_outline),
-                    _field(
-                      label: '密码',
-                      controller: _password,
-                      hint: '至少 6 位',
-                      icon: Icons.lock_outline,
-                      obscure: _obscure,
-                      suffix: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: Icon(
-                            _obscure ? Icons.visibility_off : Icons.visibility,
-                            size: 20,
-                            color: AppColors.outline),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
-                    ),
-                    _field(
-                      label: '确认密码',
-                      controller: _confirmPassword,
-                      hint: '再次输入密码',
-                      icon: Icons.verified_user_outlined,
-                      obscure: _obscureConfirm,
-                      action: TextInputAction.done,
-                      suffix: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: Icon(
-                            _obscureConfirm
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            size: 20,
-                            color: AppColors.outline),
-                        onPressed: () =>
-                            setState(() => _obscureConfirm = !_obscureConfirm),
-                      ),
-                    ),
-                    if (_error != null) ...[
-                      Text(_error!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: AppColors.error, fontSize: 13)),
-                      const SizedBox(height: 8),
-                    ],
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: _loading ? null : _register,
-                      child: _loading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2))
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text('创建账号'),
-                                SizedBox(width: 6),
-                                Icon(Icons.arrow_forward, size: 20),
-                              ],
-                            ),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => context.go('/auth/login'),
-                      icon: const Icon(Icons.login, size: 20),
-                      label: const Text('已有账号，返回登录'),
-                    ),
-                  ],
+              const SizedBox(height: 12),
+              AuthTextField(
+                controller: _password,
+                hint: '密码，至少 6 位',
+                icon: Icons.vpn_key_outlined,
+                obscure: _obscure,
+                enabled: !_loading,
+                onChanged: (_) => _clearError(),
+                autofillHints: const [AutofillHints.newPassword],
+                keyboardType: TextInputType.visiblePassword,
+                validator: (value) {
+                  final password = value ?? '';
+                  if (password.isEmpty) return '请输入密码';
+                  if (password.length < 6) return '密码至少 6 位';
+                  return null;
+                },
+                suffix: IconButton(
+                  tooltip: _obscure ? '显示密码' : '隐藏密码',
+                  padding: EdgeInsets.zero,
+                  icon: Icon(
+                    _obscure ? Icons.visibility_off : Icons.visibility,
+                    size: 20,
+                    color: const Color(0xFF6E9080),
+                  ),
+                  onPressed: _loading
+                      ? null
+                      : () => setState(() => _obscure = !_obscure),
                 ),
               ),
-            )
-                .animate()
-                .slideY(
-                    begin: 0.2, duration: 600.ms, curve: Curves.easeOutCubic)
-                .fadeIn(),
+              const SizedBox(height: 12),
+              AuthTextField(
+                controller: _confirmPassword,
+                hint: '确认密码',
+                icon: Icons.verified_user_outlined,
+                obscure: _obscureConfirm,
+                action: TextInputAction.done,
+                onSubmit: _register,
+                enabled: !_loading,
+                onChanged: (_) => _clearError(),
+                autofillHints: const [AutofillHints.newPassword],
+                keyboardType: TextInputType.visiblePassword,
+                validator: (value) {
+                  final confirm = value ?? '';
+                  if (confirm.isEmpty) return '请再次输入密码';
+                  if (confirm != _password.text) return '两次输入的密码不一致';
+                  return null;
+                },
+                suffix: IconButton(
+                  tooltip: _obscureConfirm ? '显示确认密码' : '隐藏确认密码',
+                  padding: EdgeInsets.zero,
+                  icon: Icon(
+                    _obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                    size: 20,
+                    color: const Color(0xFF6E9080),
+                  ),
+                  onPressed: _loading
+                      ? null
+                      : () => setState(
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                _errorText(_error!),
+              ],
+              const SizedBox(height: 18),
+              AuthPrimaryButton(
+                label: '创建账号',
+                loading: _loading,
+                onPressed: _loading ? null : _register,
+              ),
+              const SizedBox(height: 14),
+              AuthInlineAction(
+                prefix: '已有账号？',
+                action: '返回登录',
+                enabled: !_loading,
+                onTap: () => context.go('/auth/login'),
+              ),
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _errorText(String text) {
+    return Text(
+      text,
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        color: Color(0xFFFFD9D9),
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
       ),
     );
   }

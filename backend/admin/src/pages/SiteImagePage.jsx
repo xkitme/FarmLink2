@@ -27,7 +27,7 @@ const STARTUP_AD_IMAGE_KEY = 'app-fullscreen-ad'
 const LABELS = {
   [STARTUP_AD_IMAGE_KEY]: 'App 启动全屏广告',
   'admin-login-bg': '管理后台登录页背景',
-  'auth-hero': '登录/注册页顶图',
+  'auth-hero': '登录/注册/忘记密码页背景',
   'smart-farming': '首页 · 智慧种植横幅',
   'farm-market': '首页 · 乡村集市横幅',
   'machinery-sharing': '首页/农机 · 共享横幅',

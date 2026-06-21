@@ -11,6 +11,7 @@ const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif'])
 const IMAGE_EXT_ORDER = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
 const STARTUP_AD_SETTING_KEY = 'startup_ad'
 const STARTUP_AD_IMAGE_KEY = 'app-fullscreen-ad'
+const AUTH_BACKGROUND_IMAGE_KEY = 'auth-hero'
 const DEFAULT_STARTUP_AD = {
   enabled: true,
   imageKey: STARTUP_AD_IMAGE_KEY,
@@ -102,6 +103,17 @@ export async function listSiteImages(req, res) {
 // App 启动广告配置：公开读取，移动端据此展示全屏广告与真实倒计时。
 export async function getStartupAd(req, res) {
   ok(res, await startupAdPayload())
+}
+
+// 认证页背景：登录 / 注册 / 忘记密码共用，单独公开接口供 App 获取。
+export async function getAuthBackground(req, res) {
+  const imageUrl = siteImageUrlForKey(AUTH_BACKGROUND_IMAGE_KEY)
+  ok(res, {
+    imageKey: AUTH_BACKGROUND_IMAGE_KEY,
+    imageUrl,
+    fallbackAsset: 'assets/images/generated/auth-hero.jpg',
+    serverTime: Date.now(),
+  })
 }
 
 // 管理台读取启动广告配置。

@@ -16,6 +16,7 @@ const router = Router()
 // ── 站点配图（清单公开；上传替换需管理员，覆盖即实时更新前端配图）─
 router.get('/site/images', optionalAuth, wrap(site.listSiteImages))
 router.get('/site/startup-ad', optionalAuth, wrap(site.getStartupAd))
+router.get('/site/auth-background', optionalAuth, wrap(site.getAuthBackground))
 router.post('/site/images/:key', requireAuth, requireRole('ADMIN'),
   upload.single('file'), wrap(site.uploadSiteImage))
 
