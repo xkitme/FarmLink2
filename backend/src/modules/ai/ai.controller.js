@@ -282,6 +282,12 @@ export async function assistantTurn(req, res) {
   ok(res, result, 'AI 助手已响应')
 }
 
+/** 移动端读取语音助手公开配置：只回开关与唤醒词，绝不暴露任何密钥/提示词。 */
+export async function assistantConfig(req, res) {
+  const cfg = await loadAssistantConfig()
+  ok(res, { enabled: cfg.enabled, wakeWords: cfg.wakeWords }, 'OK')
+}
+
 /** 前端执行白名单命令后的回传入口，让助手决定下一步。 */
 export async function assistantCommandResult(req, res) {
   const result = await runAssistantTurn({

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/auth_state.dart';
 import '../../../core/constants.dart';
 import '../../../core/elder_mode.dart';
+import '../../../core/voice_wake.dart';
 import '../../../widgets/common.dart';
 import 'settings_widgets.dart';
 
@@ -16,6 +17,7 @@ class SettingsHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
     final elderMode = context.watch<ElderModeState>().enabled;
+    final voiceWake = context.watch<VoiceWakeState>().enabled;
     final user = auth.user;
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -75,6 +77,14 @@ class SettingsHomePage extends StatelessWidget {
                   subtitle: '放大字号、朗读 AI 回答，方便长辈使用',
                   trailingText: elderMode ? '已开启' : '未开启',
                   onTap: () => context.push('/profile/settings/elder'),
+                ),
+                const Divider(height: 1, indent: 56),
+                SettingTile(
+                  icon: Icons.keyboard_voice_outlined,
+                  label: '语音唤醒',
+                  subtitle: '说「你好小田」呼叫唤起 AI 语音助手',
+                  trailingText: voiceWake ? '已开启' : '未开启',
+                  onTap: () => context.push('/profile/settings/wake'),
                 ),
                 const Divider(height: 1, indent: 56),
                 SettingTile(

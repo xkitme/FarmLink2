@@ -35,6 +35,7 @@ import '../pages/profile/settings/about_page.dart';
 import '../pages/profile/settings/account_page.dart';
 import '../pages/profile/settings/account_edit_page.dart';
 import '../pages/profile/settings/elder_mode_page.dart';
+import '../pages/profile/settings/wake_word_page.dart';
 import '../pages/profile/settings/help_feedback_page.dart';
 import '../pages/profile/settings/password_page.dart';
 import '../pages/profile/settings/privacy_settings_page.dart';
@@ -219,6 +220,9 @@ GoRouter buildRouter(AuthState auth) => GoRouter(
             GoRoute(
                 path: '/profile/settings/elder',
                 builder: (_, __) => const ElderModePage()),
+            GoRoute(
+                path: '/profile/settings/wake',
+                builder: (_, __) => const WakeWordPage()),
           ],
         ),
       ],

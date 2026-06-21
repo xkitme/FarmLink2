@@ -57,6 +57,7 @@ export default function AiAssistantPage() {
         temperature: typeof data?.temperature === 'number' ? data.temperature : 0.1,
         deepseekThinking: data?.deepseekThinking === true,
         systemPrompt: data?.systemPrompt || '',
+        wakeWords: Array.isArray(data?.wakeWords) ? data.wakeWords.join('\n') : '',
         deepseekApiKey: '', // 永不回显明文；留空=保持原 Key
       })
     } catch {
@@ -157,6 +158,21 @@ export default function AiAssistantPage() {
               type="info"
               showIcon
               message="语音助手与主问答各自独立选择提供方。关闭总开关后语音助手返回「已关闭」（不影响主问答）。选「只用 Ollama」无需 DeepSeek Key；选 DeepSeek/自动需在下方填 Key。"
+            />
+          </Card>
+
+          <Card title="语音唤醒词" style={{ marginBottom: 16 }}>
+            <Form.Item
+              name="wakeWords"
+              label="唤醒词（移动端开启「语音唤醒」后离线监听这些词）"
+              extra="逗号或换行分隔多个，最多 8 个、单词 ≤ 20 字；留空使用默认「你好小田」。识别有近音容错，建议用清晰好念的词。"
+            >
+              <Input.TextArea autoSize={{ minRows: 2, maxRows: 6 }} placeholder={'你好小田\n小田小田'} />
+            </Form.Item>
+            <Alert
+              type="info"
+              showIcon
+              message="语音唤醒需移动端在「设置 - 语音唤醒」手动开启（默认关），且仅 APK 真机离线识别可用；Web 端不生效。"
             />
           </Card>
 

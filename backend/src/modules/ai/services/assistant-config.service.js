@@ -19,6 +19,31 @@ export function providerPlan(provider) {
   }
 }
 
+// 默认唤醒词。管理台留空时回落这份；移动端「语音唤醒」开关开启后离线监听这些词。
+export const DEFAULT_WAKE_WORDS = ['你好小田']
+
+// 把唤醒词输入（数组 / 逗号或换行分隔的字符串）规整成去空去重的字符串数组。
+// 限制：最多 8 个、单词长度 ≤ 20；为空回落默认词。
+export function normalizeWakeWords(input) {
+  let list = []
+  if (Array.isArray(input)) {
+    list = input
+  } else if (typeof input === 'string') {
+    list = input.split(/[,，\n]/)
+  }
+  const cleaned = []
+  const seen = new Set()
+  for (const raw of list) {
+    const word = String(raw || '').trim()
+    if (!word || word.length > 20) continue
+    if (seen.has(word)) continue
+    seen.add(word)
+    cleaned.push(word)
+    if (cleaned.length >= 8) break
+  }
+  return cleaned.length ? cleaned : [...DEFAULT_WAKE_WORDS]
+}
+
 // 默认系统提示词。管理台留空时回落到这份；改写后存库覆盖。
 export const DEFAULT_SYSTEM_PROMPT = [
   '你是 InkFlow 的 AI 语音自动化助手，只能输出严格 JSON。',
@@ -83,6 +108,7 @@ function normalize(raw = {}) {
     enabled: raw.enabled !== false,
     assistantProvider,
     chatProvider,
+    wakeWords: normalizeWakeWords(raw.wakeWords),
     systemPrompt,
     temperature: clampTemperature(raw.temperature),
     deepseekApiKey,
@@ -140,6 +166,9 @@ export async function saveAssistantConfig(patch = {}) {
   if (patch.chatProvider !== undefined) {
     if (!ASSISTANT_PROVIDERS.has(patch.chatProvider)) throw errors.param('问答 provider 取值非法')
     next.chatProvider = patch.chatProvider
+  }
+  if (patch.wakeWords !== undefined) {
+    next.wakeWords = normalizeWakeWords(patch.wakeWords)
   }
   if (patch.systemPrompt !== undefined) {
     const prompt = String(patch.systemPrompt || '').trim()

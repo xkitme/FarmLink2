@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../core/api_client.dart';
@@ -12,6 +13,7 @@ import '../core/auth_state.dart';
 import '../core/constants.dart';
 import '../core/offline_stt.dart';
 import '../core/tts_service.dart';
+import '../core/voice_wake.dart';
 import 'common.dart';
 import 'markdown_text.dart';
 
@@ -75,6 +77,20 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   String _replyMarkdown = '您好，我是 AI 语音助手。说出想做的事，我会帮您打开页面、推荐商品或继续对话。';
   String _status = '正在准备语音助手';
 
+  // ── 悬浮小球：可拖动、松手只吸左/右边，位置持久化 ──────────────────
+  static const double _orbSize = 46; // 收小后的小球直径
+  static const double _orbMargin = 14; // 距屏幕边的留白
+  static const String _orbSideKey = 'voice_orb_side';
+  static const String _orbTopFracKey = 'voice_orb_top_frac';
+  String _orbSide = 'right'; // 'left' / 'right'
+  double _orbTopFrac = 0.82; // 纵向位置比例（0=最上、1=最下），默认偏下
+  bool _dragging = false;
+  Offset _dragTopLeft = Offset.zero; // 拖动中小球左上角的绝对坐标
+
+  // ── 语音唤醒（呼叫唤起）后台常听 ──────────────────────────────────
+  VoiceWakeState? _wake;
+  bool _wakeListening = false; // 当前是否在被动监听唤醒词
+
   static const Map<String, String> _routePaths = {
     'home': '/home',
     'all': '/all',
@@ -120,6 +136,19 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       duration: const Duration(milliseconds: 4200),
     )..repeat(); // 不反向，0→1 循环驱动边框跑马灯绕圈
     VoiceAssistantController.requests.addListener(_handleOpenRequest);
+    _loadOrbPosition();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final wake = context.read<VoiceWakeState?>();
+    if (!identical(wake, _wake)) {
+      _wake?.removeListener(_onWakeChanged);
+      _wake = wake;
+      _wake?.addListener(_onWakeChanged);
+    }
+    _evaluateWakeListening();
   }
 
   @override
@@ -128,11 +157,15 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     if (!_active && !widget.enabled && oldWidget.enabled) {
       _silenceTimer?.cancel();
     }
+    if (widget.enabled != oldWidget.enabled) {
+      _evaluateWakeListening(); // 进出一级 tab 时启停常听
+    }
   }
 
   @override
   void dispose() {
     VoiceAssistantController.requests.removeListener(_handleOpenRequest);
+    _wake?.removeListener(_onWakeChanged);
     _silenceTimer?.cancel();
     _glow.dispose();
     if (kIsWeb) {
@@ -143,13 +176,108 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     super.dispose();
   }
 
+  Future<void> _loadOrbPosition() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final side = sp.getString(_orbSideKey);
+      final frac = sp.getDouble(_orbTopFracKey);
+      if (!mounted) return;
+      setState(() {
+        if (side == 'left' || side == 'right') _orbSide = side!;
+        if (frac != null) _orbTopFrac = frac.clamp(0.0, 1.0);
+      });
+    } catch (_) {
+      // 读失败用默认位置即可。
+    }
+  }
+
+  Future<void> _saveOrbPosition() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      await sp.setString(_orbSideKey, _orbSide);
+      await sp.setDouble(_orbTopFracKey, _orbTopFrac);
+    } catch (_) {}
+  }
+
   void _handleOpenRequest() {
     if (!mounted) return;
     _activate();
   }
 
+  void _onWakeChanged() {
+    if (mounted) _evaluateWakeListening();
+  }
+
+  /// 依据「在一级 tab + 未激活 + 开关开 + 非 Web」决定是否后台监听唤醒词。
+  void _evaluateWakeListening() {
+    final shouldListen =
+        widget.enabled && !_active && !kIsWeb && (_wake?.enabled ?? false);
+    if (shouldListen && !_wakeListening) {
+      unawaited(_startWakeListening());
+    } else if (!shouldListen && _wakeListening) {
+      unawaited(_stopWakeListening());
+    }
+  }
+
+  Future<void> _startWakeListening() async {
+    if (_wakeListening || _active || kIsWeb) return;
+    _wakeListening = true;
+    try {
+      final ok = await OfflineStt.start(
+        onText: _onWakeText,
+        onEndpoint: _onWakeText,
+      );
+      if (!ok) _wakeListening = false;
+    } catch (_) {
+      _wakeListening = false;
+    }
+  }
+
+  Future<void> _stopWakeListening() async {
+    if (!_wakeListening) return;
+    _wakeListening = false;
+    try {
+      await OfflineStt.stop();
+    } catch (_) {}
+  }
+
+  void _onWakeText(String text) {
+    if (!mounted || _active || !_wakeListening) return;
+    if (_matchesWakeWord(text)) {
+      unawaited(_activate()); // _activate 会先停常听再开正式聆听
+    }
+  }
+
+  /// 识别文本是否命中任一唤醒词：归一化后包含匹配；或长度相当时近音字高重叠（容错同音错字）。
+  bool _matchesWakeWord(String recognized) {
+    final words = _wake?.wakeWords ?? VoiceWakeState.defaultWakeWords;
+    final r = _normForEcho(recognized);
+    if (r.isEmpty) return false;
+    for (final w in words) {
+      final n = _normForEcho(w);
+      if (n.isEmpty) continue;
+      if (r.contains(n)) return true;
+      if ((r.runes.length - n.runes.length).abs() <= 1 &&
+          _overlapRatio(r, n) >= 0.75) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static double _overlapRatio(String a, String b) {
+    if (b.isEmpty) return 0;
+    var hit = 0;
+    for (final ch in b.runes) {
+      if (a.contains(String.fromCharCode(ch))) hit++;
+    }
+    return hit / b.runes.length;
+  }
+
   Future<void> _activate() async {
     if (_active) return;
+    await _stopWakeListening(); // 唤醒/点击进入正式聆听前先停常听，避免抢同一个麦克风
+    if (!mounted) return;
     setState(() {
       _active = true;
       _recognized = '';
@@ -180,6 +308,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       _lastSubmitted = '';
       _status = '已关闭语音助手';
     });
+    _evaluateWakeListening(); // 关闭助手后，若唤醒开关仍开则恢复后台常听
   }
 
   Future<bool> _ensureSpeech() async {
@@ -624,42 +753,88 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     );
   }
 
+  // 小球可拖动的纵向范围（绝对坐标）：状态栏下方 ~ 底部导航栏上方。
+  double _orbMinTop(MediaQueryData mq) => mq.padding.top + 60;
+  double _orbMaxTop(MediaQueryData mq) {
+    final max = mq.size.height - mq.padding.bottom - 96 - _orbSize;
+    final min = _orbMinTop(mq);
+    return max < min ? min : max;
+  }
+
   Widget _smallOrb() {
-    return Positioned(
-      right: 18,
-      bottom: 150, // 覆盖层已包住底部导航栏，抬高小球避免压在导航栏上
-      child: SafeArea(
-        minimum: EdgeInsets.zero,
-        child: Semantics(
-          button: true,
-          label: '打开 AI 语音助手',
-          child: GestureDetector(
-            onTap: _activate,
-            child: Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.secondary,
-                    AppColors.gold
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(999),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.26),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
+    final mq = MediaQuery.of(context);
+    final minTop = _orbMinTop(mq);
+    final maxTop = _orbMaxTop(mq);
+    final restTop = minTop + _orbTopFrac * (maxTop - minTop);
+    final restLeft = _orbSide == 'left'
+        ? _orbMargin
+        : mq.size.width - _orbSize - _orbMargin;
+    final pos = _dragging ? _dragTopLeft : Offset(restLeft, restTop);
+
+    return AnimatedPositioned(
+      duration: _dragging
+          ? Duration.zero
+          : const Duration(milliseconds: 240), // 松手吸边的回弹动画
+      curve: Curves.easeOutCubic,
+      left: pos.dx,
+      top: pos.dy,
+      child: Semantics(
+        button: true,
+        label: '打开 AI 语音助手（可拖动靠边）',
+        child: GestureDetector(
+          onTap: _activate,
+          onPanStart: (_) {
+            setState(() {
+              _dragging = true;
+              _dragTopLeft = Offset(restLeft, restTop);
+            });
+          },
+          onPanUpdate: (details) {
+            setState(() {
+              final nx = (_dragTopLeft.dx + details.delta.dx)
+                  .clamp(0.0, mq.size.width - _orbSize);
+              final ny = (_dragTopLeft.dy + details.delta.dy)
+                  .clamp(minTop, maxTop);
+              _dragTopLeft = Offset(nx, ny);
+            });
+          },
+          onPanEnd: (_) {
+            final center = _dragTopLeft.dx + _orbSize / 2;
+            final side = center < mq.size.width / 2 ? 'left' : 'right';
+            final frac = maxTop > minTop
+                ? ((_dragTopLeft.dy - minTop) / (maxTop - minTop))
+                    .clamp(0.0, 1.0)
+                : 0.0;
+            setState(() {
+              _dragging = false;
+              _orbSide = side;
+              _orbTopFrac = frac;
+            });
+            unawaited(_saveOrbPosition());
+          },
+          child: Container(
+            width: _orbSize,
+            height: _orbSize,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  AppColors.primary,
+                  AppColors.secondary,
+                  AppColors.gold
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child:
-                  const Icon(Icons.graphic_eq, color: Colors.white, size: 28),
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.26),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
+            child: const Icon(Icons.graphic_eq, color: Colors.white, size: 24),
           ),
         ),
       ),

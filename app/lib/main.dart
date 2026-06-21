@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'core/auth_state.dart';
 import 'core/elder_mode.dart';
 import 'core/router.dart';
+import 'core/voice_wake.dart';
 import 'core/theme.dart';
 
 void main() {
@@ -24,6 +25,7 @@ class FarmLinkApp extends StatefulWidget {
 class _FarmLinkAppState extends State<FarmLinkApp> {
   final AuthState _auth = AuthState();
   final ElderModeState _elderMode = ElderModeState();
+  final VoiceWakeState _voiceWake = VoiceWakeState();
   late final GoRouter _router;
   bool _ready = false;
 
@@ -34,6 +36,7 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
     _auth
         .init()
         .then((_) => _elderMode.init(user: _auth.user))
+        .then((_) => _voiceWake.init())
         .whenComplete(() {
       if (mounted) setState(() => _ready = true);
     });
@@ -59,6 +62,7 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
       providers: [
         ChangeNotifierProvider.value(value: _auth),
         ChangeNotifierProvider.value(value: _elderMode),
+        ChangeNotifierProvider.value(value: _voiceWake),
       ],
       child: MaterialApp.router(
         title: '田园通',
