@@ -5,7 +5,6 @@ import '../../core/constants.dart';
 import '../../core/site_images.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
-import '../../widgets/section_tool_chips.dart';
 import 'product_detail_page.dart';
 
 class MarketPage extends StatefulWidget {
@@ -304,8 +303,6 @@ class _MarketPageState extends State<MarketPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
-            const SectionToolChips(section: 'market'),
-            const SizedBox(height: 8),
             _searchBar(),
             const SizedBox(height: 20),
             _categoryChips(),

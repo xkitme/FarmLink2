@@ -5,7 +5,6 @@ import '../../core/constants.dart';
 import '../../core/site_images.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
-import '../../widgets/section_tool_chips.dart';
 import '../common/info_detail_page.dart';
 
 /// 惠农政策 · 党建学习 · 文明乡风 —— 三个 tab 全部接入服务端
@@ -244,8 +243,6 @@ class _PolicyPageState extends State<PolicyPage> {
       ]),
       body: Column(
         children: [
-          const SectionToolChips(section: 'policy'),
-          const SizedBox(height: 8),
           _tabsBar(),
           if (_fromCache[_active])
             const AlertBanner('数据更新中，下拉刷新可重试', critical: false),

@@ -9,7 +9,6 @@ import '../../core/site_images.dart';
 import '../../core/offline_cache.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
-import '../../widgets/section_tool_chips.dart';
 
 /// 乡村生活服务 · 覆盖医疗、便民、就业金融、互助交易、文化环保 12 个模块。
 class LifePage extends StatefulWidget {
@@ -287,8 +286,6 @@ class _LifePageState extends State<LifePage> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
                     children: [
-                      const SectionToolChips(section: 'life'),
-                      const SizedBox(height: 8),
                       if (_fromCache)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),

@@ -10,7 +10,6 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/offline_sync_queue.dart';
 import '../../widgets/common.dart';
-import '../../widgets/section_tool_chips.dart';
 
 class DataDashboardPage extends StatefulWidget {
   const DataDashboardPage({super.key});
@@ -125,8 +124,6 @@ class _DataDashboardPageState extends State<DataDashboardPage> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                     children: [
-                      const SectionToolChips(section: 'data'),
-                      const SizedBox(height: 8),
                       _heroCard(),
                       const SizedBox(height: 16),
                       _iotEntryCard(),

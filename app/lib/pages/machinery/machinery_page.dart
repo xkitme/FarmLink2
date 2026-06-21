@@ -7,7 +7,6 @@ import '../../core/constants.dart';
 import '../../core/site_images.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
-import '../../widgets/section_tool_chips.dart';
 
 class MachineryPage extends StatefulWidget {
   const MachineryPage({super.key});
@@ -338,8 +337,6 @@ class _MachineryPageState extends State<MachineryPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SectionToolChips(section: 'machinery'),
-                    const SizedBox(height: 8),
                     // K1 真搜索框
                     _searchBar(),
                     const SizedBox(height: 12),
