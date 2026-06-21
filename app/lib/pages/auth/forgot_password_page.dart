@@ -71,6 +71,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     if (_error != null) setState(() => _error = null);
   }
 
+  void _backToLogin() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/auth/login');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AuthScreenScaffold(
@@ -78,7 +86,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       subtitle: '每一次绿色选择，都在为乡村成长赋能',
       showBack: true,
       backEnabled: !_loading,
-      onBack: () => context.go('/auth/login'),
+      onBack: _backToLogin,
       brandTopGap: 70,
       compactBrandTopGap: 34,
       brandFormGap: 24,
@@ -200,7 +208,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 prefix: '想起密码？',
                 action: '返回登录',
                 enabled: !_loading,
-                onTap: () => context.go('/auth/login'),
+                onTap: _backToLogin,
               ),
             ],
           ),

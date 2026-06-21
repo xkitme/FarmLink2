@@ -158,7 +158,7 @@ class _LoginPageState extends State<LoginPage> {
                   TextButton(
                     onPressed: _loading
                         ? null
-                        : () => context.go('/auth/forgot-password'),
+                        : () => context.push('/auth/forgot-password'),
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0xFFD3FFE0),
                       padding: const EdgeInsets.symmetric(vertical: 4),
