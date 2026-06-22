@@ -36,7 +36,7 @@ function parseValue(field, value, mode) {
   if (field.type === 'float') return Number(value) || 0
   if (field.type === 'boolean') return Boolean(value)
   if (field.type === 'date') return new Date(value)
-  if (field.type === 'json') return typeof value === 'string' ? value : JSON.stringify(value)
+  if (field.type === 'json' || field.type === 'images') return typeof value === 'string' ? value : JSON.stringify(value)
   if (field.type === 'password') return String(value)
   return String(value)
 }

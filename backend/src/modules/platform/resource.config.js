@@ -83,7 +83,7 @@ export const RESOURCE_CONFIGS = {
     model: 'feedback',
     searchFields: ['category', 'content', 'contact', 'status'],
     listFields: ['id', 'category', 'content', 'status', 'contact', 'createdAt'],
-    fields: [field('userId', '用户ID', 'int'), field('category', '分类'), field('content', '内容', 'textarea', { required: true }), field('contact', '联系方式'), field('images', '图片JSON', 'json'), field('status', '状态', 'select', { options: ['PENDING', 'REPLIED', 'CLOSED'] }), field('reply', '回复', 'textarea')],
+    fields: [field('userId', '用户ID', 'int'), field('category', '分类'), field('content', '内容', 'textarea', { required: true }), field('contact', '联系方式'), field('images', '图片', 'images'), field('status', '状态', 'select', { options: ['PENDING', 'REPLIED', 'CLOSED'] }), field('reply', '回复', 'textarea')],
   },
   landPlot: {
     title: '地块管理',
@@ -97,7 +97,7 @@ export const RESOURCE_CONFIGS = {
     model: 'farmRecord',
     searchFields: ['recordType', 'cropType', 'content'],
     listFields: ['id', 'userId', 'plotId', 'recordType', 'cropType', 'cost', 'recordDate', 'createdAt'],
-    fields: [field('userId', '用户ID', 'int', { required: true }), field('plotId', '地块ID', 'int'), field('recordType', '农事类型', 'select', { options: ['播种', '施肥', '打药', '灌溉', '收获', '其他'] }), field('cropType', '作物'), field('content', '内容', 'textarea'), field('cost', '成本', 'float'), field('images', '图片JSON', 'json'), field('recordDate', '记录日期', 'date'), field('localUuid', '客户端UUID')],
+    fields: [field('userId', '用户ID', 'int', { required: true }), field('plotId', '地块ID', 'int'), field('recordType', '农事类型', 'select', { options: ['播种', '施肥', '打药', '灌溉', '收获', '其他'] }), field('cropType', '作物'), field('content', '内容', 'textarea'), field('cost', '成本', 'float'), field('images', '图片', 'images'), field('recordDate', '记录日期', 'date'), field('localUuid', '客户端UUID')],
   },
   diseaseKnowledge: {
     title: '病害知识库',
@@ -132,7 +132,7 @@ export const RESOURCE_CONFIGS = {
     model: 'product',
     searchFields: ['title', 'category', 'description', 'traceCode'],
     listFields: ['id', 'title', 'sellerId', 'category', 'price', 'stock', 'status', 'createdAt'],
-    fields: [field('sellerId', '卖家ID', 'int', { required: true }), field('title', '标题', 'string', { required: true }), field('category', '分类'), field('description', '描述', 'textarea'), field('price', '价格', 'float', { required: true }), field('unit', '单位'), field('stock', '库存', 'int'), field('images', '图片JSON', 'json'), field('traceCode', '溯源码'), field('regionCode', '区域'), field('status', '状态', 'int'), field('soldCount', '销量', 'int')],
+    fields: [field('sellerId', '卖家ID', 'int', { required: true }), field('title', '标题', 'string', { required: true }), field('category', '分类'), field('description', '描述', 'textarea'), field('price', '价格', 'float', { required: true }), field('unit', '单位'), field('stock', '库存', 'int'), field('images', '图片', 'images'), field('traceCode', '溯源码'), field('regionCode', '区域'), field('status', '状态', 'int'), field('soldCount', '销量', 'int')],
   },
   order: {
     title: '订单管理',
@@ -146,7 +146,7 @@ export const RESOURCE_CONFIGS = {
     model: 'traceRecord',
     searchFields: ['traceCode', 'stage', 'description', 'operator'],
     listFields: ['id', 'traceCode', 'productId', 'stage', 'operator', 'recordTime'],
-    fields: [field('traceCode', '溯源码', 'string', { required: true }), field('productId', '商品ID', 'int'), field('stage', '阶段', 'string', { required: true }), field('description', '描述', 'textarea'), field('images', '图片JSON', 'json'), field('operator', '操作人'), field('recordTime', '记录时间', 'date')],
+    fields: [field('traceCode', '溯源码', 'string', { required: true }), field('productId', '商品ID', 'int'), field('stage', '阶段', 'string', { required: true }), field('description', '描述', 'textarea'), field('images', '图片', 'images'), field('operator', '操作人'), field('recordTime', '记录时间', 'date')],
   },
   buyer: {
     title: '收购站',
@@ -160,7 +160,7 @@ export const RESOURCE_CONFIGS = {
     model: 'machinery',
     searchFields: ['machineName', 'machineType', 'description', 'regionCode'],
     listFields: ['id', 'machineName', 'ownerId', 'machineType', 'dailyPrice', 'status', 'rating', 'createdAt'],
-    fields: [field('ownerId', '机主ID', 'int', { required: true }), field('machineName', '农机名称', 'string', { required: true }), field('machineType', '类型'), field('dailyPrice', '日租金', 'float'), field('deposit', '押金', 'float'), field('regionCode', '区域'), field('totalHours', '累计小时', 'int'), field('images', '图片JSON', 'json'), field('description', '描述', 'textarea'), field('status', '状态', 'int'), field('rating', '评分', 'float')],
+    fields: [field('ownerId', '机主ID', 'int', { required: true }), field('machineName', '农机名称', 'string', { required: true }), field('machineType', '类型'), field('dailyPrice', '日租金', 'float'), field('deposit', '押金', 'float'), field('regionCode', '区域'), field('totalHours', '累计小时', 'int'), field('images', '图片', 'images'), field('description', '描述', 'textarea'), field('status', '状态', 'int'), field('rating', '评分', 'float')],
   },
   machineryBooking: {
     title: '农机预约',
@@ -181,7 +181,7 @@ export const RESOURCE_CONFIGS = {
     model: 'disasterReport',
     searchFields: ['disasterType', 'description', 'status', 'regionCode'],
     listFields: ['id', 'userId', 'disasterType', 'affectedArea', 'estimatedLoss', 'status', 'createdAt'],
-    fields: [field('userId', '用户ID', 'int', { required: true }), field('disasterType', '灾害类型', 'string', { required: true }), field('plotId', '地块ID', 'int'), field('affectedArea', '受灾面积', 'float'), field('estimatedLoss', '预估损失', 'float'), field('description', '描述', 'textarea'), field('images', '图片JSON', 'json'), field('location', '位置JSON', 'json'), field('aiLossLevel', 'AI等级'), field('status', '状态', 'select', { options: ['REPORTED', 'REVIEWING', 'PROCESSED'] }), field('regionCode', '区域'), field('localUuid', '客户端UUID')],
+    fields: [field('userId', '用户ID', 'int', { required: true }), field('disasterType', '灾害类型', 'string', { required: true }), field('plotId', '地块ID', 'int'), field('affectedArea', '受灾面积', 'float'), field('estimatedLoss', '预估损失', 'float'), field('description', '描述', 'textarea'), field('images', '图片', 'images'), field('location', '位置JSON', 'json'), field('aiLossLevel', 'AI等级'), field('status', '状态', 'select', { options: ['REPORTED', 'REVIEWING', 'PROCESSED'] }), field('regionCode', '区域'), field('localUuid', '客户端UUID')],
   },
   weatherAlert: {
     title: '天气预警',
@@ -230,7 +230,7 @@ export const RESOURCE_CONFIGS = {
     model: 'honorRecord',
     searchFields: ['honoreeName', 'honorType', 'deed', 'status'],
     listFields: ['id', 'honoreeName', 'honorType', 'votes', 'status', 'createdAt'],
-    fields: [field('regionCode', '区域'), field('honoreeName', '荣誉人', 'string', { required: true }), field('honorType', '荣誉类型'), field('deed', '事迹', 'textarea'), field('images', '图片JSON', 'json'), field('votes', '票数', 'int'), field('status', '状态', 'select', { options: ['PENDING', 'PUBLISHED'] })],
+    fields: [field('regionCode', '区域'), field('honoreeName', '荣誉人', 'string', { required: true }), field('honorType', '荣誉类型'), field('deed', '事迹', 'textarea'), field('images', '图片', 'images'), field('votes', '票数', 'int'), field('status', '状态', 'select', { options: ['PENDING', 'PUBLISHED'] })],
   },
   trainingCourse: {
     title: '培训课程',
@@ -251,14 +251,14 @@ export const RESOURCE_CONFIGS = {
     model: 'tourismSpot',
     searchFields: ['name', 'spotType', 'address', 'description'],
     listFields: ['id', 'name', 'spotType', 'address', 'price', 'rating', 'createdAt'],
-    fields: [field('name', '名称', 'string', { required: true }), field('spotType', '类型'), field('regionCode', '区域'), field('address', '地址'), field('description', '描述', 'textarea'), field('images', '图片JSON', 'json'), field('price', '价格', 'float'), field('phone', '电话'), field('promoText', '推广文案', 'textarea'), field('rating', '评分', 'float')],
+    fields: [field('name', '名称', 'string', { required: true }), field('spotType', '类型'), field('regionCode', '区域'), field('address', '地址'), field('description', '描述', 'textarea'), field('images', '图片', 'images'), field('price', '价格', 'float'), field('phone', '电话'), field('promoText', '推广文案', 'textarea'), field('rating', '评分', 'float')],
   },
   secondhandItem: {
     title: '二手交易',
     model: 'secondhandItem',
     searchFields: ['title', 'category', 'description', 'status'],
     listFields: ['id', 'title', 'sellerId', 'category', 'price', 'status', 'createdAt'],
-    fields: [field('sellerId', '卖家ID', 'int', { required: true }), field('title', '标题', 'string', { required: true }), field('category', '分类'), field('description', '描述', 'textarea'), field('price', '价格', 'float'), field('images', '图片JSON', 'json'), field('regionCode', '区域'), field('status', '状态', 'select', { options: ['ON_SALE', 'SOLD'] })],
+    fields: [field('sellerId', '卖家ID', 'int', { required: true }), field('title', '标题', 'string', { required: true }), field('category', '分类'), field('description', '描述', 'textarea'), field('price', '价格', 'float'), field('images', '图片', 'images'), field('regionCode', '区域'), field('status', '状态', 'select', { options: ['ON_SALE', 'SOLD'] })],
   },
   helpRequest: {
     title: '邻里互助',
@@ -272,7 +272,7 @@ export const RESOURCE_CONFIGS = {
     model: 'envReport',
     searchFields: ['problemType', 'description', 'status', 'handleResult'],
     listFields: ['id', 'problemType', 'userId', 'status', 'regionCode', 'createdAt'],
-    fields: [field('userId', '用户ID', 'int', { required: true }), field('problemType', '问题类型'), field('description', '描述', 'textarea'), field('images', '图片JSON', 'json'), field('location', '位置'), field('regionCode', '区域'), field('status', '状态', 'select', { options: ['REPORTED', 'HANDLING', 'RESOLVED'] }), field('handleResult', '处理结果', 'textarea')],
+    fields: [field('userId', '用户ID', 'int', { required: true }), field('problemType', '问题类型'), field('description', '描述', 'textarea'), field('images', '图片', 'images'), field('location', '位置'), field('regionCode', '区域'), field('status', '状态', 'select', { options: ['REPORTED', 'HANDLING', 'RESOLVED'] }), field('handleResult', '处理结果', 'textarea')],
   },
   loanProduct: {
     title: '贷款产品',

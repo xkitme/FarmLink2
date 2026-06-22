@@ -106,7 +106,40 @@ function optionValue(item) {
   return item
 }
 
+/** 解析多图字段：DB 里存 JSON 数组字符串（如 ["/uploads/a.jpg","assets/x.jpg"]）。
+ *  兼容空值 / 已是数组 / 遗留的裸 URL 字符串，始终返回 URL 数组。 */
+function parseImages(value) {
+  if (!value) return []
+  if (Array.isArray(value)) return value.filter(Boolean)
+  if (typeof value !== 'string') return []
+  try {
+    const arr = JSON.parse(value)
+    if (Array.isArray(arr)) return arr.filter(Boolean)
+    if (typeof arr === 'string' && arr) return [arr]
+    return []
+  } catch {
+    return value.trim() ? [value.trim()] : []
+  }
+}
+
 function formatValue(value, field) {
+  if (field?.type === 'images') {
+    const arr = parseImages(value)
+    if (!arr.length) return '-'
+    return (
+      <Space size={4}>
+        {arr.slice(0, 3).map((url, index) => (
+          <img
+            key={index}
+            src={url}
+            alt=""
+            style={{ height: 36, width: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+          />
+        ))}
+        {arr.length > 3 ? <Tag>+{arr.length - 3}</Tag> : null}
+      </Space>
+    )
+  }
   if (value === null || value === undefined || value === '') return '-'
   if (field?.type === 'image') {
     return (
@@ -185,9 +218,96 @@ function ImageUploadField({ value, onChange }) {
   )
 }
 
+/** 多图字段：上传多张到 /upload/image，维护一个 URL 数组，回写为 JSON 字符串（与 DB 既有格式一致）。
+ *  缩略图网格可逐张删除，也支持手动填 URL 追加。 */
+function ImagesUploadField({ value, onChange }) {
+  const [loading, setLoading] = useState(false)
+  const [urlDraft, setUrlDraft] = useState('')
+  const list = parseImages(value)
+  // 批量上传时多个 customRequest 并发，闭包里的 value 是旧的；用 ref 串行累加避免相互覆盖。
+  const listRef = useRef(list)
+  listRef.current = list
+  const emit = (arr) => {
+    listRef.current = arr
+    onChange?.(arr.length ? JSON.stringify(arr) : '')
+  }
+  async function customRequest({ file, onSuccess, onError }) {
+    setLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append('image', file)
+      const data = await api.post('/upload/image', fd)
+      if (data?.url) emit([...listRef.current, data.url])
+      onSuccess?.(data)
+    } catch (error) {
+      message.error('图片上传失败')
+      onError?.(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  return (
+    <Space direction="vertical" size={8} style={{ width: '100%' }}>
+      {list.length ? (
+        <Space wrap size={8}>
+          {list.map((url, index) => (
+            <div key={index} style={{ position: 'relative', lineHeight: 0 }}>
+              <img
+                src={url}
+                alt=""
+                style={{ width: 86, height: 86, objectFit: 'cover', borderRadius: 6, border: '1px solid #eee' }}
+              />
+              <Button
+                type="primary"
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                onClick={() => emit(list.filter((_, i) => i !== index))}
+                style={{ position: 'absolute', top: 2, right: 2, padding: '0 4px', height: 22 }}
+              />
+            </div>
+          ))}
+        </Space>
+      ) : null}
+      <Space wrap>
+        <Upload showUploadList={false} accept="image/*" multiple customRequest={customRequest}>
+          <Button icon={<UploadOutlined />} loading={loading}>
+            {list.length ? '继续添加' : '上传图片'}
+          </Button>
+        </Upload>
+        {list.length ? <Button danger onClick={() => emit([])}>清空</Button> : null}
+      </Space>
+      <Space.Compact style={{ width: '100%' }}>
+        <Input
+          value={urlDraft}
+          onChange={(event) => setUrlDraft(event.target.value)}
+          placeholder="或手动填图片 URL 后点添加"
+          onPressEnter={() => {
+            if (urlDraft.trim()) {
+              emit([...list, urlDraft.trim()])
+              setUrlDraft('')
+            }
+          }}
+        />
+        <Button
+          onClick={() => {
+            if (urlDraft.trim()) {
+              emit([...list, urlDraft.trim()])
+              setUrlDraft('')
+            }
+          }}
+        >
+          添加
+        </Button>
+      </Space.Compact>
+    </Space>
+  )
+}
+
 function FieldInput({ field, ...rest }) {
   // rest 携带 Form.Item 注入的 value/onChange/id，必须透传给真正的控件，否则字段不与表单绑定。
   if (field.type === 'image') return <ImageUploadField {...rest} />
+  if (field.type === 'images') return <ImagesUploadField {...rest} />
   if (field.type === 'textarea' || field.type === 'json') {
     return <Input.TextArea {...rest} rows={field.type === 'json' ? 4 : 3} placeholder={field.placeholder || field.label} />
   }
