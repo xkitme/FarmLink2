@@ -6,11 +6,8 @@ dist/
 .claude/settings.json
 .claude/settings.local.json
 
-# 宣传片生成项目的大二进制产物（字体/渲染视频/缩略图缓存）不进主库
-promo-video/node_modules/
-promo-video/renders/
-promo-video/assets/fonts/
-promo-video/.thumbnails/
+# 宣传片生成项目（设计/路演素材，本地保留，整个目录不进主库）
+promo-video/
 
 # ── 上传策略：GitHub 仓库只放 docs 与开发相关源码 ──
 # 临时验证截图 / 探针图（根目录散落的 png 一律不进库）
