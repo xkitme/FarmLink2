@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import 'constants.dart';
+import 'mic_coordinator.dart';
 import 'offline_stt.dart';
 import '../widgets/common.dart';
 
@@ -46,16 +47,28 @@ class VoiceInput {
       toast(context, '当前环境暂不支持语音输入，请改用键盘输入', error: true);
       return null;
     }
-    return showModalBottomSheet<String>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: false,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (sheetContext) => const _VoiceListenSheet(),
-    );
+    // 占用麦克风：让语音助手的「唤醒常听」先让路，避免抢同一个 OfflineStt。
+    MicCoordinator.acquire();
+    // 给唤醒常听一帧时间停麦，再开本弹层的识别，规避释放/占用竞态。
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    if (!context.mounted) {
+      MicCoordinator.release();
+      return null;
+    }
+    try {
+      return await showModalBottomSheet<String>(
+        context: context,
+        useRootNavigator: true,
+        isScrollControlled: false,
+        backgroundColor: AppColors.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+        ),
+        builder: (sheetContext) => const _VoiceListenSheet(),
+      );
+    } finally {
+      MicCoordinator.release(); // 弹层关闭后唤醒常听自动恢复
+    }
   }
 
   static SpeechToText get engine => _speech;
@@ -100,6 +113,10 @@ class _VoiceListenSheetState extends State<_VoiceListenSheet> {
           onText: (text) {
             if (!mounted) return;
             setState(() => _recognized = text);
+          },
+          onNoSpeech: () {
+            // 检测到声音活动但 1 秒内识别不出字（噪音/误触发）→ 自动收起语音输入
+            if (mounted) _cancel();
           },
         );
         if (!ok) {

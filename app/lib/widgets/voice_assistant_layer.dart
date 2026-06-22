@@ -11,6 +11,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../core/api_client.dart';
 import '../core/auth_state.dart';
 import '../core/constants.dart';
+import '../core/mic_coordinator.dart';
 import '../core/offline_stt.dart';
 import '../core/tts_service.dart';
 import '../core/voice_wake.dart';
@@ -136,6 +137,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
       duration: const Duration(milliseconds: 4200),
     )..repeat(); // 不反向，0→1 循环驱动边框跑马灯绕圈
     VoiceAssistantController.requests.addListener(_handleOpenRequest);
+    MicCoordinator.busy.addListener(_onWakeChanged);
     _loadOrbPosition();
   }
 
@@ -165,6 +167,7 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
   @override
   void dispose() {
     VoiceAssistantController.requests.removeListener(_handleOpenRequest);
+    MicCoordinator.busy.removeListener(_onWakeChanged);
     _wake?.removeListener(_onWakeChanged);
     _silenceTimer?.cancel();
     _glow.dispose();
@@ -208,10 +211,14 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
     if (mounted) _evaluateWakeListening();
   }
 
-  /// 依据「在一级 tab + 未激活 + 开关开 + 非 Web」决定是否后台监听唤醒词。
+  /// 全局唤醒：只要登录后处于 App 内（本层挂在 ShellRoute 上、覆盖所有业务页），
+  /// 未激活 + 开关开 + 非 Web + 没有别的功能在占麦克风，就后台监听唤醒词——
+  /// 不再限定一级 tab，二级页（搜索/详情/设置…）同样可「呼叫唤起」。
   void _evaluateWakeListening() {
-    final shouldListen =
-        widget.enabled && !_active && !kIsWeb && (_wake?.enabled ?? false);
+    final shouldListen = !_active &&
+        !kIsWeb &&
+        (_wake?.enabled ?? false) &&
+        !MicCoordinator.busy.value;
     if (shouldListen && !_wakeListening) {
       unawaited(_startWakeListening());
     } else if (!shouldListen && _wakeListening) {
@@ -400,6 +407,11 @@ class _VoiceAssistantLayerState extends State<VoiceAssistantLayer>
             // sherpa 端点检测（静音停顿）= 一句说完，立即提交
             if (!mounted || !_active) return;
             unawaited(_submitRecognized(auto: true));
+          },
+          onNoSpeech: () {
+            // 检测到声音活动但 1 秒内识别不出字（噪音/误开麦）→ 结束本轮聆听，不空等
+            if (!mounted || !_active) return;
+            unawaited(_deactivate());
           },
         );
         if (!ok) {

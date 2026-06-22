@@ -52,6 +52,13 @@ tts_samples/
 _asrdl/
 docs.zip
 
+# 语音助手图标导出（设计素材，本地保留不入库）
+app/assets/voice_icons/
+app/assets/voice_icons.zip
+
+# APK 构建日志（本地产物，不入库）
+.apk-build.log
+
 # 离线 STT 模型权重：int8 encoder 173MB 超 GitHub 单文件 100MB 硬上限，
 # 随交付包/本地解压保留，不入库（tokens.txt 小且标识模型，照常入库）。
 # 解压：tar -xjf _asrdl/model_full.tar.bz2 --strip-components=1 -C app/assets/models/asr <四个文件名>

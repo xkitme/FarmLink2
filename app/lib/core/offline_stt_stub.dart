@@ -13,6 +13,7 @@ class OfflineStt {
   static Future<bool> start({
     required void Function(String text) onText,
     void Function(String text)? onEndpoint,
+    void Function()? onNoSpeech,
   }) async =>
       false;
 

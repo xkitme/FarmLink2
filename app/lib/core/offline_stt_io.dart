@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -37,12 +38,23 @@ class OfflineStt {
 
   static bool _bindingsInited = false;
   static bool _listening = false;
+  // 诊断用：统计收到的音频帧与最大振幅，判断麦克风是真有声还是静音（模拟器常喂静音）。
+  static int _diagChunks = 0;
+  static double _diagMaxAmp = 0;
   // 已断句确定下来的文本（多句拼接）+ 当前句的实时文本。
   static String _finalized = '';
   static String _partial = '';
 
   static void Function(String text)? _onText;
   static void Function(String text)? _onEndpoint;
+  // 「有声但识别不出字」自动结束：检测到声音活动（振幅过阈）后，若 1 秒内仍无任何
+  // 识别文字，触发一次 onNoSpeech 让调用方收尾（噪音环境 / 误触发开麦时不空等）。
+  static void Function()? _onNoSpeech;
+  static Timer? _noSpeechTimer;
+  static bool _sawSpeech = false;
+  // 归一化 [-1,1] 采样的最大绝对值 > 此值即视为有声音活动（模拟器静音≈0）。
+  static const double _noiseAmpThreshold = 0.02;
+  static const Duration _noSpeechWindow = Duration(seconds: 1);
 
   static bool get isListening => _listening;
 
@@ -58,25 +70,37 @@ class OfflineStt {
   /// 开始麦克风流式识别。
   /// - [onText]：当前完整文本（已断句 + 当前句实时）持续回调。
   /// - [onEndpoint]：检测到一次静音停顿（一句说完）时回调当前完整文本，便于自动提交。
+  /// - [onNoSpeech]：检测到声音活动后 1 秒内仍无任何识别文字时回调一次（噪音/误触发开麦
+  ///   场景下让调用方收尾结束）。不传则不启用；出过字后本轮永久关闭，正常说话不受影响。
   /// 返回 true 表示已开始；false 表示不可用/无权限/失败（调用方应回落或提示）。
   static Future<bool> start({
     required void Function(String text) onText,
     void Function(String text)? onEndpoint,
+    void Function()? onNoSpeech,
   }) async {
     if (_listening) return true;
     final recognizer = await _ensureRecognizer();
     if (recognizer == null) return false;
 
     try {
-      if (!await _recorder.hasPermission()) return false;
-    } catch (_) {
+      final granted = await _recorder.hasPermission();
+      debugPrint('[STT] hasPermission=$granted');
+      if (!granted) return false;
+    } catch (e) {
+      debugPrint('[STT] hasPermission threw: $e');
       return false;
     }
 
     _onText = onText;
     _onEndpoint = onEndpoint;
+    _onNoSpeech = onNoSpeech;
     _finalized = '';
     _partial = '';
+    _diagChunks = 0;
+    _diagMaxAmp = 0;
+    _sawSpeech = false;
+    _noSpeechTimer?.cancel();
+    _noSpeechTimer = null;
 
     try {
       _stream = recognizer.createStream();
@@ -96,13 +120,15 @@ class OfflineStt {
         ),
       );
       _listening = true;
+      debugPrint('[STT] recorder.startStream ok, listening');
       _audioSub = audio.listen(
         _onAudioChunk,
-        onError: (_) {},
+        onError: (e) => debugPrint('[STT] audio stream error: $e'),
         cancelOnError: false,
       );
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[STT] startStream threw: $e');
       await _teardownAudio();
       return false;
     }
@@ -111,11 +137,14 @@ class OfflineStt {
   /// 停止识别，返回完整识别文本。
   static Future<String> stop() async {
     _listening = false;
+    _noSpeechTimer?.cancel();
+    _noSpeechTimer = null;
     await _stopRecorder();
     _flushStream();
     final text = _fullText();
     _onText = null;
     _onEndpoint = null;
+    _onNoSpeech = null;
     await _freeStream();
     return text;
   }
@@ -141,8 +170,21 @@ class OfflineStt {
     final stream = _stream;
     if (recognizer == null || stream == null || !_listening) return;
     try {
+      final samples = _pcm16ToFloat32(bytes);
+      // 诊断：每 ~25 帧打印一次帧数/最大振幅/当前识别文本。
+      // maxAmp≈0 => 麦克风是静音(模拟器没接真麦)；maxAmp>0 但无文本 => sherpa 侧问题。
+      var amp = 0.0;
+      for (final s in samples) {
+        final a = s < 0 ? -s : s;
+        if (a > amp) amp = a;
+      }
+      if (amp > _diagMaxAmp) _diagMaxAmp = amp;
+      if (++_diagChunks % 25 == 0) {
+        debugPrint(
+            '[STT] chunks=$_diagChunks bytes=${bytes.length} maxAmp=${_diagMaxAmp.toStringAsFixed(4)} partial="$_partial"');
+      }
       stream.acceptWaveform(
-        samples: _pcm16ToFloat32(bytes),
+        samples: samples,
         sampleRate: _sampleRate,
       );
       while (recognizer.isReady(stream)) {
@@ -150,6 +192,7 @@ class OfflineStt {
       }
       _partial = recognizer.getResult(stream).text;
       _onText?.call(_fullText());
+      _trackNoSpeech(amp);
 
       if (recognizer.isEndpoint(stream)) {
         // 一句结束：把当前句并入已确定文本，回调端点，重置流接着听下一句。
@@ -161,6 +204,28 @@ class OfflineStt {
       }
     } catch (_) {
       // 单帧异常不打断整段聆听。
+    }
+  }
+
+  /// 「有声但无字」自动结束：检测到声音活动后 1 秒仍无识别文字则触发 onNoSpeech。
+  /// 一旦出过字（_sawSpeech）即永久关闭本轮该机制，正常说话不受影响。
+  static void _trackNoSpeech(double amp) {
+    if (_onNoSpeech == null) return;
+    if (_fullText().isNotEmpty) {
+      // 出字了：标记并撤销待触发的自动结束。
+      _sawSpeech = true;
+      _noSpeechTimer?.cancel();
+      _noSpeechTimer = null;
+      return;
+    }
+    if (_sawSpeech) return;
+    // 检测到声音活动且尚无文字：开一个 1 秒窗口，到点仍无字则结束。
+    if (amp > _noiseAmpThreshold && _noSpeechTimer == null) {
+      _noSpeechTimer = Timer(_noSpeechWindow, () {
+        _noSpeechTimer = null;
+        if (!_listening || _sawSpeech || _fullText().isNotEmpty) return;
+        _onNoSpeech?.call();
+      });
     }
   }
 
@@ -210,8 +275,10 @@ class OfflineStt {
         rule3MinUtteranceLength: 20,
       );
       _recognizer = sherpa.OnlineRecognizer(config);
+      debugPrint('[STT] recognizer ready (model dir=$dir)');
       return _recognizer;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[STT] recognizer init failed: $e');
       _recognizer = null;
       return null;
     }
@@ -242,6 +309,8 @@ class OfflineStt {
 
   static Future<void> _teardownAudio() async {
     _listening = false;
+    _noSpeechTimer?.cancel();
+    _noSpeechTimer = null;
     await _stopRecorder();
     await _freeStream();
   }
