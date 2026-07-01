@@ -61,14 +61,23 @@ class AuthState extends ChangeNotifier {
   }
 
   Future<void> register(
-      String username, String password, String nickname) async {
-    // 「手机号/账号」单字段：若填的是手机号格式（11 位、1 开头），同步写入 phone
-    final isPhone = RegExp(r'^1\d{10}$').hasMatch(username);
+    String username,
+    String password,
+    String nickname, {
+    String? phone,
+  }) async {
+    // 手机号来源：优先显式手机号字段；否则若「用户名」本身是手机号格式则回退取用。
+    // 存了手机号，后续「重置密码」才能通过手机号+账号校验（否则该账号永远无法找回）。
+    final explicit = (phone ?? '').trim();
+    final fallback = RegExp(r'^1\d{10}$').hasMatch(username) ? username : '';
+    final resolvedPhone = explicit.isNotEmpty ? explicit : fallback;
     final data = await ApiClient.post('/auth/register', body: {
       'username': username,
       'password': password,
-      'nickname': nickname,
-      if (isPhone) 'phone': username,
+      // 后端 schema 认 displayName（strip 会丢弃 nickname），此处直接对齐字段名，
+      // 昵称才能真正生效，而不是被静默丢弃后回退成用户名。
+      if (nickname.trim().isNotEmpty) 'displayName': nickname.trim(),
+      if (resolvedPhone.isNotEmpty) 'phone': resolvedPhone,
     });
     await _save(data as Map<String, dynamic>);
   }

@@ -16,6 +16,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _nickname = TextEditingController();
   final _username = TextEditingController();
+  final _phone = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
   bool _loading = false;
@@ -27,6 +28,7 @@ class _RegisterPageState extends State<RegisterPage> {
   void dispose() {
     _nickname.dispose();
     _username.dispose();
+    _phone.dispose();
     _password.dispose();
     _confirmPassword.dispose();
     super.dispose();
@@ -37,11 +39,12 @@ class _RegisterPageState extends State<RegisterPage> {
     FocusScope.of(context).unfocus();
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
-      setState(() => _error = null);
+      setState(() => _error = '请按提示补全上方信息后再创建账号');
       return;
     }
     final n = _nickname.text.trim();
     final u = _username.text.trim();
+    final ph = _phone.text.trim();
     final p = _password.text;
     TextInput.finishAutofillContext();
     setState(() {
@@ -49,7 +52,7 @@ class _RegisterPageState extends State<RegisterPage> {
       _error = null;
     });
     try {
-      await context.read<AuthState>().register(u, p, n);
+      await context.read<AuthState>().register(u, p, n, phone: ph);
       if (mounted) context.go('/home');
     } catch (e) {
       if (!mounted) return;
@@ -73,10 +76,9 @@ class _RegisterPageState extends State<RegisterPage> {
       backEnabled: !_loading,
       brandTopGap: 70,
       compactBrandTopGap: 34,
-      brandFormGap: 24,
+      brandFormGap: 30,
       child: Form(
         key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: AutofillGroup(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -93,7 +95,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               AuthTextField(
                 controller: _username,
                 hint: '手机号 / 用户名',
@@ -109,7 +111,29 @@ class _RegisterPageState extends State<RegisterPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              AuthTextField(
+                controller: _phone,
+                hint: '手机号（用于找回密码）',
+                icon: Icons.phone_iphone,
+                keyboardType: TextInputType.phone,
+                enabled: !_loading,
+                onChanged: (_) => _clearError(),
+                autofillHints: const [AutofillHints.telephoneNumber],
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(11),
+                ],
+                validator: (value) {
+                  final phone = (value ?? '').trim();
+                  if (phone.isEmpty) return '请输入手机号';
+                  if (!RegExp(r'^1\d{10}$').hasMatch(phone)) {
+                    return '请输入正确的手机号';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
               AuthTextField(
                 controller: _password,
                 hint: '密码，至少 6 位',
@@ -138,7 +162,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       : () => setState(() => _obscure = !_obscure),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               AuthTextField(
                 controller: _confirmPassword,
                 hint: '确认密码',

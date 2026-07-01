@@ -100,7 +100,6 @@ class _LoginPageState extends State<LoginPage> {
       brandFormGap: 38,
       child: Form(
         key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: AutofillGroup(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -149,7 +148,7 @@ class _LoginPageState extends State<LoginPage> {
                       : () => setState(() => _obscure = !_obscure),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 14),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [

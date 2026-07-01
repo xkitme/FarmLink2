@@ -38,7 +38,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     FocusScope.of(context).unfocus();
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
-      setState(() => _error = null);
+      setState(() => _error = '请按提示补全上方信息后再重置密码');
       return;
     }
     final username = _username.text.trim();
@@ -89,10 +89,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       onBack: _backToLogin,
       brandTopGap: 70,
       compactBrandTopGap: 34,
-      brandFormGap: 24,
+      brandFormGap: 30,
       child: Form(
         key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: AutofillGroup(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -109,7 +108,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               AuthTextField(
                 controller: _phone,
                 hint: '绑定手机号',
@@ -131,7 +130,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               AuthTextField(
                 controller: _password,
                 hint: '新密码，至少 6 位',
@@ -160,7 +159,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       : () => setState(() => _obscure = !_obscure),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               AuthTextField(
                 controller: _confirmPassword,
                 hint: '确认新密码',

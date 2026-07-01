@@ -261,6 +261,7 @@ class AuthTextField extends StatelessWidget {
     this.validator,
     this.onSubmit,
     this.onChanged,
+    this.autovalidateMode = AutovalidateMode.onUserInteraction,
   });
 
   final TextEditingController controller;
@@ -277,11 +278,16 @@ class AuthTextField extends StatelessWidget {
   final VoidCallback? onSubmit;
   final ValueChanged<String>? onChanged;
 
+  /// 每个字段独立校验（默认仅在自己被输入后校验自己），
+  /// 避免把 autovalidate 挂在 Form 级导致「填一个框、其它框全飘红」。
+  final AutovalidateMode autovalidateMode;
+
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
       enabled: enabled,
+      autovalidateMode: autovalidateMode,
       obscureText: obscure,
       keyboardType: keyboardType,
       autofillHints: autofillHints,
