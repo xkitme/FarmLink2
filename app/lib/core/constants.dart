@@ -16,40 +16,45 @@ class AppColors {
   AppColors._();
 
   // 主色 · 叶绿
-  static const primary = Color(0xFF0D631B);
-  static const primaryContainer = Color(0xFF2E7D32);
-  static const primaryDim = Color(0xFF88D982);
-  static const onPrimaryContainer = Color(0xFFCBFFC2);
+  static const primary = Color(0xFF386641);
+  static const primaryContainer = Color(0xFF3E6B4F);
+  static const primaryDim = Color(0xFF52B788);
+  static const onPrimaryContainer = Color(0xFFD8F3DC);
 
   // 次色 · 黛青
-  static const secondary = Color(0xFF2E6E66);
+  static const secondary = Color(0xFF40916C);
   // 第三色 · 麦金
-  static const tertiary = Color(0xFF734E00);
-  static const gold = Color(0xFFFFBA38); // AI 卡边框 / 高亮
-  static const goldContainer = Color(0xFF926500);
+  static const tertiary = Color(0xFF2D6A4F);
+  static const gold = Color(0xFFDDA15E); // AI 卡边框 / 高亮
+  static const goldContainer = Color(0xFFE0892F);
 
   // 预警
   static const error = Color(0xFFBA1A1A);
   static const errorContainer = Color(0xFFFFDAD6);
-  static const warning = Color(0xFFB26000);
-  static const priceRed = Color(0xFFB40000);
+  static const warning = Color(0xFFC58A37);
+  static const priceRed = Color(0xFFC0584B);
 
   // 表面层
-  static const background = Color(0xFFF9F9F9);
+  static const background = Color(0xFFF4F1E4);
   static const surface = Color(0xFFFFFFFF);
-  static const surfaceLow = Color(0xFFF3F3F3);
-  static const surfaceContainer = Color(0xFFEEEEEE);
-  static const surfaceHigh = Color(0xFFE8E8E8);
+  static const surfaceLow = Color(0xFFF7FAF5);
+  static const surfaceContainer = Color(0xFFEFEBDC);
+  static const surfaceHigh = Color(0xFFECEFEA);
 
   // 文字 / 描边
-  static const onSurface = Color(0xFF1A1C1C);
-  static const onSurfaceVariant = Color(0xFF40493D);
-  static const outline = Color(0xFF707A6C);
-  static const outlineVariant = Color(0xFFBFCABA);
+  static const onSurface = Color(0xFF2F3A30);
+  static const onSurfaceVariant = Color(0xFF726A57);
+  static const outline = Color(0xFF9C8E7A);
+  static const outlineVariant = Color(0xFFE5DFCE);
 
   // 渐变（用于 hero 区）
   static const heroGradient = LinearGradient(
-    colors: [Color(0xFF2E7D32), Color(0xFF0D631B)],
+    colors: [Color(0xFF3E6B4F), Color(0xFF5C8A6D)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  static const authButtonGradient = LinearGradient(
+    colors: [Color(0xFF5ED09B), Color(0xFF1E7F61)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -57,20 +62,27 @@ class AppColors {
   /// 环境光阴影（柔和棕调，禁用浓黑）
   static List<BoxShadow> get ambientShadow => const [
         BoxShadow(
-            color: Color(0x0D795548), blurRadius: 20, offset: Offset(0, 4)),
+          color: Color(0x12000000),
+          blurRadius: 18,
+          offset: Offset(0, 6),
+        ),
       ];
   static List<BoxShadow> get ambientShadowUp => const [
         BoxShadow(
-            color: Color(0x0D795548), blurRadius: 20, offset: Offset(0, -4)),
+          color: Color(0x16000000),
+          blurRadius: 14,
+          offset: Offset(0, -2),
+        ),
       ];
 }
 
 // 圆角
 class R {
   R._();
-  static const sm = 8.0;
+  static const sm = 10.0;
   static const md = 16.0;
-  static const lg = 32.0;
+  static const lg = 26.0;
+  static const pill = 999.0;
 }
 
 // ── 八大板块 ──────────────────────────────────────────

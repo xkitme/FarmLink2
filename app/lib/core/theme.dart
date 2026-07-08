@@ -73,15 +73,15 @@ ThemeData buildAppTheme() {
 
     // 白底顶栏
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.surface,
-      foregroundColor: AppColors.primary,
+      backgroundColor: AppColors.background,
+      foregroundColor: AppColors.onSurface,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
       titleTextStyle: TextStyle(
-        color: AppColors.primary,
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
+        color: AppColors.onSurface,
+        fontSize: 17,
+        fontWeight: FontWeight.w800,
         letterSpacing: 0,
       ),
       iconTheme: IconThemeData(color: AppColors.onSurfaceVariant),
@@ -103,28 +103,25 @@ ThemeData buildAppTheme() {
           const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14),
       floatingLabelStyle: const TextStyle(
           color: AppColors.primary, fontWeight: FontWeight.w600),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(R.sm),
-        borderSide:
-            const BorderSide(color: AppColors.outlineVariant, width: 1.5),
+        borderRadius: BorderRadius.circular(R.md),
+        borderSide: const BorderSide(color: AppColors.outlineVariant, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(R.sm),
+        borderRadius: BorderRadius.circular(R.md),
         borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(R.sm),
-        borderSide:
-            const BorderSide(color: AppColors.outlineVariant, width: 1.5),
+        borderRadius: BorderRadius.circular(R.md),
+        borderSide: const BorderSide(color: AppColors.outlineVariant, width: 1),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(R.sm),
+        borderRadius: BorderRadius.circular(R.md),
         borderSide: const BorderSide(color: AppColors.error, width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(R.sm),
+        borderRadius: BorderRadius.circular(R.md),
         borderSide: const BorderSide(color: AppColors.error, width: 1.5),
       ),
     ),
@@ -137,10 +134,10 @@ ThemeData buildAppTheme() {
         elevation: 0,
         minimumSize: const Size(0, 52),
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.sm)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
         textStyle: const TextStyle(
-            fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+            fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0),
       ),
     ),
 
@@ -150,8 +147,8 @@ ThemeData buildAppTheme() {
         foregroundColor: AppColors.primary,
         minimumSize: const Size(0, 52),
         side: const BorderSide(color: AppColors.outlineVariant, width: 1.5),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.sm)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     ),
@@ -174,13 +171,16 @@ ThemeData buildAppTheme() {
       backgroundColor: AppColors.surfaceContainer,
       selectedColor: AppColors.primary,
       labelStyle: const TextStyle(
-          fontSize: 13, color: AppColors.onSurface, fontWeight: FontWeight.w500),
+          fontSize: 13,
+          color: AppColors.onSurface,
+          fontWeight: FontWeight.w500),
       secondaryLabelStyle: const TextStyle(
           fontSize: 13, color: Colors.white, fontWeight: FontWeight.w600),
       checkmarkColor: Colors.white,
       showCheckmark: false,
       side: BorderSide.none,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.pill)),
     ),
 
     textTheme: const TextTheme(

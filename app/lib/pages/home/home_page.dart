@@ -194,58 +194,114 @@ class _HomePageState extends State<HomePage> {
     final isAdmin = context.watch<AuthState>().user?.role == 'ADMIN';
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(title: '田园通'),
       body: _loading
           ? const Loading(text: '正在加载首页...')
           : RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _load,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                padding: EdgeInsets.zero,
                 children: [
-                  if (_fromCache) ...[
-                    AlertBanner(
-                        '数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
-                        critical: false),
-                    const SizedBox(height: 12),
-                  ],
-                  _homeSearch(),
-                  const SizedBox(height: 14),
-                  _greetingWeather()
-                      .animate()
-                      .fadeIn(duration: 300.ms)
-                      .slideY(begin: 0.05),
-                  const SizedBox(height: 16),
-                  _decisionCard()
-                      .animate(delay: 60.ms)
-                      .fadeIn(duration: 340.ms)
-                      .slideY(begin: 0.06),
-                  if (isAdmin && _hasPlatformStats) ...[
-                    const SizedBox(height: 14),
-                    _platformStatsStrip()
-                        .animate(delay: 90.ms)
-                        .fadeIn(duration: 320.ms)
-                        .slideY(begin: 0.04),
-                  ],
-                  SectionTitle(
-                    '核心服务',
-                    trailing: TextButton(
-                      onPressed: () => context.go('/all'),
-                      child: Text('全部 ${kFeatureCatalog.length} 项 →'),
+                  _homeHero(),
+                  Transform.translate(
+                    offset: const Offset(0, -18),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(22)),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 46),
+                      child: Column(
+                        children: [
+                          if (_fromCache) ...[
+                            AlertBanner(
+                                '数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
+                                critical: false),
+                            const SizedBox(height: 12),
+                          ],
+                          _decisionCard()
+                              .animate(delay: 60.ms)
+                              .fadeIn(duration: 340.ms)
+                              .slideY(begin: 0.06),
+                          if (isAdmin && _hasPlatformStats) ...[
+                            const SizedBox(height: 14),
+                            _platformStatsStrip()
+                                .animate(delay: 90.ms)
+                                .fadeIn(duration: 320.ms)
+                                .slideY(begin: 0.04),
+                          ],
+                          SectionTitle(
+                            '核心服务',
+                            trailing: TextButton(
+                              onPressed: () => context.go('/all'),
+                              child: Text('全部 ${kFeatureCatalog.length} 项 →'),
+                            ),
+                          ),
+                          _serviceGrid(context),
+                          const SizedBox(height: 22),
+                          _sectionBanners(),
+                          const SizedBox(height: 20),
+                          _priceCard(),
+                          const SizedBox(height: 16),
+                          _subsidyCard(),
+                          const SectionTitle('生活服务'),
+                          _lifeGrid(),
+                        ],
+                      ),
                     ),
                   ),
-                  _serviceGrid(context),
-                  const SizedBox(height: 22),
-                  _sectionBanners(),
-                  const SizedBox(height: 20),
-                  _priceCard(),
-                  const SizedBox(height: 16),
-                  _subsidyCard(),
-                  const SectionTitle('生活服务'),
-                  _lifeGrid(),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _homeHero() {
+    final top = MediaQuery.of(context).padding.top;
+    return Container(
+      decoration: const BoxDecoration(gradient: AppColors.heroGradient),
+      padding: EdgeInsets.fromLTRB(16, top + 8, 16, 34),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Spacer(),
+              const Text(
+                '发现',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 42),
+              Text(
+                '田园通',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.68),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () => context.go('/messages'),
+                icon: const Icon(Icons.notifications_none,
+                    color: Colors.white, size: 22),
+                tooltip: '消息通知',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _homeSearch(),
+          const SizedBox(height: 16),
+          _greetingWeather()
+              .animate()
+              .fadeIn(duration: 300.ms)
+              .slideY(begin: 0.05),
+        ],
+      ),
     );
   }
 
@@ -327,14 +383,19 @@ class _HomePageState extends State<HomePage> {
         height: 50,
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(R.sm),
-          border: Border.all(color: AppColors.outlineVariant, width: 1.5),
+          borderRadius: BorderRadius.circular(R.pill),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 16,
+              offset: Offset(0, 5),
+            ),
+          ],
         ),
-        padding: const EdgeInsets.only(left: 14, right: 6),
+        padding: const EdgeInsets.only(left: 16, right: 8),
         child: Row(
           children: [
-            const Icon(Icons.search,
-                color: AppColors.onSurfaceVariant, size: 21),
+            const Icon(Icons.search, color: AppColors.secondary, size: 21),
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
@@ -346,15 +407,8 @@ class _HomePageState extends State<HomePage> {
               height: 38,
               padding: const EdgeInsets.symmetric(horizontal: 18),
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(R.sm - 2),
-              ),
-              child: const Text('搜索',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600)),
+              child: const Icon(Icons.qr_code_scanner_rounded,
+                  color: AppColors.secondary, size: 20),
             ),
           ],
         ),
@@ -381,7 +435,11 @@ class _HomePageState extends State<HomePage> {
     final decision = _computeDecision();
     return Container(
       decoration: BoxDecoration(
-        color: decision.tone,
+        gradient: LinearGradient(
+          colors: [decision.tone, AppColors.secondary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(R.lg),
         boxShadow: AppColors.ambientShadow,
       ),
@@ -672,51 +730,46 @@ class _HomePageState extends State<HomePage> {
         'icon': Icons.sensors_rounded,
         'color': Color(0xFF2E6E66),
       });
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: sections.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 0.85,
+    return AppCard(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: sections.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 4,
+          crossAxisSpacing: 4,
+          childAspectRatio: 0.92,
+        ),
+        itemBuilder: (context, index) {
+          final item = sections[index];
+          final color = item['color'] as Color;
+          return InkWell(
+            onTap: () => _openSection(context, item['key'] as String),
+            borderRadius: BorderRadius.circular(R.md),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(item['icon'] as IconData, color: color, size: 34),
+                const SizedBox(height: 8),
+                Text(
+                  item['label'] as String,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 12,
+                    height: 1.2,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
-      itemBuilder: (context, index) {
-        final item = sections[index];
-        final color = item['color'] as Color;
-        return AppCard(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-          onTap: () => _openSection(context, item['key'] as String),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(R.md),
-                ),
-                child: Icon(item['icon'] as IconData, color: color, size: 22),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                item['label'] as String,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.onSurface,
-                  fontSize: 12,
-                  height: 1.2,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 

@@ -50,15 +50,15 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
             )
           : const Center(
               child:
-                  Icon(Icons.agriculture, color: AppColors.primary, size: 30),
+                  Icon(Icons.eco_rounded, color: AppColors.primary, size: 30),
             ),
       title: Text(title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
+              color: AppColors.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
               letterSpacing: 0)),
       actions: [
         if (showSearch)
@@ -208,13 +208,14 @@ class _AppSearchFieldState extends State<AppSearchField> {
       height: 50,
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(R.sm),
+        borderRadius: BorderRadius.circular(R.pill),
         border: Border.all(
-          color: accent ?? AppColors.outlineVariant,
-          width: 1.5,
+          color: accent ?? Colors.transparent,
+          width: 1.2,
         ),
+        boxShadow: AppColors.ambientShadow,
       ),
-      padding: const EdgeInsets.only(left: 14, right: 6),
+      padding: const EdgeInsets.only(left: 16, right: 6),
       child: Row(
         children: [
           Icon(Icons.search,
@@ -268,7 +269,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(R.sm - 2),
+                  borderRadius: BorderRadius.circular(R.pill),
                 ),
                 child: const Text(
                   '搜索',
@@ -300,8 +301,8 @@ class SectionTitle extends StatelessWidget {
           children: [
             Text(text,
                 style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.onSurface)),
             const Spacer(),
             if (trailing != null) trailing!,

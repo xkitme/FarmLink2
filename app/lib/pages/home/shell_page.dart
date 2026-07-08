@@ -72,12 +72,18 @@ class _ShellPageState extends State<ShellPage> {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sm)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x24000000),
+            blurRadius: 14,
+            offset: Offset(0, -2),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+          padding: const EdgeInsets.fromLTRB(8, 7, 8, 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -88,6 +94,7 @@ class _ShellPageState extends State<ShellPage> {
                     icon: _tabs[i].icon,
                     label: _tabs[i].label,
                     active: idx == i,
+                    prominent: _tabs[i].path == '/publish',
                     badgeCount: _tabs[i].path == '/messages' ? unread : 0,
                     onTap: () => context.go(_tabs[i].path),
                   ),
@@ -104,59 +111,96 @@ class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
+  final bool prominent;
   final int badgeCount;
   final VoidCallback onTap;
   const _NavItem({
     required this.icon,
     required this.label,
     required this.active,
+    this.prominent = false,
     required this.badgeCount,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.primary : AppColors.onSurfaceVariant;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(R.sm),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: active
-              ? AppColors.primaryContainer.withValues(alpha: 0.16)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(R.sm),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 34,
-              height: 28,
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  Icon(icon, color: color, size: 26),
-                  if (badgeCount > 0)
-                    Positioned(
-                      right: -3,
-                      top: -3,
-                      child: _UnreadBadge(count: badgeCount),
+    final color = active ? AppColors.primary : const Color(0xFFBFC3C2);
+    if (prominent) {
+      return Expanded(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(R.pill),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 54,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: AppColors.authButtonGradient,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x4D40916C),
+                      blurRadius: 16,
+                      offset: Offset(0, 5),
                     ),
-                ],
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 30),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(label,
+              const SizedBox(height: 2),
+              Text(
+                label,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                  color: color,
-                )),
-          ],
+                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                  color: active ? AppColors.primary : AppColors.outline,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.md),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 34,
+                height: 28,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(icon, color: color, size: 26),
+                    if (badgeCount > 0)
+                      Positioned(
+                        right: -3,
+                        top: -3,
+                        child: _UnreadBadge(count: badgeCount),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                    color: color,
+                  )),
+            ],
+          ),
         ),
       ),
     );

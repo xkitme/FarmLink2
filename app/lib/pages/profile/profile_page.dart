@@ -95,7 +95,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const FarmAppBar(title: '我的'),
       body: _loading
           ? const Loading(text: '正在读取个人数据')
           // 只有在「无缓存用户、也无任何数据」时才整屏报错；
@@ -106,23 +105,30 @@ class _ProfilePageState extends State<ProfilePage> {
                   onRefresh: _load,
                   color: AppColors.primary,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                    padding: EdgeInsets.zero,
                     children: [
-                      if (_error != null) ...[
-                        AlertBanner(_error!, critical: false),
-                        const SizedBox(height: 12),
-                      ],
                       // 渐变 hero + 概览卡（概览卡上移 24，叠压 hero 底缘）
                       _profileHero(context, user),
-                      Transform.translate(
-                        offset: const Offset(0, -24),
-                        child: _overview(context, cards),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                        child: Transform.translate(
+                          offset: const Offset(0, -40),
+                          child: Column(
+                            children: [
+                              if (_error != null) ...[
+                                AlertBanner(_error!, critical: false),
+                                const SizedBox(height: 12),
+                              ],
+                              _overview(context, cards),
+                              _entryCards(context),
+                              const SizedBox(height: 16),
+                              _syncPanel(),
+                              const SectionTitle('我的事务'),
+                              _taskZone(context),
+                            ],
+                          ),
+                        ),
                       ),
-                      _entryCards(context),
-                      const SizedBox(height: 16),
-                      _syncPanel(),
-                      const SectionTitle('我的事务'),
-                      _taskZone(context),
                     ],
                   ),
                 ),
@@ -135,6 +141,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final initial = name.isNotEmpty ? name.substring(0, 1) : null;
     final bannerUrl = (user?.bannerUrl as String?)?.trim();
     final hasBanner = bannerUrl != null && bannerUrl.isNotEmpty;
+    final top = MediaQuery.of(context).padding.top;
     // 横幅直出无蒙版：给白字一点阴影，浅色横幅上也可读。
     const shadows = [
       Shadow(color: Color(0x73000000), blurRadius: 6, offset: Offset(0, 1)),
@@ -144,16 +151,15 @@ class _ProfilePageState extends State<ProfilePage> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => context.push('/profile/settings/account'),
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.zero,
         child: Container(
           clipBehavior: Clip.antiAlias,
           // 给横幅足够高度，否则高度仅由头像行撑起、横幅图被压得很矮。
-          constraints: const BoxConstraints(minHeight: 168),
+          constraints: const BoxConstraints(minHeight: 238),
           decoration: BoxDecoration(
             // 有横幅时让真实图打底；无横幅回落主绿渐变（默认观感不变）。
             gradient: hasBanner ? null : AppColors.heroGradient,
-            borderRadius: BorderRadius.circular(R.md),
-            boxShadow: AppColors.ambientShadow,
+            borderRadius: BorderRadius.zero,
           ),
           child: Stack(
             // 内容垂直居中；底部多留一点（概览卡叠压 24px），观感才居中。
@@ -171,8 +177,54 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                 ),
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0x33000000),
+                        Color(0x00000000),
+                        Color(0x4D000000),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: top + 8,
+                left: 20,
+                right: 16,
+                child: Row(
+                  children: [
+                    const Text(
+                      '个人中心',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        shadows: shadows,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => context.push('/messages'),
+                      icon: const Icon(Icons.notifications_none,
+                          color: Colors.white),
+                      tooltip: '消息通知',
+                    ),
+                    IconButton(
+                      onPressed: () => context.push('/profile/settings'),
+                      icon: const Icon(Icons.settings_outlined,
+                          color: Colors.white),
+                      tooltip: '设置',
+                    ),
+                  ],
+                ),
+              ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 16, 46),
+                padding: EdgeInsets.fromLTRB(20, top + 74, 16, 62),
                 child: Row(
                   children: [
                     // 圆形头像：后端头像 / 昵称首字 / 人像兜底
