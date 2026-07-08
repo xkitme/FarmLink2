@@ -70,10 +70,6 @@ if (-not (Test-Command 'node')) {
 if (-not (Test-Command 'npm.cmd') -and -not (Test-Command 'npm')) {
   throw 'npm was not found. Please install Node.js 18+.'
 }
-if (-not $SkipMobile -and -not (Test-Command 'python')) {
-  throw 'python was not found. Mobile web preview needs python -m http.server.'
-}
-
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 Stop-PortProcess $BackendPort
 if (-not $SkipAdmin) { Stop-PortProcess $AdminPort }
@@ -124,9 +120,10 @@ if (-not $SkipMobile -and -not $SkipWebBuild) {
 }
 
 if (-not $SkipMobile) {
+  $env:PORT = "$WebPort"
   $mobileProcess = Start-HiddenProcess `
-    -FilePath 'python' `
-    -Arguments @('-m', 'http.server', "$WebPort", '--directory', 'build/web') `
+    -FilePath 'node' `
+    -Arguments @('serve_web.mjs') `
     -WorkingDirectory $AppDir `
     -Name 'mobile-web'
 }

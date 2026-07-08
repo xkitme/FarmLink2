@@ -76,7 +76,8 @@ class _StartupAdPageState extends State<StartupAdPage> {
 
   Future<void> _load() async {
     try {
-      final data = await ApiClient.get('/site/startup-ad');
+      final data = await ApiClient.get('/site/startup-ad')
+          .timeout(const Duration(seconds: 2));
       if (!mounted) return;
       final ad = _StartupAdConfig.fromJson(data as Map<String, dynamic>);
       if (!ad.enabled || ad.imageUrl.isEmpty || ad.durationMs <= 0) {

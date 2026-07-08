@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,8 +28,8 @@ class VoiceWakeState extends ChangeNotifier {
     _enabled = sp.getBool(preferenceKey) ?? false;
     _initialized = true;
     notifyListeners();
-    // 唤醒词从后端拉，失败不影响开关功能（保留默认词）。
-    await refreshWakeWords();
+    // 唤醒词是远程配置，不能阻塞 App 首屏启动；失败保留默认词。
+    unawaited(refreshWakeWords());
   }
 
   /// 从后端拉取最新唤醒词（登录后/进入相关页时可再调）。失败静默保留现值。
@@ -36,10 +38,8 @@ class VoiceWakeState extends ChangeNotifier {
       final data = await ApiClient.get('/ai/assistant/config');
       final raw = data is Map ? data['wakeWords'] : null;
       if (raw is List) {
-        final words = raw
-            .map((e) => '$e'.trim())
-            .where((e) => e.isNotEmpty)
-            .toList();
+        final words =
+            raw.map((e) => '$e'.trim()).where((e) => e.isNotEmpty).toList();
         if (words.isNotEmpty) {
           _wakeWords = words;
           notifyListeners();

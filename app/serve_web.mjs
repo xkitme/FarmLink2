@@ -20,6 +20,33 @@ const MIME = {
   '.woff': 'font/woff', '.woff2': 'font/woff2',
 }
 
+const NO_STORE = new Set([
+  '/index.html',
+  '/flutter_bootstrap.js',
+  '/main.dart.js',
+  '/flutter_service_worker.js',
+])
+
+function headersFor(urlPath, file) {
+  const headers = {
+    'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
+  }
+  if (NO_STORE.has(urlPath)) {
+    headers['Cache-Control'] = 'no-store, max-age=0'
+  }
+  return headers
+}
+
+function stripDisabledServiceWorkerBootstrap(urlPath, data) {
+  if (urlPath !== '/flutter_bootstrap.js') return data
+  const source = data.toString('utf8')
+  const patched = source.replace(
+    /_flutter\.loader\.load\(\{\s*serviceWorkerSettings:\s*\{\s*serviceWorkerVersion:\s*"[^"]*"\s*\}\s*\}\);/,
+    '_flutter.loader.load();',
+  )
+  return Buffer.from(patched, 'utf8')
+}
+
 http.createServer((req, res) => {
   let urlPath
   try {
@@ -42,14 +69,16 @@ http.createServer((req, res) => {
       // SPA fallback
       fs.readFile(path.join(root, 'index.html'), (e2, idx) => {
         if (e2) { res.writeHead(404); return res.end('not found') }
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store, max-age=0',
+        })
         res.end(idx)
       })
       return
     }
-    res.writeHead(200, {
-      'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
-    })
-    res.end(req.method === 'HEAD' ? undefined : data)
+    const body = stripDisabledServiceWorkerBootstrap(urlPath, data)
+    res.writeHead(200, headersFor(urlPath, file))
+    res.end(req.method === 'HEAD' ? undefined : body)
   })
 }).listen(PORT, () => console.log(`田园通 Web → http://localhost:${PORT}`))
