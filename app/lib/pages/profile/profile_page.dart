@@ -120,10 +120,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                 const SizedBox(height: 12),
                               ],
                               _overview(context, cards),
+                              const SizedBox(height: 16),
                               _entryCards(context),
                               const SizedBox(height: 16),
                               _syncPanel(),
-                              const SectionTitle('我的事务'),
+                              const SizedBox(height: 16),
                               _taskZone(context),
                             ],
                           ),
@@ -135,13 +136,18 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ── Hero：横幅/绿底 + 圆形头像 + 名字 + 角色/村庄徽标（去蒙版/水印/等级）──
+  // ── Hero：TripGO 式绿底头部 + 头像 + 等级/成长进度 ───────────────
   Widget _profileHero(BuildContext context, dynamic user) {
     final name = user?.displayName ?? '未登录';
     final initial = name.isNotEmpty ? name.substring(0, 1) : null;
     final bannerUrl = (user?.bannerUrl as String?)?.trim();
     final hasBanner = bannerUrl != null && bannerUrl.isNotEmpty;
     final top = MediaQuery.of(context).padding.top;
+    final growth = _int(user?.growth);
+    final level = (growth ~/ 100) + 1;
+    final intoLevel = growth % 100;
+    final progress = intoLevel / 100;
+    final heroHeight = top + 254;
     // 横幅直出无蒙版：给白字一点阴影，浅色横幅上也可读。
     const shadows = [
       Shadow(color: Color(0x73000000), blurRadius: 6, offset: Offset(0, 1)),
@@ -153,9 +159,8 @@ class _ProfilePageState extends State<ProfilePage> {
         onTap: () => context.push('/profile/settings/account'),
         borderRadius: BorderRadius.zero,
         child: Container(
+          height: heroHeight,
           clipBehavior: Clip.antiAlias,
-          // 给横幅足够高度，否则高度仅由头像行撑起、横幅图被压得很矮。
-          constraints: const BoxConstraints(minHeight: 238),
           decoration: BoxDecoration(
             // 有横幅时让真实图打底；无横幅回落主绿渐变（默认观感不变）。
             gradient: hasBanner ? null : AppColors.heroGradient,
@@ -223,48 +228,88 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(20, top + 74, 16, 62),
-                child: Row(
+              Positioned(
+                left: 20,
+                right: 16,
+                bottom: 54,
+                child: Column(
                   children: [
-                    // 圆形头像：后端头像 / 昵称首字 / 人像兜底
-                    ProfileAvatar(
-                      url: user?.avatarUrl as String?,
-                      initial: initial,
-                      size: 76,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 21,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              shadows: shadows,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
+                    Row(
+                      children: [
+                        // 圆形头像：后端头像 / 昵称首字 / 人像兜底
+                        ProfileAvatar(
+                          url: user?.avatarUrl as String?,
+                          initial: initial,
+                          size: 68,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              _heroBadge(kRoleLabels[user?.role] ?? '农户'),
-                              _heroBadge(user?.villageName ?? '幸福村'),
+                              Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  shadows: shadows,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  _heroBadge('Lv.$level · 成长农户'),
+                                  _heroBadge(kRoleLabels[user?.role] ?? '农户'),
+                                  _heroBadge(user?.villageName ?? '幸福村'),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
+                        ),
+                        Icon(Icons.chevron_right,
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shadows: shadows),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '成长值',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.78),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '$intoLevel/100 升 Lv.${level + 1}',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.78),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 7),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(R.pill),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
+                        backgroundColor: Colors.white.withValues(alpha: 0.22),
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     ),
-                    Icon(Icons.chevron_right,
-                        color: Colors.white.withValues(alpha: 0.9),
-                        shadows: shadows),
                   ],
                 ),
               ),
@@ -344,85 +389,148 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _divider() =>
       Container(width: 1, height: 30, color: AppColors.outlineVariant);
 
-  // ── 两张大入口卡：我的订单 / 我的发布 ───────────────────────
+  // ── TripGO 分组：我的订单 / 我的发布 ────────────────────────
   Widget _entryCards(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _entryCard(
-            context,
-            icon: Icons.receipt_long_outlined,
-            tint: AppColors.primary,
-            title: '我的订单',
-            subtitle: '查看全部订单',
-            route: '/market',
+        _profileSection(
+          context,
+          title: '我的订单',
+          onMore: () => context.push('/market/orders'),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _sectionAction(
+                  context, Icons.payments_outlined, '待付款', '/market/orders'),
+              _sectionAction(
+                  context, Icons.inventory_2_outlined, '待发货', '/market/orders'),
+              _sectionAction(context, Icons.local_shipping_outlined, '待收货',
+                  '/market/orders'),
+              _sectionAction(
+                  context, Icons.task_alt_outlined, '已完成', '/market/orders'),
+              _sectionAction(context, Icons.support_agent_outlined, '售后',
+                  '/market/orders'),
+            ],
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _entryCard(
-            context,
-            icon: Icons.campaign_outlined,
-            tint: AppColors.secondary,
-            title: '我的发布',
-            subtitle: '管理我的发布',
-            route: '/publish',
+        const SizedBox(height: 12),
+        _profileSection(
+          context,
+          title: '我的发布',
+          onMore: () => context.push('/publish'),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _sectionAction(
+                  context, Icons.campaign_outlined, '我的发布', '/publish'),
+              _sectionAction(context, Icons.eco_outlined, '农事记录', '/agri'),
+              _sectionAction(
+                  context, Icons.chat_bubble_outline, '互动消息', '/messages'),
+              _sectionAction(context, Icons.person_outline, '个人资料',
+                  '/profile/settings/account'),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _entryCard(
+  Widget _profileSection(
     BuildContext context, {
-    required IconData icon,
-    required Color tint,
     required String title,
-    required String subtitle,
-    required String route,
+    required Widget child,
+    VoidCallback? onMore,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => context.push(route),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(R.md),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(R.md),
-            border: Border.all(color: AppColors.outlineVariant, width: 1),
-          ),
-          padding: const EdgeInsets.all(14),
-          child: Row(
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+        boxShadow: AppColors.ambientShadow,
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      child: Column(
+        children: [
+          Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 4,
+                height: 16,
                 decoration: BoxDecoration(
-                  color: tint.withValues(alpha: 0.12),
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(R.pill),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+              ),
+              if (onMore != null)
+                TextButton(
+                  onPressed: onMore,
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  ),
+                  child: const Text(
+                    '查看全部 ›',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionAction(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String route,
+  ) {
+    return Expanded(
+      child: InkWell(
+        onTap: () => context.push(route),
+        borderRadius: BorderRadius.circular(R.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(R.sm),
                 ),
-                child: Icon(icon, color: tint, size: 22),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.onSurface)),
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.onSurfaceVariant)),
-                  ],
+              const SizedBox(height: 7),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.onSurfaceVariant,
                 ),
               ),
             ],
@@ -538,180 +646,99 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ── 我的事务：不规则三栏 ────────────────────────────────────
-  // 左栏竖排 4 项 · 中栏两大块（政策申请 / 适老模式·绿底）· 右栏竖排 2 项。
-  // IntrinsicHeight + 横向 stretch：中栏两块按左栏总高等分填充，右栏自然
-  // 顶对齐、下方留空，整体对齐参考图版式。
+  // ── 更多服务：TripGO 式 4 列宫格 ─────────────────────────────
   Widget _taskZone(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 左栏：竖排 4 项
-          Expanded(
-            child: _taskList(context, const [
-              _TaskItem(Icons.eco_outlined, '农事记录', '/agri'),
-              _TaskItem(Icons.thunderstorm_outlined, '灾情记录', '/disaster'),
-              _TaskItem(Icons.notifications_none_rounded, '消息通知', '/messages'),
-              _TaskItem(
-                  Icons.agriculture_outlined, '农机服务', '/machinery/service'),
-            ]),
-          ),
-          const SizedBox(width: 10),
-          // 中栏：两个大块
-          Expanded(
-            child: Column(
+    const items = [
+      _TaskItem(Icons.assignment_turned_in_outlined, '政策申请', '/policy/service'),
+      _TaskItem(Icons.insights_outlined, '数据看板', '/data'),
+      _TaskItem(Icons.eco_outlined, '农事记录', '/agri'),
+      _TaskItem(Icons.thunderstorm_outlined, '灾情记录', '/disaster'),
+      _TaskItem(Icons.agriculture_outlined, '农机服务', '/machinery/service'),
+      _TaskItem(Icons.notifications_none_rounded, '消息通知', '/messages'),
+      _TaskItem(Icons.elderly_outlined, '适老模式', '/profile/settings/elder',
+          badge: '新'),
+      _TaskItem(Icons.settings_outlined, '设置', '/profile/settings'),
+    ];
+
+    return _profileSection(
+      context,
+      title: '更多服务',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth / 4;
+          return Wrap(
+            runSpacing: 16,
+            children: [
+              for (final item in items)
+                SizedBox(
+                  width: width,
+                  child: _serviceAction(context, item),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _serviceAction(BuildContext context, _TaskItem item) {
+    return InkWell(
+      onTap: () => context.push(item.route),
+      borderRadius: BorderRadius.circular(R.sm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Column(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                Expanded(
-                  child: _taskTile(
-                    context,
-                    icon: Icons.assignment_turned_in_outlined,
-                    label: '政策申请',
-                    route: '/policy/service',
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLow,
+                    borderRadius: BorderRadius.circular(R.sm),
                   ),
+                  child: Icon(item.icon, color: AppColors.primary, size: 22),
                 ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: _taskTile(
-                    context,
-                    icon: Icons.elderly_outlined,
-                    label: '适老模式',
-                    route: '/profile/settings/elder',
-                    highlight: true,
-                    badge: '新',
+                if (item.badge != null)
+                  Positioned(
+                    right: -9,
+                    top: -7,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(R.pill),
+                      ),
+                      child: Text(
+                        item.badge!,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
-          ),
-          const SizedBox(width: 10),
-          // 右栏：竖排 2 项
-          Expanded(
-            child: _taskList(context, const [
-              _TaskItem(Icons.insights_outlined, '数据看板', '/data'),
-              _TaskItem(Icons.settings_outlined, '设置', '/profile/settings'),
-            ]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 竖排列表栏：每项一张扁平描边小卡（图标在左、文字在右），顶部对齐堆叠。
-  Widget _taskList(BuildContext context, List<_TaskItem> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < items.length; i++) ...[
-          if (i > 0) const SizedBox(height: 10),
-          _taskRowCard(context, items[i]),
-        ],
-      ],
-    );
-  }
-
-  Widget _taskRowCard(BuildContext context, _TaskItem item) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => context.push(item.route),
-        borderRadius: BorderRadius.circular(R.md),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(R.md),
-            border: Border.all(color: AppColors.outlineVariant, width: 1),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          child: Row(
-            children: [
-              Icon(item.icon, color: AppColors.primary, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.onSurface)),
+            const SizedBox(height: 8),
+            Text(
+              item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.onSurfaceVariant,
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 中栏大块：图标+文字居中。`highlight` 为绿底强调（适老模式）。
-  Widget _taskTile(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String route,
-    bool highlight = false,
-    String? badge,
-  }) {
-    final bg = highlight
-        ? AppColors.primaryContainer.withValues(alpha: 0.14)
-        : AppColors.surface;
-    final fg = highlight ? AppColors.primary : AppColors.onSurface;
-    final borderColor = highlight
-        ? AppColors.primaryContainer.withValues(alpha: 0.35)
-        : AppColors.outlineVariant;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => context.push(route),
-        borderRadius: BorderRadius.circular(R.md),
-        child: Container(
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(R.md),
-            border: Border.all(color: borderColor, width: 1),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, color: AppColors.primary, size: 30),
-                    const SizedBox(height: 8),
-                    Text(label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: fg)),
-                  ],
-                ),
-              ),
-              if (badge != null)
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      borderRadius: BorderRadius.circular(R.sm),
-                    ),
-                    child: Text(badge,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700)),
-                  ),
-                ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -757,5 +784,12 @@ class _TaskItem {
   final IconData icon;
   final String label;
   final String route;
-  const _TaskItem(this.icon, this.label, this.route);
+  final String? badge;
+
+  const _TaskItem(
+    this.icon,
+    this.label,
+    this.route, {
+    this.badge,
+  });
 }
