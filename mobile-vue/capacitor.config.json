@@ -1,0 +1,8 @@
+{
+  "appId": "com.farmlink.mobile",
+  "appName": "田园通",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  }
+}
