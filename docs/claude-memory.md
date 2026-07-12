@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-12 · Vue 移植 P1 低风险只读页 (doc116-P1)
+
+用户「看 docs 完善项目」，方向拍板走 **116 Vue 移植 P1**（非 115 Flutter 瘦身——两者竞合，Vue 移植是最新主线）。
+
+**状态**：`mobile-vue/` 下新增/改动，**未提交**（待 commit+push）。工作树另有 P0 遗留的 `docs/进度总览.md`(M) 和 `docs/115-...md`(??) 本会话一并动了进度总览。**本会话为验证临时起过 backend 裸 `node src/server.js`(:8000) + vite dev(:5199)，验完已 kill**；nodemon 未用。
+
+**做了**（P1 低风险只读页，Flutter `app/` 全程没动）：
+- 共享数据层 `src/data/`：`features.js`(28 功能，全部服务+搜索共用，`AllFeaturesView` 已改消费它)、`legal.js`(服务协议12节+隐私9节，移植自 Flutter `legal_documents.dart`)、`app.js`(版本1.8.0)。
+- 新页：`LaunchView`(启动广告+协议同意门，`/`→`/launch`)、`SearchView`(`/search`,真调 `/search?keyword=`,功能命中+5类内容分区)、`InfoDetailView`(`/detail/info`,入参走新 `store/modules/ui.js` 或 query 兜底)、设置 `SettingsHomeView/AboutView/LegalView/HelpView` + `SettingsScaffold/SettingRow/LegalDialog` 组件。
+- router：新页 dynamic import 拆包；写型设置子页(account/password/push/weather/storage/elder/wake)先落迁移占位不死链。
+
+**验收**：`npm run build` 通过；375×812 浏览器(farmer/张大叔登录)实测 launch协议门 / search(补贴→功能命中+3条真政策) / settings(真实用户脱敏手机v1.8.0) / about / 隐私政策 / help / detail / all 全部真渲染。
+
+**⚠️ 坑 / 注意**：
+- **本环境 in-app 浏览器 `computer screenshot` 对满屏大图页必超时**(launch/login 背景图把光栅化打满)，`read_page`/`get_page_text` 正常——验证一律走 read_page 读真实 DOM，别等截图。
+- **store auth 在 app 启动即 initialize**，测试时先 localStorage 塞 token 再 `location.reload()` 才认（否则 guard 仍判未登录弹回登录）；`form_input` 不触发 Vant v-model，登录走 JS fetch 塞 token。
+- `features.js`(Vue) 与 `feature_catalog.dart`(Flutter) 各一份，增删功能点两边都要动。
+- 下一批 **P2 读多写少**（政策/数据看板/IoT/消息/AI历史/集市列表·详情·订单/村级大屏）。
+
+---
+
 ## 2026-06-20 · 语音助手「四级全功能接入」(doc107)
 
 用户拍板四级全做：①AI 问答直接答 ②语音全局搜索 ③页面内动作真执行 ④导航全覆盖。

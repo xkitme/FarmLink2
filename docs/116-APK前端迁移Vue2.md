@@ -53,4 +53,20 @@
 - 验证：`npm run build` 通过；`npm run sync` 通过；Gradle `assembleDebug` 通过；React 管理台 `npm run build` 通过。
 - 环境备注：本机全局 Gradle 阿里云镜像 TLS 异常，Vue 构建脚本使用项目隔离的 `.gradle-user/`，不修改用户全局 Gradle 配置。
 
-下一批：P1 低风险只读页。Flutter `app/` 继续作为正式版本和同功能回归基线。
+### P1（2026-07-12）✅ 低风险只读页
+
+按 P1 范围补齐「启动广告 / 引导、搜索、通用详情、基础设置」，并抽出可复用数据层，建立视觉基线。P0 六页保持不动。
+
+- **共享数据层**
+  - `src/data/features.js`：功能目录（28 项，含 icon/route/section/keywords），全部服务与搜索共用，`AllFeaturesView` 改为消费此源，去掉页内硬编码，避免与搜索双份维护。
+  - `src/data/legal.js`：从 Flutter `legal_documents.dart` 移植《服务协议》12 节 +《隐私政策》9 节，启动引导页与关于页共用。
+  - `src/data/app.js`：`APP_VERSION=1.8.0` 等对外口径常量。
+- **启动广告 / 引导**：`LaunchView` + `LegalDialog`。`/` 改重定向到 `/launch`；拉 `/site/startup-ad`（2s 超时兜底）：已登录→广告图 + 右上倒计时跳过→`targetPath`；未登录→广告图作背景 + 服务协议同意门（同意→登录并记 `farmlink_agreed`，不同意→退出提示）。
+- **全局搜索**：`SearchView`（`/search`，支持 `?q=` 进页自动检索）。热门词 + 功能命中（`matchFeatures`）+ `/search?keyword=` 内容分区（政策/农技/商品/招工/课程），含加载 / 空 / 失败态。
+- **通用详情**：`InfoDetailView`（`/detail/info`）只读页，入参走新增 `store/modules/ui.js`（Hash 路由不便带对象）或 `?title=&body=` 兜底，支持图片 / 段落 / 条目 / 动作按钮。
+- **基础设置**：`SettingsScaffold` + `SettingRow` + `SettingsHomeView`（镜像 Flutter 三组分区，真实用户名 / 脱敏手机号 / 版本号 / 清缓存 / 退出）、`AboutView`、`LegalView`（服务协议 / 隐私政策共用，`meta.doc` 区分）、`HelpView`（FAQ 手风琴 + 联系方式）。写型子页（account/password/push/weather/storage/elder/wake）先落迁移占位，不死链。
+- **性能**：`LegalDialog` 遮罩去掉 `backdrop-filter: blur`（全屏大图上叠加连续合成会拖低端 WebView）。P1 新增页在 router 里按需拆包（dynamic import），不拖大首屏 bundle。
+
+验证：`npm run build` 通过（238 模块，新页独立 chunk）；浏览器（375×812，farmer/张大叔登录）实测 `/launch` 协议门、`/search?q=补贴`（功能命中「补贴申请」+ 3 条真实政策）、`/profile/settings`（真实用户/脱敏手机/v1.8.0）、关于/隐私政策/帮助/通用详情、`/all`（重构后 28 项+分区）均正常渲染。
+
+下一批：P2 读多写少（政策 / 数据看板 / IoT / 消息 / AI 历史 / 集市列表·详情·订单 / 村级大屏）。Flutter `app/` 继续作为正式版本和同功能回归基线。
