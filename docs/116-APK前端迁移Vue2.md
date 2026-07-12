@@ -92,3 +92,22 @@
 验证：`npm run build` 通过（新页均独立 chunk）；375×812 浏览器（张大叔登录）逐页 `read_page` 实测——政策列表分页+详情、数据看板环形图、消息类型筛选、集市列表+商品详情+订单中文状态、IoT 设备+规则（开关 toggle 真发 `POST …/toggle` 200）、AI 历史+线程气泡、村级大屏实时时钟+轮询，全部真数据渲染正常。
 
 下一批：P3 业务写闭环（发布 / 乡村生活 / 农机 / 灾害 / 农业 / 集市服务；表单 + 图片上传 + 离线队列）。
+
+### P3（2026-07-12）✅ 业务写闭环
+
+6 大板块页 + 4 条真实写闭环 + 图片上传能力落地。Flutter `app/` 未动；离线队列/冲突重试与原生相机留 P5。
+
+- **公共能力**
+  - `api/client.js` 新增 `uploadImage(file)`（FormData + Bearer，不手设 Content-Type，30s 超时），走后端 `POST /upload/image` 返回 `{url}`。
+  - `components/ImageUploader.vue`：web `file input` 多图上传组件（预览 + 删除 + 8MB 限制 + 上传中态），供农事/灾情/发布复用。
+- **P3a 农业**：`AgriView`(`/agri` 天气+预报+快捷入口+地块+农事记录列表+本月农事日历) + `RecordCreateView`(`/agri/record/new` 农事建档表单：类型/地块/作物/内容/成本/日期/多图 → `POST /agri/record`)。
+- **P3b 农机**：`MachineryView`(`/machinery` 列表) + `MachineryDetailView`(`/machinery/:id` 详情+机主+吸底) 内嵌 `van-popup` 预约表单（起止日期算天数×日租 → `POST /machinery/booking`）+ `MyBookingsView`(`/machinery/bookings` 我的预约+中文状态)。
+- **P3c 灾害**：`DisasterView`(`/disaster` 预警空态+我的上报列表) 内嵌灾情上报表单（类型/地块/面积/损失/描述/图片 → `POST /disaster/report`）与紧急求助表单（`POST /disaster/sos`）。
+- **P3d 发布**：`PublishView`(替换 `/publish` 占位，底栏 tab)：记录与上报入口分流 + 发布信息宫格；内置卖闲置(`POST /life/secondhand`+图片)/邻里互助(`POST /life/help`)/招零工(`POST /life/job`)三个弹层写表单。
+- **P3e 乡村生活 + 集市服务**：`LifeView`(`/life` 宫格 + 二手/互助/村卫生室 tab 读列表) + `MarketServiceView`(`/market/service` 溯源码查询 + 农资团购进度 + 收购站列表)。
+
+验证：`npm run build` 逐批通过；375×812 浏览器（张大叔登录）逐页 `read_page` 实测。**4 条写闭环均真调后端并 200**：农事记录（提交→返回→列表现新记录「打药·Vue端测试」）、农机预约（7/20-7/22 → 我的预约现￥1800 待确认，天数×日租计算正确）、灾情上报（冰雹 → 列表现 AI 定损「轻」）、二手发布（→ life 二手列表首位）。图片上传组件随表单集成，web file input 逻辑就绪（真机相机 P5）。
+
+**测试数据遗留**（后端无对应 DELETE API，`npm run seed` 重置会清）：农机预约 7/20-7/22 一条、灾情上报「冰雹·Vue端测试」一条、二手「Vue端测试·喷雾器」一条；农事测试记录已通过 `DELETE /agri/record/:id` 清除。
+
+下一批：P4 AI 链路（SSE 对话 / 历史删除 / 图片识别与反馈 / 语音助手命令契约）。

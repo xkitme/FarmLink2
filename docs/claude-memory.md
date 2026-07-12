@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-07-12 · Vue 移植 P3 业务写闭环 (doc116-P3)
+
+接 P2 后用户「继续」。6 板块页 + 4 条写闭环 + 图片上传，分 a-e 五子批逐批 build+浏览器实测，**未提交**（待 commit+push）。验证时临时起 backend(:8000)+vite(:5201) 已 kill。
+
+**做了**（`mobile-vue/`，Flutter `app/` 没动）：
+- 公共：`api/client.js` 加 `uploadImage(file)`(FormData+Bearer,不手设 Content-Type→boundary,走 `POST /upload/image` 返回 `{url}`)；`components/ImageUploader.vue`(web file input 多图+预览+删除+8MB)。
+- P3a 农业：`AgriView`(/agri 天气/日历/地块/记录)+`RecordCreateView`(/agri/record/new 农事建档→`POST /agri/record`)。
+- P3b 农机：`MachineryView`+`MachineryDetailView`(内嵌 van-popup 预约表单,天数×日租→`POST /machinery/booking`)+`MyBookingsView`。
+- P3c 灾害：`DisasterView`(预警空态+我的上报;内嵌灾情上报`POST /disaster/report`+求助`POST /disaster/sos`)。
+- P3d 发布：`PublishView`(替换 /publish 占位,底栏 tab;内置二手`/life/secondhand`+互助`/life/help`+招工`/life/job`三弹层表单)。
+- P3e：`LifeView`(/life 宫格+二手/互助/村医 tab)+`MarketServiceView`(/market/service 溯源查询+团购+收购站)。
+- router 全部按需拆包；`/publish` 换真实页，新增 agri/machinery/disaster/life/market-service 路由。
+
+**关键接口字段**（curl 实测）：agri record create `{plotId,recordType,cropType,content,cost,images,recordDate}`(仅 recordType 必填)；plot list 裸数组；weather=`{days:[{condition,tempHigh,tempLow,farmTip}]}`；machinery booking `{machineryId,startDate,endDate,remark}`；disaster report `{disasterType,plotId,affectedArea,estimatedLoss,description,images}`(status 初始 REPORTED)；sos `{sosType,contactPhone,description}`；life secondhand `{title,category,description,price,images,contactPhone}`(title+price 必填)/help `{type,title,content,contactPhone}`/job `{title,jobType,salary,location,headcount,requirement,contactPhone}`；upload 返回 `{url}` 字段名 `image`。
+
+**⚠️ 注意**：
+- 承 P1/P2 坑：screenshot 必超时走 read_page；换端口(5201)重塞 token+reload；**表单提交/chip 点击一律用 JS 点 DOM**（computer 坐标漂移，`.chips button` textContent 匹配、原生 input 用 value setter+dispatch input 事件同步 v-model；van-popup 里的元素同理）。
+- **测试数据遗留**（后端无 DELETE API,reseed 清）：农机预约 7/20-7/22、灾情「冰雹·Vue端测试」、二手「Vue端测试·喷雾器」各一条；农事测试记录已用 DELETE API 删。
+- 图片上传组件 web 端逻辑就绪但没用真图测；真机相机是 P5。
+- 下一批 **P4 AI 链路**（SSE 对话/历史删除/图片识别与反馈/语音助手命令契约）。
+
+---
+
 ## 2026-07-12 · Vue 移植 P2 读多写少页 (doc116-P2)
 
 接 P1 后用户「继续p2」。10 个读页全做完 + 浏览器逐页实测，**未提交**（待 commit+push；本条与 P1 那批一起提也可）。验证时临时起 backend(:8000)+vite(:5200) 已 kill。

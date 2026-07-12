@@ -85,10 +85,44 @@ export async function request(path, options = {}) {
   }
 }
 
+export async function uploadImage(file, { timeout = 30000 } = {}) {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), timeout)
+  const token = getToken()
+  const form = new FormData()
+  form.append('image', file)
+  try {
+    // 不手动设 Content-Type，交给浏览器补 multipart boundary。
+    const response = await fetch(buildUrl('/upload/image'), {
+      method: 'POST',
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: form,
+      signal: controller.signal,
+    })
+    let envelope
+    try {
+      envelope = await response.json()
+    } catch (_) {
+      throw new ApiError('上传失败，请稍后重试', response.status, response.status)
+    }
+    const code = Number(envelope.code ?? response.status)
+    if (code === 40101 || response.status === 401) await unauthorizedHandler?.()
+    if (!response.ok || code !== 200) throw new ApiError(envelope.msg || '上传失败', code, response.status, envelope)
+    return envelope.data
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new ApiError('上传超时，请重试', 50000, 0)
+    if (error instanceof ApiError) throw error
+    throw new ApiError('上传失败，请稍后重试', 60002, 0)
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
+
 export const api = {
   get: (path, query, options = {}) => request(path, { ...options, method: 'GET', query }),
   post: (path, body, options = {}) => request(path, { ...options, method: 'POST', body }),
   put: (path, body, options = {}) => request(path, { ...options, method: 'PUT', body }),
   delete: (path, options = {}) => request(path, { ...options, method: 'DELETE' }),
+  uploadImage,
   resolveImageUrl,
 }

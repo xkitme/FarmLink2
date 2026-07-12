@@ -25,6 +25,15 @@ const DataDashboardView = () => import('@/views/DataDashboardView.vue')
 const MarketView = () => import('@/views/MarketView.vue')
 const ProductDetailView = () => import('@/views/ProductDetailView.vue')
 const OrdersView = () => import('@/views/OrdersView.vue')
+const AgriView = () => import('@/views/AgriView.vue')
+const RecordCreateView = () => import('@/views/RecordCreateView.vue')
+const MachineryView = () => import('@/views/MachineryView.vue')
+const MachineryDetailView = () => import('@/views/MachineryDetailView.vue')
+const MyBookingsView = () => import('@/views/MyBookingsView.vue')
+const DisasterView = () => import('@/views/DisasterView.vue')
+const PublishView = () => import('@/views/PublishView.vue')
+const LifeView = () => import('@/views/LifeView.vue')
+const MarketServiceView = () => import('@/views/MarketServiceView.vue')
 const IotView = () => import('@/views/IotView.vue')
 const AiThreadsView = () => import('@/views/AiThreadsView.vue')
 const AiThreadDetailView = () => import('@/views/AiThreadDetailView.vue')
@@ -101,7 +110,7 @@ const router = new VueRouter({
     {
       path: '/publish',
       name: 'publish',
-      component: PlaceholderView,
+      component: PublishView,
       meta: { requiresAuth: true, title: '发布' },
     },
     {
@@ -151,6 +160,54 @@ const router = new VueRouter({
       name: 'village-screen',
       component: VillageScreenView,
       meta: { requiresAuth: true, title: '村级大屏' },
+    },
+    {
+      path: '/agri',
+      name: 'agri',
+      component: AgriView,
+      meta: { requiresAuth: true, title: '农业生产' },
+    },
+    {
+      path: '/agri/record/new',
+      name: 'record-create',
+      component: RecordCreateView,
+      meta: { requiresAuth: true, title: '记一笔农事' },
+    },
+    {
+      path: '/machinery',
+      name: 'machinery',
+      component: MachineryView,
+      meta: { requiresAuth: true, title: '农机共享' },
+    },
+    {
+      path: '/machinery/bookings',
+      name: 'my-bookings',
+      component: MyBookingsView,
+      meta: { requiresAuth: true, title: '我的预约' },
+    },
+    {
+      path: '/machinery/:id',
+      name: 'machinery-detail',
+      component: MachineryDetailView,
+      meta: { requiresAuth: true, title: '农机详情' },
+    },
+    {
+      path: '/disaster',
+      name: 'disaster',
+      component: DisasterView,
+      meta: { requiresAuth: true, title: '气象灾害' },
+    },
+    {
+      path: '/life',
+      name: 'life',
+      component: LifeView,
+      meta: { requiresAuth: true, title: '乡村生活' },
+    },
+    {
+      path: '/market/service',
+      name: 'market-service',
+      component: MarketServiceView,
+      meta: { requiresAuth: true, title: '集市服务' },
     },
     {
       path: '/iot',
