@@ -70,3 +70,25 @@
 验证：`npm run build` 通过（238 模块，新页独立 chunk）；浏览器（375×812，farmer/张大叔登录）实测 `/launch` 协议门、`/search?q=补贴`（功能命中「补贴申请」+ 3 条真实政策）、`/profile/settings`（真实用户/脱敏手机/v1.8.0）、关于/隐私政策/帮助/通用详情、`/all`（重构后 28 项+分区）均正常渲染。
 
 下一批：P2 读多写少（政策 / 数据看板 / IoT / 消息 / AI 历史 / 集市列表·详情·订单 / 村级大屏）。Flutter `app/` 继续作为正式版本和同功能回归基线。
+
+### P2（2026-07-12）✅ 读多写少页
+
+补齐 10 个读页 + 通用二级页脚手架，全部对接真实后端接口。Flutter `app/` 未动，写闭环（下单/发布/AI 对话）仍留 P3/P4 占位。
+
+- **脚手架 / 共享**
+  - `src/components/SubPage.vue`：二级页统一脚手架（返回顶栏 + 标题 + `right` 插槽 + `flush` 无内边距模式），政策/看板/集市/详情/IoT/AI 均复用。
+  - `src/store/modules/notification.js`：未读计数模块；`AppShell` 底栏「消息」加红点 badge、`created` 时 `notification/refresh`。
+- **P2a**
+  - 政策 `PolicyView`(`/policy`, `van-list` 分页 + 下拉刷新) + `PolicyDetailView`(`/policy/:id`，含加载/失败态)。
+  - 数据看板 `DataDashboardView`(`/data`)：核心卡片 + 种植结构 **SVG 环形图（无图表依赖）** + 灾情横条 + 农事类型 + 最近统计上报叙事；右上入口跳村级大屏。
+  - 消息 `MessagesView`(替换 `/messages` 占位)：`typeCounts` 驱动类型筛选 chip + 列表 + 点击 `PUT /notification/:id/read` + 全部已读 + 底栏未读联动。
+- **P2b**
+  - 集市 `MarketView`(`/market`, 两列商品网格分页 + 订单入口 + 搜索跳 `/search`) + `ProductDetailView`(`/market/product/:id`，图廊/卖家/吸底价；「立即购买」诚实提示下单属后续版本，不伪装可下单) + `OrdersView`(`/market/orders`，中文状态徽章 PENDING/PAID/SHIPPED/DONE/CANCELLED + 收货信息)。
+- **P2c**
+  - IoT `IotView`(`/iot`)：感知设备卡（在线/电量/指标状态色）+ 联动规则卡（`van-switch` 真调 `POST /iot/linkage/rules/:id/toggle` 乐观更新）+ 联动记录。
+  - AI 历史 `AiThreadsView`(`/ai`, `/ai/qa/records` thread 聚合列表) + `AiThreadDetailView`(`/ai/thread/:id`，`/ai/qa/threads/:id` 多轮气泡)。新对话入口指向 `/ai/chat/new`（P4 前落占位）。
+  - 村级大屏 `VillageScreenView`(`/data/screen`)：全屏深色驾驶舱，`/data/dashboard` 30s 轮询 + 秒级时钟，KPI/种植结构/灾情/动态滚动。
+
+验证：`npm run build` 通过（新页均独立 chunk）；375×812 浏览器（张大叔登录）逐页 `read_page` 实测——政策列表分页+详情、数据看板环形图、消息类型筛选、集市列表+商品详情+订单中文状态、IoT 设备+规则（开关 toggle 真发 `POST …/toggle` 200）、AI 历史+线程气泡、村级大屏实时时钟+轮询，全部真数据渲染正常。
+
+下一批：P3 业务写闭环（发布 / 乡村生活 / 农机 / 灾害 / 农业 / 集市服务；表单 + 图片上传 + 离线队列）。

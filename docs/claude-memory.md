@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-12 · Vue 移植 P2 读多写少页 (doc116-P2)
+
+接 P1 后用户「继续p2」。10 个读页全做完 + 浏览器逐页实测，**未提交**（待 commit+push；本条与 P1 那批一起提也可）。验证时临时起 backend(:8000)+vite(:5200) 已 kill。
+
+**做了**（`mobile-vue/`，Flutter `app/` 没动）：
+- 脚手架：`components/SubPage.vue`（二级页返回顶栏+`right`插槽+`flush`模式，P2 二级页全复用）；`store/modules/notification.js`（未读数）+ `AppShell` 底栏消息红点 badge + `created` 拉未读。
+- P2a：`PolicyView`/`PolicyDetailView`、`DataDashboardView`(种植结构 **SVG 环形图无依赖**)、`MessagesView`(替换占位,typeCounts 筛选+已读+底栏联动)。
+- P2b：`MarketView`(两列网格分页)、`ProductDetailView`(图廊/卖家/吸底「立即购买」诚实提示下单待后续,不伪装)、`OrdersView`(中文状态徽章 PENDING待付款/PAID待发货/SHIPPED待收货/DONE已完成/CANCELLED已取消)。
+- P2c：`IotView`(设备+联动规则 `van-switch` 真调 toggle)、`AiThreadsView`+`AiThreadDetailView`(qa/records thread 聚合 + threads/:id 多轮气泡)、`VillageScreenView`(`/data/screen` 全屏深色大屏,30s 轮询+秒钟)。
+- router 全部按需 import 拆包；`/messages` 换真实页，其余新增 policy/data/market/iot/ai/data-screen 等路由。
+
+**接口口径**（已 curl 实测）：policy/market/notification/qa 列表都是 `{records,total,pageNum,pageSize,pages}`；dashboard=`{cards,cropArea,farmRecordTypes,disasterStats,latestStatReports}`；iot devices/rules/logs 是**裸数组**；notification unread=`{unread}`；order 状态枚举 PENDING/PAID/SHIPPED/DONE/CANCELLED。
+
+**⚠️ 注意**：
+- 承 P1 坑：**screenshot 必超时**走 read_page；换端口后 localStorage token 要重新塞 + reload。
+- **`computer left_click` 坐标常漂移**（scroll 后 ref 坐标不更新，会点到相邻/hero 元素→误进占位或 toast）；验证点击类交互改用 `javascript` 点 DOM（如 `.van-switch`.click()）或直接 URL 导航更稳。
+- 写闭环仍未做：下单/发布/AI 对话 SSE 是 P3/P4；`/ai/chat/new`、发布等仍占位。
+- 下一批 **P3 业务写闭环**（发布/乡村生活/农机/灾害/农业/集市服务；表单+图片上传+离线队列）。
+
+---
+
 ## 2026-07-12 · Vue 移植 P1 低风险只读页 (doc116-P1)
 
 用户「看 docs 完善项目」，方向拍板走 **116 Vue 移植 P1**（非 115 Flutter 瘦身——两者竞合，Vue 移植是最新主线）。

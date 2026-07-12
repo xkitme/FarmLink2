@@ -17,6 +17,18 @@ const SettingsHomeView = () => import('@/views/settings/SettingsHomeView.vue')
 const AboutView = () => import('@/views/settings/AboutView.vue')
 const LegalView = () => import('@/views/settings/LegalView.vue')
 const HelpView = () => import('@/views/settings/HelpView.vue')
+// P2 读多写少页
+const MessagesView = () => import('@/views/MessagesView.vue')
+const PolicyView = () => import('@/views/PolicyView.vue')
+const PolicyDetailView = () => import('@/views/PolicyDetailView.vue')
+const DataDashboardView = () => import('@/views/DataDashboardView.vue')
+const MarketView = () => import('@/views/MarketView.vue')
+const ProductDetailView = () => import('@/views/ProductDetailView.vue')
+const OrdersView = () => import('@/views/OrdersView.vue')
+const IotView = () => import('@/views/IotView.vue')
+const AiThreadsView = () => import('@/views/AiThreadsView.vue')
+const AiThreadDetailView = () => import('@/views/AiThreadDetailView.vue')
+const VillageScreenView = () => import('@/views/VillageScreenView.vue')
 
 Vue.use(VueRouter)
 
@@ -95,8 +107,68 @@ const router = new VueRouter({
     {
       path: '/messages',
       name: 'messages',
-      component: PlaceholderView,
+      component: MessagesView,
       meta: { requiresAuth: true, title: '消息' },
+    },
+    {
+      path: '/policy',
+      name: 'policy',
+      component: PolicyView,
+      meta: { requiresAuth: true, title: '惠农政策' },
+    },
+    {
+      path: '/policy/:id',
+      name: 'policy-detail',
+      component: PolicyDetailView,
+      meta: { requiresAuth: true, title: '政策详情' },
+    },
+    {
+      path: '/data',
+      name: 'data',
+      component: DataDashboardView,
+      meta: { requiresAuth: true, title: '数据看板' },
+    },
+    {
+      path: '/market',
+      name: 'market',
+      component: MarketView,
+      meta: { requiresAuth: true, title: '乡村集市' },
+    },
+    {
+      path: '/market/orders',
+      name: 'market-orders',
+      component: OrdersView,
+      meta: { requiresAuth: true, title: '我的订单' },
+    },
+    {
+      path: '/market/product/:id',
+      name: 'product-detail',
+      component: ProductDetailView,
+      meta: { requiresAuth: true, title: '商品详情' },
+    },
+    {
+      path: '/data/screen',
+      name: 'village-screen',
+      component: VillageScreenView,
+      meta: { requiresAuth: true, title: '村级大屏' },
+    },
+    {
+      path: '/iot',
+      name: 'iot',
+      component: IotView,
+      meta: { requiresAuth: true, title: '智能物联' },
+    },
+    {
+      path: '/ai',
+      name: 'ai',
+      component: AiThreadsView,
+      meta: { requiresAuth: true, title: 'AI 助手' },
+    },
+    {
+      path: '/ai/thread/:id',
+      name: 'ai-thread',
+      component: AiThreadDetailView,
+      meta: { requiresAuth: true, title: '对话详情' },
     },
     {
       path: '/profile',
