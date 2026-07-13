@@ -85,37 +85,101 @@ export async function request(path, options = {}) {
   }
 }
 
-export async function uploadImage(file, { timeout = 30000 } = {}) {
+// 通用 multipart 提交（图片上传、图像识别等），不手设 Content-Type 让浏览器补 boundary。
+export async function postForm(path, formData, { timeout = 30000 } = {}) {
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), timeout)
   const token = getToken()
-  const form = new FormData()
-  form.append('image', file)
   try {
-    // 不手动设 Content-Type，交给浏览器补 multipart boundary。
-    const response = await fetch(buildUrl('/upload/image'), {
+    const response = await fetch(buildUrl(path), {
       method: 'POST',
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: form,
+      body: formData,
       signal: controller.signal,
     })
     let envelope
     try {
       envelope = await response.json()
     } catch (_) {
-      throw new ApiError('上传失败，请稍后重试', response.status, response.status)
+      throw new ApiError('请求失败，请稍后重试', response.status, response.status)
     }
     const code = Number(envelope.code ?? response.status)
     if (code === 40101 || response.status === 401) await unauthorizedHandler?.()
-    if (!response.ok || code !== 200) throw new ApiError(envelope.msg || '上传失败', code, response.status, envelope)
+    if (!response.ok || code !== 200) throw new ApiError(envelope.msg || '请求失败', code, response.status, envelope)
     return envelope.data
   } catch (error) {
-    if (error?.name === 'AbortError') throw new ApiError('上传超时，请重试', 50000, 0)
+    if (error?.name === 'AbortError') throw new ApiError('请求超时，请重试', 50000, 0)
     if (error instanceof ApiError) throw error
-    throw new ApiError('上传失败，请稍后重试', 60002, 0)
+    throw new ApiError('服务暂时不可用，请稍后重试', 60002, 0)
   } finally {
     window.clearTimeout(timer)
   }
+}
+
+export function uploadImage(file, options = {}) {
+  const form = new FormData()
+  form.append('image', file)
+  return postForm('/upload/image', form, options)
+}
+
+// AI 对话 SSE 流式：POST /ai/chat，解析 meta / message(delta) / done 三类事件。
+// 返回 { cancel } 供调用方中断。handlers: { onMeta, onDelta, onDone, onError }
+export function streamChat({ question, scene = 'GENERAL', threadId, handlers = {} } = {}) {
+  const token = getToken()
+  const controller = new AbortController()
+  const run = async () => {
+    let response
+    try {
+      response = await fetch(buildUrl('/ai/chat'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          Accept: 'text/event-stream',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ question, scene, threadId, stream: true }),
+        signal: controller.signal,
+      })
+    } catch (error) {
+      if (error?.name !== 'AbortError') handlers.onError?.(new ApiError('AI 服务暂时不可用', 60001, 0))
+      return
+    }
+    if (!response.ok || !response.body) {
+      handlers.onError?.(new ApiError('AI 服务暂时不可用', response.status || 60001, response.status))
+      return
+    }
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let event = 'message'
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+        for (const raw of lines) {
+          const line = raw.replace(/\r$/, '')
+          if (!line) { event = 'message'; continue }
+          if (line.startsWith('event:')) { event = line.slice(6).trim() }
+          else if (line.startsWith('data:')) {
+            const payloadStr = line.slice(5).trim()
+            if (!payloadStr) continue
+            let data
+            try { data = JSON.parse(payloadStr) } catch (_) { data = { delta: payloadStr } }
+            if (event === 'meta') handlers.onMeta?.(data)
+            else if (event === 'done') handlers.onDone?.(data)
+            else handlers.onDelta?.(typeof data.delta === 'string' ? data.delta : '')
+          }
+        }
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') handlers.onError?.(new ApiError('对话中断，请重试', 60001, 0))
+    }
+  }
+  run()
+  return { cancel: () => controller.abort() }
 }
 
 export const api = {
@@ -124,5 +188,7 @@ export const api = {
   put: (path, body, options = {}) => request(path, { ...options, method: 'PUT', body }),
   delete: (path, options = {}) => request(path, { ...options, method: 'DELETE' }),
   uploadImage,
+  postForm,
+  streamChat,
   resolveImageUrl,
 }

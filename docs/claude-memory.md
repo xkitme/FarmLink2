@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-12 · Vue 移植 P4 AI 链路 (doc116-P4)
+
+接 P3 后用户「继续」。SSE 对话/图片识别/历史删除三块 + build + 浏览器实测，**未提交**（待 commit+push）。验证临时起 backend(:8000)+vite(:5202) 已 kill。
+
+**做了**（`mobile-vue/`，Flutter `app/` 没动）：
+- `api/client.js`：`postForm(path,formData)` 通用 multipart（uploadImage 改为其封装）；`streamChat({question,scene,threadId,handlers})` SSE 流式。
+- `AiChatView`(/ai/chat/:threadId, new=新会话)：流式气泡+打字指示+scene 切换+停止+done 回传 threadId 多轮；替换 AiThreads 新对话占位。
+- `DiagnoseView`(/agri/diagnose)：选图→`POST /ai/image/analyze`(multipart)→结果卡(病名/可信度/建议/依据)+反馈三按钮 `POST /ai/detect-feedback`。
+- `AiThreadsView` 加 `van-swipe-cell` 右滑删除 `DELETE /ai/qa/threads/:id` + 清空 `DELETE /ai/qa/records`(van-dialog 确认)。
+- router 加 /ai/chat/:threadId、/agri/diagnose。
+
+**⚠️ 最大坑**：**`POST /ai/chat` 默认返回整包 JSON，只有 body `stream:true`(或 `?stream=1`) 才走 SSE**（后端 ai.controller askScene line107）；streamChat 必须带 `stream:true`，否则读不到 event stream。SSE 事件格式 `event: meta|message|done\ndata: {...}\n\n`；message 的 `{delta}` 逐字。ollama 离线走 knowledge-rule 规则兜底仍逐块 SSE 吐字。
+**其它注意**：
+- 承前坑：screenshot 超时走 read_page；**工具的 Tab Context 标题会滞后**（显示上一页标题，别被"页面乱跳"假象误导，以 `location.hash` 为准）；换端口重塞 token；点击/表单一律 JS 点 DOM。
+- 图片识别测试：JS `fetch` 后端图 → `File` → `DataTransfer` 塞 `input.files` → dispatch change，可在页面内验证整条上传链路；风景图后端诚实回"无法识别"（正确）。
+- 图片识别返回 `{recordId,resultLabel,confidence,adviceText,detail,imageUrl}`；"无法识别"不建 record→无 recordId→反馈区不显示（合理）。
+- 语音助手命令契约(assistant/turn)+STT/TTS/唤醒是 **P5 原生**（Capacitor 插件+APK 真机）。
+- 测试数据：SSE 对话产生数条 AI 问答记录(157已删)，reseed 清。
+
+---
+
 ## 2026-07-12 · Vue 移植 P3 业务写闭环 (doc116-P3)
 
 接 P2 后用户「继续」。6 板块页 + 4 条写闭环 + 图片上传，分 a-e 五子批逐批 build+浏览器实测，**未提交**（待 commit+push）。验证时临时起 backend(:8000)+vite(:5201) 已 kill。

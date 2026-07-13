@@ -111,3 +111,18 @@
 **测试数据遗留**（后端无对应 DELETE API，`npm run seed` 重置会清）：农机预约 7/20-7/22 一条、灾情上报「冰雹·Vue端测试」一条、二手「Vue端测试·喷雾器」一条；农事测试记录已通过 `DELETE /agri/record/:id` 清除。
 
 下一批：P4 AI 链路（SSE 对话 / 历史删除 / 图片识别与反馈 / 语音助手命令契约）。
+
+### P4（2026-07-12）✅ AI 链路
+
+SSE 流式对话、图片识别+反馈、历史删除落地。语音助手命令契约（STT/TTS/唤醒）依赖原生，留 P5。
+
+- **公共能力**（`api/client.js`）
+  - `postForm(path, formData)`：通用 multipart（`uploadImage` 改为其上层封装），供图像识别复用。
+  - `streamChat({question, scene, threadId, handlers})`：SSE 流式对话。**关键：`/ai/chat` 仅在 body `stream:true` 时走 SSE**（否则返回整包 JSON），故请求体带 `stream:true`；手动读 `response.body` reader 按行解析 `event: meta|message|done` + `data:`，`onDelta` 逐字回调；返回 `{cancel}` 供中断。
+- **P4a AI 对话**：`AiChatView`(`/ai/chat/:threadId`，`new` 为新会话)：欢迎语+快捷问题、scene 切换(综合/农技/政策/法律 action-sheet)、逐字流式气泡+打字指示、停止按钮、`done` 回传 threadId 支持连续多轮。替换 `AiThreadsView` 新对话占位。
+- **P4b 图片识别**：`DiagnoseView`(`/agri/diagnose`)：选图→`POST /ai/image/analyze`(multipart,detectType=DISEASE)→结果卡(病名/可信度进度条/处理建议/判断依据)，`无法识别`/0 可信度走弱化态；有 `recordId` 时三按钮反馈 `POST /ai/detect-feedback`。
+- **P4c 历史删除**：`AiThreadsView` 每条 `van-swipe-cell` 右滑删除 `DELETE /ai/qa/threads/:id` + 顶部清空 `DELETE /ai/qa/records`，均 `van-dialog` 二次确认。
+
+验证：`npm run build` 通过；375×812 浏览器（张大叔登录）实测——SSE 对话（「稻瘟病怎么防治」→ 逐字流式渲染完整农技回答，`POST /ai/chat`+`stream:true` 200）、图片识别（注入风景图 → 后端诚实返回「无法识别·非田间病害场景」，弱化态正确）、历史删除（滑动删单条 `DELETE …/threads/157` 200 + 确认弹窗）。ollama 离线时后端走 knowledge-rule 规则兜底仍逐块 SSE 吐字。
+
+下一批：P5 原生能力（Camera/媒体、Android TTS、sherpa-onnx STT 与唤醒 Kotlin 桥、升级数据搬迁、权限与真机性能回归）——多数需 Capacitor 插件与 APK 真机。

@@ -37,6 +37,8 @@ const MarketServiceView = () => import('@/views/MarketServiceView.vue')
 const IotView = () => import('@/views/IotView.vue')
 const AiThreadsView = () => import('@/views/AiThreadsView.vue')
 const AiThreadDetailView = () => import('@/views/AiThreadDetailView.vue')
+const AiChatView = () => import('@/views/AiChatView.vue')
+const DiagnoseView = () => import('@/views/DiagnoseView.vue')
 const VillageScreenView = () => import('@/views/VillageScreenView.vue')
 
 Vue.use(VueRouter)
@@ -222,10 +224,22 @@ const router = new VueRouter({
       meta: { requiresAuth: true, title: 'AI 助手' },
     },
     {
+      path: '/ai/chat/:threadId',
+      name: 'ai-chat',
+      component: AiChatView,
+      meta: { requiresAuth: true, title: 'AI 对话' },
+    },
+    {
       path: '/ai/thread/:id',
       name: 'ai-thread',
       component: AiThreadDetailView,
       meta: { requiresAuth: true, title: '对话详情' },
+    },
+    {
+      path: '/agri/diagnose',
+      name: 'diagnose',
+      component: DiagnoseView,
+      meta: { requiresAuth: true, title: '拍照识病' },
     },
     {
       path: '/profile',
