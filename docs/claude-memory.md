@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-02 · 116 已开工：M0 完成、M1 Phase A 完成
+
+用户已明确回复“开工”。旧 116 删除型代码 WIP 已完整封存在 `codex/archive-116-wip`（`74ac4423`，约 10003 行删除及原有用户改动均保留）；当前实施分支为 `codex/refactor-farmlink`，不得把归档 WIP 直接合回重构分支。
+
+**已完成**：
+
+- `e27c5096`：冻结 116/116a/116b/116c 计划与决策。
+- `d0901332`：新增 `docs/116d-基线与统一验证入口.md` 和 `scripts/verify-all.ps1`。
+- `0063038b`：公开注册固定 FARMER；忽略 role/region；兼容 `displayName`；access/refresh token 分密钥、分类型；新增 dev/demo/release 安全配置门禁和 Node 安全测试。
+- `e659627c`：管理台不再预填 admin/123456；种子密码改用环境策略，demo 必须显式提供，release 禁止执行种子脚本。
+
+**验证**：统一脚本完整通过；Flutter analyze/test/Web build、后端 75 个 JS 语法、5 个安全测试、管理台 build 均通过。管理台 bundle >500k 警告是已知 P1；后端 lint、管理台 test/lint 仍是基线缺口。
+
+**下一步**：继续 `docs/116e-身份安全与权限矩阵.md` Phase B。优先把旧“账号+手机号直接重置密码”替换为 ADMIN 生成、5 分钟过期、最多 5 次、只能使用一次的重置码；同时新增持久 `AuthSession`、refresh rotation、logout/改密撤销。必须先写 migration 和回归测试，不能只改 Flutter 表单。
+
+---
+
 ## 2026-08-02 · 116 大重构方案冻结（未开工）
 
 用户完成 `117` 与 `117a` 两轮问卷，正式冻结新的 116 大重构方向。**实际验收对象是评委，目标用户是农户**：界面必须按正式农户产品呈现，不出现比赛/Demo/开发文案；设计与演示流程优先让评委快速看懂价值并稳定完成操作。
