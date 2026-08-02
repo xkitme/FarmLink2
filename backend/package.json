@@ -9,15 +9,16 @@
     "dev:backend":  "nodemon src/server.js",
     "dev:admin":    "npm run dev --prefix admin",
     "dev:tts":      "node scripts/start-tts.mjs",
-    "start":        "npm run build:admin && cross-env NODE_ENV=production node src/server.js",
+    "start":        "npm run build:admin && npm run db:deploy && cross-env NODE_ENV=production node src/server.js",
     "build:admin":  "npm run build --prefix admin",
     "db:generate":  "prisma generate",
     "db:migrate":   "prisma migrate dev",
+    "db:deploy":    "node scripts/migrate-safe.mjs",
     "db:push":      "prisma db push",
     "db:seed":      "node seeds/index.js",
     "db:studio":    "prisma studio",
     "db:reset":     "prisma migrate reset",
-    "test":         "node --test test/auth-security.test.js",
+    "test":         "node --test test/auth-security.test.js test/auth-session.integration.test.js",
     "install:all":  "npm install && npm install --prefix admin"
   },
   "dependencies": {

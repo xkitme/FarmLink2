@@ -18,4 +18,5 @@ data/*.db-wal
 data/*.db-shm
 prisma/data/
 prisma/dev.db*
+prisma/.test-auth-*/
 .DS_Store

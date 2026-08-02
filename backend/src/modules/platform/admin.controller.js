@@ -9,6 +9,8 @@ import {
   loadAssistantConfig,
 } from '../ai/services/assistant-config.service.js'
 import { deepseekGenerate } from '../ai/services/deepseek.service.js'
+import { revokeAllUserSessions } from './auth-session.service.js'
+import { createPasswordResetCode } from './password-reset.service.js'
 
 function switchWhere(query) {
   const where = {}
@@ -234,4 +236,23 @@ export async function seedDataSummary(req, res) {
       '执行初始化命令前请确认当前数据是否需要保留。',
     ],
   })
+}
+
+/** 为指定账号生成 5 分钟有效的一次性密码重置码 */
+export async function passwordResetCodeCreate(req, res) {
+  const result = await createPasswordResetCode(req.body.username, req.user.id)
+  ok(res, result, '一次性重置码已生成')
+}
+
+/** 管理员强制撤销指定账号全部会话 */
+export async function userSessionsRevoke(req, res) {
+  const username = `${req.body.username || ''}`.trim()
+  if (!username) throw errors.param('请输入账号')
+  const user = await prisma.user.findUnique({
+    where: { username },
+    select: { id: true, username: true, nickname: true },
+  })
+  if (!user) throw errors.notFound('账号不存在')
+  const count = await revokeAllUserSessions(user.id)
+  ok(res, { ...user, revokedCount: count }, '账号会话已全部撤销')
 }

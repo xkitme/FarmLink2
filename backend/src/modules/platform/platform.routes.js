@@ -26,6 +26,9 @@ router.post('/auth/login',     wrap(auth.login))
 router.post('/auth/reset-password', wrap(auth.resetPassword))
 router.post('/auth/refresh',   wrap(auth.refresh))
 router.post('/auth/logout',    requireAuth, wrap(auth.logout))
+router.get('/auth/sessions',   requireAuth, wrap(auth.sessions))
+router.delete('/auth/sessions', requireAuth, wrap(auth.revokeAllSessions))
+router.delete('/auth/sessions/:id', requireAuth, wrap(auth.revokeSession))
 
 // ── 用户 ────────────────────────────────────
 router.get('/user/profile',     requireAuth, wrap(user.getProfile))
@@ -62,6 +65,8 @@ router.post('/admin/ai-assistant/test',    requireAuth, requireRole('ADMIN'), wr
 router.get('/admin/operation-log/list',    requireAuth, requireRole('ADMIN'), wrap(admin.operationLogList))
 router.get('/admin/rate-limit/status',     requireAuth, requireRole('ADMIN'), wrap(admin.rateLimitStatus))
 router.get('/admin/seed/summary',          requireAuth, requireRole('ADMIN'), wrap(admin.seedDataSummary))
+router.post('/admin/security/password-reset-code', requireAuth, requireRole('ADMIN'), wrap(admin.passwordResetCodeCreate))
+router.post('/admin/security/revoke-sessions', requireAuth, requireRole('ADMIN'), wrap(admin.userSessionsRevoke))
 router.get('/admin/site/startup-ad',       requireAuth, requireRole('ADMIN'), wrap(site.adminGetStartupAd))
 router.put('/admin/site/startup-ad',       requireAuth, requireRole('ADMIN'), wrap(site.adminUpdateStartupAd))
 router.get('/admin/resource/index',        requireAuth, requireRole('ADMIN'), wrap(resource.resourceIndex))

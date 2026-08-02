@@ -49,6 +49,40 @@ model User {
   @@map("t_user")
 }
 
+/// 可撤销登录会话（refresh token 仅保存哈希）
+model AuthSession {
+  id               String    @id
+  userId           Int
+  refreshTokenHash String    @unique
+  deviceName       String?
+  userAgent        String?
+  expiresAt        DateTime
+  lastUsedAt       DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([userId, revokedAt])
+  @@map("t_auth_session")
+}
+
+/// 管理员生成的离线一次性密码重置码
+model PasswordResetCode {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  codeHash     String
+  attemptCount Int       @default(0)
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdById  Int
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("t_password_reset_code")
+}
+
 /// 第三方登录绑定
 model UserOauth {
   id        Int      @id @default(autoincrement())

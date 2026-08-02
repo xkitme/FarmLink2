@@ -1,21 +1,9 @@
-import jwt from 'jsonwebtoken'
 import { prisma } from '../db.js'
-import { config } from '../config/index.js'
 import { errors } from '../utils/response.js'
+import { verifyTokenClaims } from '../modules/platform/auth-token.js'
+import { hashOpaqueToken, safeHashEquals } from '../modules/platform/auth.security.js'
 
-/** 签发用户 Token */
-export function signToken(payload) {
-  return jwt.sign({ ...payload, tokenType: 'access' }, config.jwt.secret, {
-    expiresIn: config.jwt.expiresIn,
-  })
-}
-
-/** 签发 Refresh Token */
-export function signRefreshToken(payload) {
-  return jwt.sign({ ...payload, tokenType: 'refresh' }, config.jwt.refreshSecret, {
-    expiresIn: config.jwt.refreshExpiresIn,
-  })
-}
+export { signToken, signRefreshToken } from '../modules/platform/auth-token.js'
 
 /** 解析 Authorization 头 */
 function extractToken(req) {
@@ -40,13 +28,27 @@ function tokenPasswordSnapshotStale(decoded, user) {
 /** 校验 JWT 并确保签发时间晚于最近一次改密时间 */
 export async function verifyAuthToken(token, expectedTokenType = 'access') {
   try {
-    const secret = expectedTokenType === 'refresh'
-      ? config.jwt.refreshSecret
-      : config.jwt.secret
-    const decoded = jwt.verify(token, secret)
-    if (decoded.tokenType !== expectedTokenType) {
-      throw errors.unauthorized('Token 类型无效')
+    const decoded = verifyTokenClaims(token, expectedTokenType)
+    const sessionId = `${decoded.sid || ''}`
+    if (!sessionId) throw errors.unauthorized('会话已失效，请重新登录')
+
+    const session = await prisma.authSession.findUnique({ where: { id: sessionId } })
+    const now = new Date()
+    if (
+      !session
+      || session.userId !== Number(decoded.id)
+      || session.revokedAt
+      || session.expiresAt <= now
+    ) {
+      throw errors.unauthorized('会话已失效，请重新登录')
     }
+    if (
+      expectedTokenType === 'refresh'
+      && !safeHashEquals(session.refreshTokenHash, hashOpaqueToken(token))
+    ) {
+      throw errors.unauthorized('refreshToken 已失效')
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: Number(decoded.id) },
       select: {
@@ -69,9 +71,10 @@ export async function verifyAuthToken(token, expectedTokenType = 'access') {
       phone: user.phone,
       role: user.role,
       regionCode: user.regionCode,
+      sessionId,
     }
   } catch (e) {
-    if (e.name === 'JsonWebTokenError' || e.name === 'TokenExpiredError') {
+    if (['JsonWebTokenError', 'TokenExpiredError', 'NotBeforeError'].includes(e.name)) {
       throw errors.unauthorized()
     }
     throw e

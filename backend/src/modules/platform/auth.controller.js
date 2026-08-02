@@ -1,8 +1,16 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from '../../db.js'
 import { ok, errors } from '../../utils/response.js'
-import { signToken, signRefreshToken, verifyAuthToken } from '../../middleware/auth.js'
+import { verifyAuthToken } from '../../middleware/auth.js'
 import { buildPublicRegistrationData } from './auth.policy.js'
+import {
+  issueSession,
+  listUserSessions,
+  revokeAllUserSessions,
+  revokeSession as revokeUserSession,
+  sessionMetadata,
+} from './auth-session.service.js'
+import { resetPasswordWithCode } from './password-reset.service.js'
 
 /** 去除敏感字段 */
 export function sanitizeUser(user) {
@@ -11,23 +19,12 @@ export function sanitizeUser(user) {
   return rest
 }
 
-/** Token 载荷 */
-function tokenPayload(user) {
-  return {
-    id: user.id,
-    username: user.username,
-    role: user.role,
-    regionCode: user.regionCode,
-    pwdAt: user.passwordChangedAt ? new Date(user.passwordChangedAt).getTime() : null,
-  }
-}
-
 /** 构建登录会话返回体 */
-export function buildSession(user) {
-  const payload = tokenPayload(user)
+export async function buildSession(user, req, replaceSessionId = null) {
+  const session = await issueSession(user, sessionMetadata(req), replaceSessionId)
   return {
-    token: signToken(payload),
-    refreshToken: signRefreshToken(payload),
+    token: session.token,
+    refreshToken: session.refreshToken,
     user: sanitizeUser(user),
   }
 }
@@ -51,7 +48,7 @@ export async function register(req, res) {
   const user = await prisma.user.create({
     data: buildPublicRegistrationData(req.body, passwordHash),
   })
-  ok(res, buildSession(user), '注册成功')
+  ok(res, await buildSession(user, req), '注册成功')
 }
 
 /** 登录（账号密码，后端校验） */
@@ -66,32 +63,15 @@ export async function login(req, res) {
   if (user.status !== 1) throw errors.forbidden('账号已被禁用')
 
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
-  ok(res, buildSession(user), '登录成功')
+  ok(res, await buildSession(user, req), '登录成功')
 }
 
-/** 忘记密码：用账号 + 绑定手机号校验后重置密码 */
+/** 忘记密码：使用管理员生成的一次性重置码 */
 export async function resetPassword(req, res) {
-  const username = `${req.body.username || ''}`.trim()
-  const phone = `${req.body.phone || ''}`.trim()
-  const newPassword = `${req.body.newPassword || ''}`
-
-  if (!username || !phone || !newPassword) throw errors.param('账号、手机号和新密码必填')
-  if (!/^1\d{10}$/.test(phone)) throw errors.param('请输入正确的手机号')
-  if (newPassword.length < 6) throw errors.param('密码至少 6 位')
-
-  const user = await prisma.user.findUnique({ where: { username } })
-  const matchedPhone = user?.phone === phone || (!user?.phone && user?.username === phone)
-  if (!user || user.status !== 1 || !matchedPhone) {
-    throw errors.param('账号或绑定手机号不匹配')
-  }
-
-  const passwordHash = await bcrypt.hash(newPassword, 10)
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      passwordHash,
-      passwordChangedAt: new Date(),
-    },
+  await resetPasswordWithCode({
+    username: req.body.username,
+    resetCode: req.body.resetCode,
+    newPassword: req.body.newPassword,
   })
   ok(res, null, '密码已重置，请使用新密码登录')
 }
@@ -109,10 +89,30 @@ export async function refresh(req, res) {
   }
   const user = await prisma.user.findUnique({ where: { id: sessionUser.id } })
   if (!user) throw errors.unauthorized()
-  ok(res, { token: signToken(tokenPayload(user)) })
+  const session = await issueSession(user, sessionMetadata(req), sessionUser.sessionId)
+  ok(res, { token: session.token, refreshToken: session.refreshToken })
 }
 
-/** 退出（JWT 无状态，前端清除 Token 即可） */
+/** 退出当前设备 */
 export async function logout(req, res) {
+  await revokeUserSession(req.user.id, req.user.sessionId)
   ok(res, null, '已退出登录')
+}
+
+/** 当前用户的有效设备会话 */
+export async function sessions(req, res) {
+  ok(res, await listUserSessions(req.user.id, req.user.sessionId))
+}
+
+/** 撤销指定设备会话 */
+export async function revokeSession(req, res) {
+  const count = await revokeUserSession(req.user.id, `${req.params.id || ''}`)
+  if (!count) throw errors.notFound('会话不存在或已失效')
+  ok(res, null, '设备会话已退出')
+}
+
+/** 撤销当前账号全部设备会话 */
+export async function revokeAllSessions(req, res) {
+  const count = await revokeAllUserSessions(req.user.id)
+  ok(res, { count }, '全部设备会话已退出')
 }

@@ -19,6 +19,7 @@ async function main() {
 
   // ── 清空（无外键约束，顺序随意） ──────────────────
   const tables = [
+    'passwordResetCode', 'authSession',
     'aiQaRecord', 'syncLog', 'statReport', 'annualReport',
     'expressPoint', 'folkCulture', 'loanApplication', 'loanProduct',
     'envReport', 'helpRequest', 'secondhandItem', 'tourismSpot',

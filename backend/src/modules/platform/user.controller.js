@@ -30,7 +30,10 @@ export async function getGrowth(req, res) {
 
 /** 更新个人资料 */
 export async function updateProfile(req, res) {
-  const { username, nickname, avatarUrl, bannerUrl, realName, phone, villageName, regionCode, isElderMode, shippingAddress } = req.body
+  const { username, nickname, avatarUrl, bannerUrl, realName, phone, villageName, isElderMode, shippingAddress } = req.body
+  if (req.body.regionCode !== undefined) {
+    throw errors.forbidden('行政区划由管理员维护，个人资料不能修改')
+  }
   const data = {}
   if (nickname !== undefined) data.nickname = nickname
   if (avatarUrl !== undefined) data.avatarUrl = avatarUrl
@@ -38,7 +41,6 @@ export async function updateProfile(req, res) {
   if (realName !== undefined) data.realName = realName
   if (shippingAddress !== undefined) data.shippingAddress = (shippingAddress || '').trim() || null
   if (villageName !== undefined) data.villageName = villageName
-  if (regionCode !== undefined) data.regionCode = regionCode
   if (isElderMode !== undefined) data.isElderMode = !!isElderMode
   if (username !== undefined) {
     const u = (username || '').trim()
@@ -82,13 +84,20 @@ export async function updatePassword(req, res) {
   if (!isOk) throw errors.param('当前密码不正确')
 
   const passwordHash = await bcrypt.hash(newPassword, 10)
-  await prisma.user.update({
-    where: { id: req.user.id },
-    data: {
-      passwordHash,
-      passwordChangedAt: new Date(),
-    },
-  })
+  const now = new Date()
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        passwordHash,
+        passwordChangedAt: now,
+      },
+    }),
+    prisma.authSession.updateMany({
+      where: { userId: req.user.id, revokedAt: null },
+      data: { revokedAt: now },
+    }),
+  ])
 
   ok(res, { ok: true }, '密码已修改，请重新登录')
 }
