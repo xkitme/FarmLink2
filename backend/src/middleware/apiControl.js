@@ -169,11 +169,11 @@ export async function apiSwitchMiddleware(req, res, next) {
   next()
 }
 
-function sanitizeBody(body) {
+export function sanitizeBody(body) {
   if (!body || typeof body !== 'object') return body
   const clean = {}
   for (const [key, value] of Object.entries(body)) {
-    if (/password|token|secret/i.test(key)) clean[key] = '[FILTERED]'
+    if (/password|token|secret|resetCode|verificationCode|otp/i.test(key)) clean[key] = '[FILTERED]'
     else if (typeof value === 'string' && value.length > 300) clean[key] = `${value.slice(0, 300)}...`
     else if (Array.isArray(value)) clean[key] = value.length > 8 ? `[Array(${value.length})]` : value
     else if (value && typeof value === 'object') clean[key] = '[Object]'

@@ -9,6 +9,7 @@ import {
 } from '../src/config/index.js'
 import { signToken, signRefreshToken, verifyAuthToken } from '../src/middleware/auth.js'
 import { buildPublicRegistrationData } from '../src/modules/platform/auth.policy.js'
+import { sanitizeBody } from '../src/middleware/apiControl.js'
 
 test('公开注册永远只能产生 FARMER 且不接受区域字段', () => {
   const data = buildPublicRegistrationData({
@@ -88,4 +89,26 @@ test('access/refresh token 使用不同密钥并带有明确类型', async () =>
   assert.throws(() => jwt.verify(access, config.jwt.refreshSecret))
   await assert.rejects(() => verifyAuthToken(refresh), { code: 40101 })
   await assert.rejects(() => verifyAuthToken(access, 'refresh'), { code: 40101 })
+})
+
+test('操作日志过滤密码、令牌与一次性验证码', () => {
+  const clean = sanitizeBody({
+    username: 'farmer-01',
+    newPassword: 'new-password',
+    refreshToken: 'refresh-token',
+    resetCode: '123456',
+    verificationCode: '654321',
+    otp: '999999',
+    regionCode: '510100',
+  })
+
+  assert.deepEqual(clean, {
+    username: 'farmer-01',
+    newPassword: '[FILTERED]',
+    refreshToken: '[FILTERED]',
+    resetCode: '[FILTERED]',
+    verificationCode: '[FILTERED]',
+    otp: '[FILTERED]',
+    regionCode: '510100',
+  })
 })
