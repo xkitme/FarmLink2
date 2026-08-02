@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-08-02 · 116e Phase C1 完成：客户端凭据生命周期 + 管理台 stopgap
+
+当前实施分支仍为 `codex/refactor-farmlink`。本批已按后端 / Flutter 客户端 / 管理台拆成三个本地里程碑提交：
+
+- `33ebfd32`：后端 `POST /auth/logout` 同时支持 access/refresh 撤销，补齐同 refresh 并发 rotation 只允许一个后继会话、refresh-only logout 幂等撤销的回归。
+- `e520fc26`：Flutter 凭据迁到系统安全存储，旧 `SharedPreferences` 明文迁移，refresh rotation 去重、失效清理与 logout 清本地全部接通。
+- `ede249c0`：管理台 stopgap 收口：refresh 不再写 localStorage，外部绝对 URL 调试不自动带管理 token，退出先撤销服务端会话再清本地，登录页加过期/退出提示。
+
+**浏览器验收**：真实浏览器截图已完成，包含登录失效提示页、管理台 dashboard、退出后返回登录页三态。
+
+**验证**：`scripts/verify-all.ps1` 已完整通过；Flutter analyze/test/Web build、后端 79 个 JS 语法检查、16 项后端测试、管理台 build 均通过。管理台 bundle >500k 仍是已知 P1 警告。`flutter pub get --offline` 依赖解析已稳定，`app/pubspec.lock` 仅保留新增安全存储依赖。
+
+**下一步**：继续 `docs/116e-身份安全与权限矩阵.md` Phase C2。优先做完整 HttpOnly Cookie 契约、CORS allowlist、代理来源信任、日志脱敏复核和上传安全；不要再把 refresh token 明文长期留在 SharedPreferences/localStorage。
+
+---
+
 ## 2026-08-02 · 116e Phase B 完成：可撤销会话与一次性重置码
 
 当前实施分支仍为 `codex/refactor-farmlink`。本批已按后端和双端界面拆成两个里程碑提交：
