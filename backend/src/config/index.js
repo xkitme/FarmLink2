@@ -40,6 +40,19 @@ export function validateSecurityConfig(target) {
   return target
 }
 
+export function resolveSeedPassword(target, env = process.env) {
+  validateSecurityConfig(target)
+  if (target.runtime.environment === 'release') {
+    throw new Error('release 环境禁止执行种子脚本')
+  }
+  const password = `${env.SEED_PASSWORD || ''}`
+    || (target.runtime.environment === 'dev' ? '123456' : '')
+  if (password.length < 6) {
+    throw new Error('demo 环境必须设置 SEED_PASSWORD（至少 6 位）')
+  }
+  return password
+}
+
 const runtimeEnvironment = resolveRuntimeEnvironment()
 const accessSecret = process.env.JWT_SECRET || 'village-dev-secret'
 

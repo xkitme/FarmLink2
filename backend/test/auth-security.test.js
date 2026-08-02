@@ -3,6 +3,7 @@ import test from 'node:test'
 import jwt from 'jsonwebtoken'
 import {
   config,
+  resolveSeedPassword,
   validateSecurityConfig,
   resolveRuntimeEnvironment,
 } from '../src/config/index.js'
@@ -52,6 +53,26 @@ test('demo/release 必须使用两个不同的强密钥', () => {
     ...valid,
     jwt: { secret: 'a'.repeat(32), refreshSecret: 'a'.repeat(32) },
   }), /必须不同/)
+})
+
+test('种子账号只允许 dev 回退或 demo 显式密码，release 始终拒绝', () => {
+  const strongJwt = { secret: 'a'.repeat(32), refreshSecret: 'b'.repeat(32) }
+  assert.equal(resolveSeedPassword({
+    runtime: { environment: 'dev' },
+    jwt: strongJwt,
+  }, {}), '123456')
+  assert.equal(resolveSeedPassword({
+    runtime: { environment: 'demo' },
+    jwt: strongJwt,
+  }, { SEED_PASSWORD: 'demo-strong-password' }), 'demo-strong-password')
+  assert.throws(() => resolveSeedPassword({
+    runtime: { environment: 'demo' },
+    jwt: strongJwt,
+  }, {}), /SEED_PASSWORD/)
+  assert.throws(() => resolveSeedPassword({
+    runtime: { environment: 'release' },
+    jwt: strongJwt,
+  }, { SEED_PASSWORD: 'release-password' }), /禁止执行种子脚本/)
 })
 
 test('access/refresh token 使用不同密钥并带有明确类型', async () => {

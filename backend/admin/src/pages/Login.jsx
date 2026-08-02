@@ -58,7 +58,6 @@ export default function Login() {
         </div>
         <Form
           layout="vertical"
-          initialValues={{ username: 'admin', password: '123456' }}
           onFinish={onFinish}
           requiredMark={false}
         >

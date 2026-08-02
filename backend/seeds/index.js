@@ -4,6 +4,7 @@
  */
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { config, resolveSeedPassword } from '../src/config/index.js'
 
 const prisma = new PrismaClient()
 
@@ -13,6 +14,7 @@ const daysLater = (n) => new Date(now.getTime() + n * 86400000)
 const dateOf = (value) => new Date(`${value}T08:00:00.000+08:00`)
 
 async function main() {
+  const seedPassword = resolveSeedPassword(config)
   console.log('开始写入种子数据...')
 
   // ── 清空（无外键约束，顺序随意） ──────────────────
@@ -51,7 +53,7 @@ async function main() {
   const VILLAGE = '510131100201'
 
   // ── 用户 ──────────────────────────────────────────
-  const pwd = await bcrypt.hash('123456', 10)
+  const pwd = await bcrypt.hash(seedPassword, 10)
   const mkUser = (username, nickname, role, realName, phone) => ({
     username, nickname, role, realName, phone,
     passwordHash: pwd, regionCode: VILLAGE, villageName: '松华村', points: 0, growth: 0,
@@ -812,7 +814,7 @@ async function main() {
   console.log(`  用户 ${userCount} 个`)
   console.log(`  已写入 ${tableCount} 类业务数据`)
   console.log('种子数据写入完成 ✓')
-  console.log('  测试账号：farmer / bigfarmer / village / expert / merchant / admin（密码均为 123456）')
+  console.log(`  测试账号：farmer / bigfarmer / village / expert / merchant / admin（密码来自 ${config.runtime.environment === 'dev' ? '开发环境回退值或 SEED_PASSWORD' : 'SEED_PASSWORD'}）`)
 }
 
 main()
