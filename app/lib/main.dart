@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'core/auth_credential_store.dart';
 import 'core/auth_state.dart';
 import 'core/elder_mode.dart';
 import 'core/router.dart';
@@ -17,13 +18,16 @@ void main() {
 }
 
 class FarmLinkApp extends StatefulWidget {
-  const FarmLinkApp({super.key});
+  const FarmLinkApp({super.key, this.credentialStorage});
+
+  final CredentialStorage? credentialStorage;
+
   @override
   State<FarmLinkApp> createState() => _FarmLinkAppState();
 }
 
 class _FarmLinkAppState extends State<FarmLinkApp> {
-  final AuthState _auth = AuthState();
+  late final AuthState _auth;
   final ElderModeState _elderMode = ElderModeState();
   final VoiceWakeState _voiceWake = VoiceWakeState();
   late final GoRouter _router;
@@ -32,6 +36,7 @@ class _FarmLinkAppState extends State<FarmLinkApp> {
   @override
   void initState() {
     super.initState();
+    _auth = AuthState(credentialStorage: widget.credentialStorage);
     _router = buildRouter(_auth);
     _auth
         .init()

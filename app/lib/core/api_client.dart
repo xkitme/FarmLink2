@@ -4,6 +4,11 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'constants.dart';
 
+typedef _ResponseFactory = Future<http.Response> Function(
+    Map<String, String> headers);
+typedef _StreamedResponseFactory = Future<http.StreamedResponse> Function(
+    Map<String, String> headers);
+
 /// 业务异常（携带服务端业务码）
 class ApiException implements Exception {
   final int code;
@@ -24,16 +29,35 @@ class SseEvent {
 class ApiClient {
   static String baseUrl = kBaseUrl;
   static String? _token;
+  static Future<bool> Function()? _refreshHandler;
+  static Future<void> Function()? _sessionExpiredHandler;
+  static Future<bool>? _refreshInFlight;
+  static Future<void>? _expiryInFlight;
+  static bool _automaticRefreshEnabled = true;
 
-  /// token 失效（40101）时触发，由 AuthState 注册：清登录态 → 路由回登录页
-  static void Function()? onUnauthorized;
+  static void configureAuth({
+    required Future<bool> Function() refreshHandler,
+    required Future<void> Function() sessionExpiredHandler,
+  }) {
+    _refreshHandler = refreshHandler;
+    _sessionExpiredHandler = sessionExpiredHandler;
+    _automaticRefreshEnabled = true;
+  }
 
   static void setToken(String? t) => _token = t;
   static String? get token => _token;
 
-  static Map<String, String> get _headers => {
+  static void setAutomaticRefreshEnabled(bool enabled) {
+    _automaticRefreshEnabled = enabled;
+  }
+
+  static Future<void> waitForPendingRefresh() async {
+    await _refreshInFlight;
+  }
+
+  static Map<String, String> _headersFor(String? token) => {
         'Content-Type': 'application/json; charset=utf-8',
-        if (_token != null) 'Authorization': 'Bearer $_token',
+        if (token != null) 'Authorization': 'Bearer $token',
       };
 
   static Uri _uri(String path, [Map<String, dynamic>? query]) {
@@ -50,17 +74,39 @@ class ApiClient {
   }
 
   static Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
-    final res = await http
-        .get(_uri(path, query), headers: _headers)
-        .timeout(const Duration(seconds: 15));
+    final res = await _sendAuthenticated(
+      (headers) => http
+          .get(_uri(path, query), headers: headers)
+          .timeout(const Duration(seconds: 15)),
+    );
     return _parse(res);
   }
 
   static Future<dynamic> post(String path, {Map<String, dynamic>? body}) async {
-    final res = await http
-        .post(_uri(path), headers: _headers, body: jsonEncode(body ?? {}))
-        .timeout(const Duration(seconds: 30));
+    final encoded = jsonEncode(body ?? {});
+    final res = await _sendAuthenticated(
+      (headers) => http
+          .post(_uri(path), headers: headers, body: encoded)
+          .timeout(const Duration(seconds: 30)),
+    );
     return _parse(res);
+  }
+
+  /// refresh rotation 使用不携带 access 的原始请求，避免 401 处理递归。
+  static Future<Map<String, dynamic>> refreshSession(
+      String refreshToken) async {
+    final res = await http
+        .post(
+          _uri('/auth/refresh'),
+          headers: _headersFor(null),
+          body: jsonEncode(<String, dynamic>{'refreshToken': refreshToken}),
+        )
+        .timeout(const Duration(seconds: 30));
+    final data = _parse(res);
+    if (data is! Map<String, dynamic>) {
+      throw ApiException(res.statusCode, '刷新会话响应异常');
+    }
+    return data;
   }
 
   /// POST 并返回原始二进制响应（如 TTS 的 audio/wav）。
@@ -68,9 +114,12 @@ class ApiClient {
   static Future<Uint8List> postBytes(String path,
       {Map<String, dynamic>? body,
       Duration timeout = const Duration(seconds: 30)}) async {
-    final res = await http
-        .post(_uri(path), headers: _headers, body: jsonEncode(body ?? {}))
-        .timeout(timeout);
+    final encoded = jsonEncode(body ?? {});
+    final res = await _sendAuthenticated(
+      (headers) => http
+          .post(_uri(path), headers: headers, body: encoded)
+          .timeout(timeout),
+    );
     final ct = res.headers['content-type'] ?? '';
     if (res.statusCode == 200 && ct.startsWith('audio/')) {
       return res.bodyBytes;
@@ -79,7 +128,6 @@ class ApiClient {
     try {
       final m = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       final code = m['code'] as int? ?? res.statusCode;
-      if (code == 40101) onUnauthorized?.call();
       throw ApiException(code, m['msg'] as String? ?? '请求失败');
     } on ApiException {
       rethrow;
@@ -89,37 +137,52 @@ class ApiClient {
   }
 
   static Future<dynamic> put(String path, {Map<String, dynamic>? body}) async {
-    final res = await http
-        .put(_uri(path), headers: _headers, body: jsonEncode(body ?? {}))
-        .timeout(const Duration(seconds: 15));
+    final encoded = jsonEncode(body ?? {});
+    final res = await _sendAuthenticated(
+      (headers) => http
+          .put(_uri(path), headers: headers, body: encoded)
+          .timeout(const Duration(seconds: 15)),
+    );
     return _parse(res);
   }
 
   static Future<dynamic> delete(String path) async {
-    final res = await http
-        .delete(_uri(path), headers: _headers)
-        .timeout(const Duration(seconds: 15));
+    final res = await _sendAuthenticated(
+      (headers) => http
+          .delete(_uri(path), headers: headers)
+          .timeout(const Duration(seconds: 15)),
+    );
     return _parse(res);
   }
 
   /// 上传图片（multipart），用于 AI 识别类接口
   static Future<dynamic> upload(String path, Uint8List bytes, String filename,
       {String field = 'image', Map<String, String>? fields}) async {
-    final req = http.MultipartRequest('POST', _uri(path))
-      ..headers.addAll({if (_token != null) 'Authorization': 'Bearer $_token'})
-      ..files
-          .add(http.MultipartFile.fromBytes(field, bytes, filename: filename));
-    if (fields != null) req.fields.addAll(fields);
-    final streamed = await req.send().timeout(const Duration(seconds: 240));
-    return _parse(await http.Response.fromStream(streamed));
+    final res = await _sendAuthenticated((headers) async {
+      final req = http.MultipartRequest('POST', _uri(path))
+        ..headers.addAll(<String, String>{
+          if (headers['Authorization'] != null)
+            'Authorization': headers['Authorization']!,
+        })
+        ..files.add(
+          http.MultipartFile.fromBytes(field, bytes, filename: filename),
+        );
+      if (fields != null) req.fields.addAll(fields);
+      final streamed = await req.send().timeout(const Duration(seconds: 240));
+      return http.Response.fromStream(streamed);
+    });
+    return _parse(res);
   }
 
   static Stream<SseEvent> streamEvents(
       String path, Map<String, dynamic> body) async* {
-    final req = http.Request('POST', _uri(path))
-      ..headers.addAll(_headers)
-      ..body = jsonEncode(body);
-    final res = await req.send().timeout(const Duration(seconds: 12));
+    final encoded = jsonEncode(body);
+    final res = await _sendStreamAuthenticated((headers) {
+      final req = http.Request('POST', _uri(path))
+        ..headers.addAll(headers)
+        ..body = encoded;
+      return req.send().timeout(const Duration(seconds: 12));
+    });
     if (res.statusCode != 200) throw ApiException(res.statusCode, '请求失败');
 
     var buffer = '';
@@ -213,11 +276,77 @@ class ApiClient {
       throw ApiException(res.statusCode, '服务器响应异常');
     }
     final code = body['code'] as int? ?? res.statusCode;
-    // 40101 未登录/token 失效 —— 通知上层退出登录并回到登录页
-    if (code == 40101) onUnauthorized?.call();
     if (code != 200) {
       throw ApiException(code, body['msg'] as String? ?? '请求失败');
     }
     return body['data'];
+  }
+
+  static Future<http.Response> _sendAuthenticated(
+    _ResponseFactory send,
+  ) async {
+    final failedToken = _token;
+    var response = await send(_headersFor(failedToken));
+    if (response.statusCode != 401 || failedToken == null) return response;
+    if (!_automaticRefreshEnabled) return response;
+
+    if (await _refreshAfter(failedToken)) {
+      response = await send(_headersFor(_token));
+      if (response.statusCode == 401) await _expireSession();
+    } else {
+      await _expireSession();
+    }
+    return response;
+  }
+
+  static Future<http.StreamedResponse> _sendStreamAuthenticated(
+    _StreamedResponseFactory send,
+  ) async {
+    final failedToken = _token;
+    var response = await send(_headersFor(failedToken));
+    if (response.statusCode != 401 || failedToken == null) return response;
+    if (!_automaticRefreshEnabled) return response;
+
+    await response.stream.drain<void>();
+    if (await _refreshAfter(failedToken)) {
+      response = await send(_headersFor(_token));
+      if (response.statusCode == 401) await _expireSession();
+    } else {
+      await _expireSession();
+    }
+    return response;
+  }
+
+  static Future<bool> _refreshAfter(String failedToken) async {
+    // 较晚返回的旧 401 看到 token 已换代时只需重放，不能再次 rotation。
+    if (_token != failedToken) return _token != null;
+    final active = _refreshInFlight;
+    if (active != null) return active;
+    final handler = _refreshHandler;
+    if (handler == null) return false;
+
+    final future = Future<bool>.sync(handler);
+    _refreshInFlight = future;
+    try {
+      return await future;
+    } catch (_) {
+      return false;
+    } finally {
+      if (identical(_refreshInFlight, future)) _refreshInFlight = null;
+    }
+  }
+
+  static Future<void> _expireSession() async {
+    final active = _expiryInFlight;
+    if (active != null) return active;
+    final handler = _sessionExpiredHandler;
+    if (handler == null) return;
+    final future = Future<void>.sync(handler);
+    _expiryInFlight = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_expiryInFlight, future)) _expiryInFlight = null;
+    }
   }
 }
