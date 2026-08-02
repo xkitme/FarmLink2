@@ -24,11 +24,11 @@ import {
   ToolOutlined,
   TruckOutlined,
 } from '@ant-design/icons'
-import { Avatar, Button, Dropdown, Layout, Menu, Space, Tag, Typography } from 'antd'
+import { Avatar, Button, Dropdown, Layout, Menu, Space, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { clearSession, getCurrentUser } from '../api/auth.js'
-import { API_BASE, api } from '../api/request.js'
+import { API_BASE, api, rawRequest } from '../api/request.js'
 
 const { Header, Sider, Content } = Layout
 
@@ -107,9 +107,18 @@ export default function AdminLayout() {
       key: 'logout',
       icon: <LogoutOutlined />,
       label: '退出登录',
-      onClick: () => {
-        clearSession()
-        navigate('/login', { replace: true })
+      onClick: async () => {
+        try {
+          const response = await rawRequest('/auth/logout', { method: 'POST' })
+          if (response.ok && response.data?.code === 200) {
+            clearSession()
+            navigate('/login?reason=logout', { replace: true })
+            return
+          }
+          message.error(response.data?.msg || '退出未完成，请重试')
+        } catch {
+          message.error('退出未完成，请重试')
+        }
       },
     },
   ]
@@ -161,8 +170,8 @@ export default function AdminLayout() {
           </Space>
           <Space size={16}>
             <Button type="text" icon={<BellOutlined />} aria-label="通知" />
-            <Dropdown menu={{ items: dropdownItems }} placement="bottomRight">
-              <Space className="user-menu">
+            <Dropdown menu={{ items: dropdownItems }} placement="bottomRight" trigger={['click']}>
+              <Space className="user-menu" role="button" tabIndex={0}>
                 <Avatar style={{ background: '#167d5b' }}>{(user.nickname || user.username || 'A').slice(0, 1).toUpperCase()}</Avatar>
                 <span>{user.nickname || user.username || '管理员'}</span>
               </Space>

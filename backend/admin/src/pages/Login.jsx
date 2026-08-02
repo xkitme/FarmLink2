@@ -1,10 +1,10 @@
 import { LockOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Form, Input, Typography } from 'antd'
+import { Alert, Button, Card, Form, Input, Typography } from 'antd'
 import { useEffect, useState } from 'react'
 import { message } from '../api/feedback.js'
-import { useNavigate } from 'react-router-dom'
-import { API_BASE, api } from '../api/request.js'
-import { saveSession } from '../api/auth.js'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { API_BASE, api, rawRequest } from '../api/request.js'
+import { clearSession, saveSession } from '../api/auth.js'
 
 function resolveUrl(imageUrl) {
   if (!imageUrl) return ''
@@ -16,7 +16,9 @@ function resolveUrl(imageUrl) {
 
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [backgroundUrl, setBackgroundUrl] = useState('')
+  const reason = searchParams.get('reason')
 
   useEffect(() => {
     api.get('/site/images')
@@ -30,6 +32,14 @@ export default function Login() {
   async function onFinish(values) {
     const session = await api.post('/auth/login', values)
     if (session.user?.role !== 'ADMIN') {
+      saveSession(session)
+      try {
+        await rawRequest('/auth/logout', { method: 'POST' })
+      } catch {
+        // 非管理员账号也必须立刻收口，本地态不能继续保留。
+      } finally {
+        clearSession()
+      }
       message.error('当前账号不是管理员')
       return
     }
@@ -56,6 +66,14 @@ export default function Login() {
             <Typography.Text type="secondary">在线服务平台 · 数据治理 · AI 能力</Typography.Text>
           </div>
         </div>
+        {reason && (
+          <Alert
+            style={{ marginBottom: 16 }}
+            type={reason === 'expired' ? 'warning' : 'info'}
+            showIcon
+            message={reason === 'expired' ? '登录已失效，请重新登录' : '你已退出登录，请重新进入'}
+          />
+        )}
         <Form
           layout="vertical"
           onFinish={onFinish}

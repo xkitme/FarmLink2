@@ -4,8 +4,8 @@ const USER_KEY = 'farmlink_admin_user'
 
 export function saveSession(session) {
   localStorage.setItem(TOKEN_KEY, session.token)
-  localStorage.setItem(REFRESH_KEY, session.refreshToken || '')
   localStorage.setItem(USER_KEY, JSON.stringify(session.user || {}))
+  localStorage.removeItem(REFRESH_KEY)
 }
 
 export function clearSession() {

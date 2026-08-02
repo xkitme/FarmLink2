@@ -35,7 +35,7 @@ export async function request(path, options = {}) {
     const text = payload?.msg || `请求失败：${response.status}`
     if (payload?.code === 40101) {
       clearSession()
-      window.location.href = '/admin/login'
+      window.location.replace('/admin/login?reason=expired')
       return Promise.reject(new Error(text))
     }
     message.error(text)
@@ -53,20 +53,29 @@ function normalizeDebugPath(path) {
   return buildUrl(value)
 }
 
+function isSameOriginUrl(value) {
+  try {
+    return new URL(value, window.location.origin).origin === window.location.origin
+  } catch {
+    return true
+  }
+}
+
 export async function rawRequest(path, options = {}) {
+  const targetUrl = normalizeDebugPath(path)
   const token = getToken()
   const method = (options.method || 'GET').toUpperCase()
   const headers = {
     Accept: 'application/json',
     ...(options.headers || {}),
   }
-  if (token && !headers.Authorization) headers.Authorization = token
+  if (token && !headers.Authorization && isSameOriginUrl(targetUrl)) headers.Authorization = token
   if (options.body !== undefined && !(options.body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json'
   }
 
   const started = performance.now()
-  const response = await fetch(normalizeDebugPath(path), {
+  const response = await fetch(targetUrl, {
     method,
     headers,
     body: method === 'GET' || method === 'HEAD'
