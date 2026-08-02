@@ -1,12 +1,60 @@
 import 'dotenv/config'
 
+const INSECURE_SECRETS = new Set([
+  'village-dev-secret',
+  'village-dev-secret-change-me',
+  'village-dev-refresh-secret',
+  'village-dev-refresh-secret-change-me',
+  'village-admin-secret',
+  'village-admin-secret-change-me',
+])
+
+export function resolveRuntimeEnvironment(env = process.env) {
+  const explicit = `${env.APP_ENV || ''}`.trim().toLowerCase()
+  if (explicit) return explicit
+  return env.NODE_ENV === 'production' ? 'release' : 'dev'
+}
+
+export function validateSecurityConfig(target) {
+  const environment = target.runtime.environment
+  if (!['dev', 'demo', 'release'].includes(environment)) {
+    throw new Error(`APP_ENV 必须是 dev、demo 或 release，当前为 ${environment}`)
+  }
+  if (environment === 'dev') return target
+
+  const secrets = [
+    ['JWT_SECRET', target.jwt.secret],
+    ['JWT_REFRESH_SECRET', target.jwt.refreshSecret],
+  ]
+  const issues = []
+  for (const [name, value] of secrets) {
+    if (!value || value.length < 32) issues.push(`${name} 至少需要 32 个字符`)
+    if (INSECURE_SECRETS.has(value)) issues.push(`${name} 不能使用已知默认值`)
+  }
+  if (target.jwt.secret === target.jwt.refreshSecret) {
+    issues.push('JWT_SECRET 与 JWT_REFRESH_SECRET 必须不同')
+  }
+  if (issues.length > 0) {
+    throw new Error(`安全配置校验失败（${environment}）：${issues.join('；')}`)
+  }
+  return target
+}
+
+const runtimeEnvironment = resolveRuntimeEnvironment()
+const accessSecret = process.env.JWT_SECRET || 'village-dev-secret'
+
 export const config = {
   port: parseInt(process.env.PORT) || 8000,
   isProd: process.env.NODE_ENV === 'production',
   apiPrefix: '/api/v1',
 
+  runtime: {
+    environment: runtimeEnvironment,
+  },
+
   jwt: {
-    secret: process.env.JWT_SECRET || 'village-dev-secret',
+    secret: accessSecret,
+    refreshSecret: process.env.JWT_REFRESH_SECRET || 'village-dev-refresh-secret',
     expiresIn: process.env.JWT_EXPIRES_IN || '2h',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
   },
@@ -42,11 +90,6 @@ export const config = {
     perHour: 20,
   },
 
-  admin: {
-    username: process.env.ADMIN_USERNAME || 'admin',
-    password: process.env.ADMIN_PASSWORD || 'village2025',
-    jwtSecret: process.env.ADMIN_JWT_SECRET || 'village-admin-secret',
-  },
 }
 
 // 角色常量

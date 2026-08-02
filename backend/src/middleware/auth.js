@@ -5,12 +5,16 @@ import { errors } from '../utils/response.js'
 
 /** 签发用户 Token */
 export function signToken(payload) {
-  return jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn })
+  return jwt.sign({ ...payload, tokenType: 'access' }, config.jwt.secret, {
+    expiresIn: config.jwt.expiresIn,
+  })
 }
 
 /** 签发 Refresh Token */
 export function signRefreshToken(payload) {
-  return jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.refreshExpiresIn })
+  return jwt.sign({ ...payload, tokenType: 'refresh' }, config.jwt.refreshSecret, {
+    expiresIn: config.jwt.refreshExpiresIn,
+  })
 }
 
 /** 解析 Authorization 头 */
@@ -34,9 +38,15 @@ function tokenPasswordSnapshotStale(decoded, user) {
 }
 
 /** 校验 JWT 并确保签发时间晚于最近一次改密时间 */
-export async function verifyAuthToken(token) {
+export async function verifyAuthToken(token, expectedTokenType = 'access') {
   try {
-    const decoded = jwt.verify(token, config.jwt.secret)
+    const secret = expectedTokenType === 'refresh'
+      ? config.jwt.refreshSecret
+      : config.jwt.secret
+    const decoded = jwt.verify(token, secret)
+    if (decoded.tokenType !== expectedTokenType) {
+      throw errors.unauthorized('Token 类型无效')
+    }
     const user = await prisma.user.findUnique({
       where: { id: Number(decoded.id) },
       select: {

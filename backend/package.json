@@ -17,6 +17,7 @@
     "db:seed":      "node seeds/index.js",
     "db:studio":    "prisma studio",
     "db:reset":     "prisma migrate reset",
+    "test":         "node --test test/auth-security.test.js",
     "install:all":  "npm install && npm install --prefix admin"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 import app from './app.js'
 import { prisma } from './db.js'
-import { config } from './config/index.js'
+import { config, validateSecurityConfig } from './config/index.js'
 import { cleanDefaultPwdChangedAt } from './startup/clean-default-pwd-changed-at.js'
 import { migrateThreadIds } from './startup/migrate-thread-id.js'
 import { warmupVisionModel } from './modules/ai/services/ollama.service.js'
@@ -64,6 +64,7 @@ async function warmupVisionModelWithRetry() {
 }
 
 async function bootstrap() {
+  validateSecurityConfig(config)
   await prisma.$connect()
   console.log('✓ SQLite 数据库已连接')
 

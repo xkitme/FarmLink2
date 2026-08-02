@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from '../../db.js'
-import { ROLES } from '../../config/index.js'
 import { ok, errors } from '../../utils/response.js'
 import { signToken, signRefreshToken, verifyAuthToken } from '../../middleware/auth.js'
+import { buildPublicRegistrationData } from './auth.policy.js'
 
 /** 去除敏感字段 */
 export function sanitizeUser(user) {
@@ -34,7 +34,9 @@ export function buildSession(user) {
 
 /** 注册 */
 export async function register(req, res) {
-  const { username, password, nickname, phone, role, regionCode, villageName } = req.body
+  const username = `${req.body.username || ''}`.trim()
+  const password = `${req.body.password || ''}`
+  const phone = `${req.body.phone || ''}`.trim()
   if (!username || !password) throw errors.param('用户名和密码必填')
   if (password.length < 6) throw errors.param('密码至少 6 位')
 
@@ -47,15 +49,7 @@ export async function register(req, res) {
 
   const passwordHash = await bcrypt.hash(password, 10)
   const user = await prisma.user.create({
-    data: {
-      username,
-      passwordHash,
-      nickname: nickname || username,
-      phone: phone || null,
-      role: role && ROLES[role] ? role : ROLES.FARMER,
-      regionCode: regionCode || null,
-      villageName: villageName || null,
-    },
+    data: buildPublicRegistrationData(req.body, passwordHash),
   })
   ok(res, buildSession(user), '注册成功')
 }
@@ -108,7 +102,7 @@ export async function refresh(req, res) {
   if (!refreshToken) throw errors.param('缺少 refreshToken')
   let sessionUser
   try {
-    sessionUser = await verifyAuthToken(refreshToken)
+    sessionUser = await verifyAuthToken(refreshToken, 'refresh')
   } catch (e) {
     if (e.name === 'BusinessError') throw e
     throw errors.unauthorized('refreshToken 无效或已过期')
