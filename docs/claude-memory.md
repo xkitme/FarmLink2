@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-02 · 116e Phase B 完成：可撤销会话与一次性重置码
+
+当前实施分支仍为 `codex/refactor-farmlink`。本批已按后端和双端界面拆成两个里程碑提交：
+
+- `ae0a013c`：新增 `AuthSession` / `PasswordResetCode` 正式迁移、历史 `passwordChangedAt` 漂移修复、refresh rotation、设备会话撤销、ADMIN 一次性重置码、改密全会话下线和 13 项安全回归测试。
+- `aed2461a`：Flutter 忘记密码页改用 6 位重置码，手动退出调用服务端；管理台新增“账号安全”页，提供重置码票据和按账号强制下线。
+- `90d8d0b5`：补齐 `resetCode` / `verificationCode` / `otp` 审计脱敏并新增回归，最终后端测试为 14 项。
+
+**额外关闭的 P0**：`PUT /user/profile` 曾允许本人写 `regionCode`，VILLAGE 角色可借此逃逸区域边界；现已明确返回 403，数据库值不变，并加入集成测试。`villageName` 仍是展示资料，不参与授权判断。
+
+**数据库**：`npm run db:deploy --prefix backend` 已在本机演示库执行。安全迁移脚本识别到历史库已有 `passwordChangedAt` 列但缺迁移记录，先补记迁移历史，再创建会话/重置码表；没有清空业务数据。以后生产启动会先执行同一安全迁移入口。
+
+**验收**：管理台账号安全页空态/生成结果态、Flutter 重置页均已完成浏览器截图验收；统一脚本通过 Flutter analyze/test/Web build、后端 79 个 JS 语法检查、14/14 测试和管理台生产构建。收口时另修复审计日志会记录 `resetCode` 明文的问题，现与 password/token/secret 一并过滤。已知剩余基线缺口仍是后端 lint、管理台 test/lint，以及管理台 bundle >500k 警告。
+
+**下一步**：继续 `docs/116e-身份安全与权限矩阵.md` Phase C。优先做 Flutter 凭据安全存储与迁移、管理台安全 Cookie，再收 CORS/代理来源、日志脱敏复核、上传 MIME/解码/重编码/EXIF/配额，以及 demo HTTP / release HTTPS 构建策略。不要把 refresh token 明文长期留在 SharedPreferences/localStorage 作为最终方案。
+
+---
+
 ## 2026-08-02 · 116 已开工：M0 完成、M1 Phase A 完成
 
 用户已明确回复“开工”。旧 116 删除型代码 WIP 已完整封存在 `codex/archive-116-wip`（`74ac4423`，约 10003 行删除及原有用户改动均保留）；当前实施分支为 `codex/refactor-farmlink`，不得把归档 WIP 直接合回重构分支。
