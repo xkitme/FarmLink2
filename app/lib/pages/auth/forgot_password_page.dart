@@ -16,7 +16,7 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _username = TextEditingController();
-  final _phone = TextEditingController();
+  final _resetCode = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
   bool _loading = false;
@@ -27,7 +27,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   void dispose() {
     _username.dispose();
-    _phone.dispose();
+    _resetCode.dispose();
     _password.dispose();
     _confirmPassword.dispose();
     super.dispose();
@@ -42,7 +42,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       return;
     }
     final username = _username.text.trim();
-    final phone = _phone.text.trim();
+    final resetCode = _resetCode.text.trim();
     final password = _password.text;
     TextInput.finishAutofillContext();
     setState(() {
@@ -52,7 +52,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     try {
       await ApiClient.post('/auth/reset-password', body: {
         'username': username,
-        'phone': phone,
+        'resetCode': resetCode,
         'newPassword': password,
       });
       if (!mounted) return;
@@ -109,23 +109,33 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 },
               ),
               const SizedBox(height: 16),
+              const Text(
+                '请联系田园通服务人员获取 6 位重置码，重置码将在 5 分钟后失效。',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFFD5E5DE),
+                  fontSize: 13,
+                  height: 1.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
               AuthTextField(
-                controller: _phone,
-                hint: '绑定手机号',
-                icon: Icons.phone_iphone,
-                keyboardType: TextInputType.phone,
-                autofillHints: const [AutofillHints.telephoneNumber],
+                controller: _resetCode,
+                hint: '6 位重置码',
+                icon: Icons.password_outlined,
+                keyboardType: TextInputType.number,
                 enabled: !_loading,
                 onChanged: (_) => _clearError(),
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(11),
+                  LengthLimitingTextInputFormatter(6),
                 ],
                 validator: (value) {
-                  final phone = (value ?? '').trim();
-                  if (phone.isEmpty) return '请输入绑定手机号';
-                  if (!RegExp(r'^1\d{10}$').hasMatch(phone)) {
-                    return '请输入正确的手机号';
+                  final resetCode = (value ?? '').trim();
+                  if (resetCode.isEmpty) return '请输入重置码';
+                  if (!RegExp(r'^\d{6}$').hasMatch(resetCode)) {
+                    return '请输入 6 位数字重置码';
                   }
                   return null;
                 },
@@ -133,7 +143,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               const SizedBox(height: 16),
               AuthTextField(
                 controller: _password,
-                hint: '新密码，至少 6 位',
+                hint: '新密码，至少 8 位',
                 icon: Icons.vpn_key_outlined,
                 obscure: _obscure,
                 autofillHints: const [AutofillHints.newPassword],
@@ -143,7 +153,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 validator: (value) {
                   final password = value ?? '';
                   if (password.isEmpty) return '请输入新密码';
-                  if (password.length < 6) return '密码至少 6 位';
+                  if (password.length < 8) return '密码至少 8 位';
                   return null;
                 },
                 suffix: IconButton(

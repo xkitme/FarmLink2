@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import Login from './pages/Login.jsx'
 import OperationLogPage from './pages/OperationLogPage.jsx'
 import ResourcePage from './pages/ResourcePage.jsx'
+import SecurityPage from './pages/SecurityPage.jsx'
 import SeedDataPage from './pages/SeedDataPage.jsx'
 import SiteImagePage from './pages/SiteImagePage.jsx'
 import { isLoggedIn } from './api/auth.js'
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="api-switch" element={<ApiSwitchPage />} />
           <Route path="api-debug" element={<ApiDebugPage />} />
           <Route path="seed-data" element={<SeedDataPage />} />
+          <Route path="security" element={<SecurityPage />} />
           <Route path="site-images" element={<SiteImagePage />} />
           <Route path="logs" element={<OperationLogPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

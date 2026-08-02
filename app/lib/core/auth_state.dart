@@ -51,7 +51,7 @@ class AuthState extends ChangeNotifier {
   void _handleExpiry() {
     if (_token == null || _handlingExpiry) return;
     _handlingExpiry = true;
-    logout().whenComplete(() => _handlingExpiry = false);
+    _clearLocalSession().whenComplete(() => _handlingExpiry = false);
   }
 
   Future<void> login(String username, String password) async {
@@ -67,7 +67,6 @@ class AuthState extends ChangeNotifier {
     String? phone,
   }) async {
     // 手机号来源：优先显式手机号字段；否则若「用户名」本身是手机号格式则回退取用。
-    // 存了手机号，后续「重置密码」才能通过手机号+账号校验（否则该账号永远无法找回）。
     final explicit = (phone ?? '').trim();
     final fallback = RegExp(r'^1\d{10}$').hasMatch(username) ? username : '';
     final resolvedPhone = explicit.isNotEmpty ? explicit : fallback;
@@ -91,6 +90,17 @@ class AuthState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    if (_token != null) {
+      try {
+        await ApiClient.post('/auth/logout');
+      } catch (_) {
+        // 服务端不可达或会话已失效时仍需完成本地退出。
+      }
+    }
+    await _clearLocalSession();
+  }
+
+  Future<void> _clearLocalSession() async {
     _token = null;
     _user = null;
     ApiClient.setToken(null);

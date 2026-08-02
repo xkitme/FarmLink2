@@ -360,6 +360,61 @@ body {
   background: #f7faf8;
 }
 
+.security-page .ant-alert {
+  border-radius: 8px;
+}
+
+.security-card {
+  height: 100%;
+}
+
+.security-card .ant-card-head-title {
+  font-weight: 700;
+}
+
+.reset-code-ticket {
+  margin-top: 24px;
+  padding: 18px 20px 14px;
+  border: 1px solid #c9e4d8;
+  border-radius: 8px;
+  background: #f4fbf7;
+}
+
+.reset-code-ticket-head,
+.reset-code-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reset-code-ticket-head {
+  color: #345b4d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.reset-code-value {
+  margin: 14px 0 10px;
+  color: #10251f;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: clamp(30px, 4vw, 42px);
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.reset-code-meta {
+  color: #5f716a;
+  font-size: 12px;
+}
+
+.reset-code-ticket .ant-btn {
+  margin-top: 8px;
+  padding-inline: 0;
+}
+
 .debug-pre {
   min-height: 360px;
   max-height: 560px;
@@ -413,6 +468,12 @@ body {
 
   .page-heading {
     flex-direction: column;
+  }
+
+  .reset-code-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .filter-select,
