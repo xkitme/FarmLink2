@@ -10,6 +10,7 @@ import {
   revokeSession as revokeUserSession,
   sessionMetadata,
 } from './auth-session.service.js'
+import { verifyTokenClaims } from './auth-token.js'
 import { resetPasswordWithCode } from './password-reset.service.js'
 
 /** 去除敏感字段 */
@@ -95,7 +96,26 @@ export async function refresh(req, res) {
 
 /** 退出当前设备 */
 export async function logout(req, res) {
-  await revokeUserSession(req.user.id, req.user.sessionId)
+  const refreshToken = `${req.body?.refreshToken || ''}`.trim()
+  let userId = req.user?.id
+  let sessionId = req.user?.sessionId
+
+  // access 已过期时，客户端仍可用持有的 refresh 凭据撤销服务端会话。
+  // 此处只校验 JWT 签名与类型，不要求会话仍为 active，使重复 logout 保持幂等；
+  // 已 rotation 的旧 refresh 只会指向已经撤销的旧 sid，不会影响后继会话。
+  if (refreshToken) {
+    try {
+      const claims = verifyTokenClaims(refreshToken, 'refresh')
+      if (!claims.sid || !claims.id) throw errors.unauthorized()
+      userId = Number(claims.id)
+      sessionId = `${claims.sid}`
+    } catch (error) {
+      if (!req.user) throw errors.unauthorized('退出凭据无效或已过期')
+    }
+  }
+
+  if (!userId || !sessionId) throw errors.unauthorized()
+  await revokeUserSession(userId, sessionId)
   ok(res, null, '已退出登录')
 }
 

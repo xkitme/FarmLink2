@@ -3,6 +3,7 @@ import { closeSync, mkdtempSync, openSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import test, { after, before } from 'node:test'
+import jwt from 'jsonwebtoken'
 
 const backendRoot = path.resolve(import.meta.dirname, '..')
 const testRoot = mkdtempSync(path.join(backendRoot, 'prisma', '.test-auth-'))
@@ -140,6 +141,41 @@ test('Phase B 认证、会话轮换与一次性重置码闭环', async (t) => {
     assert.equal((await api('GET', '/user/profile', null, rotatedSession.token)).status, 200)
   })
 
+  await t.test('同一 refresh 并发轮换只允许一个后继会话', async () => {
+    const login = await api('POST', '/auth/login', {
+      username: 'security-farmer',
+      password: 'old-password',
+      deviceName: '并发刷新测试机',
+    })
+    assert.equal(login.status, 200)
+
+    const original = login.payload.data
+    const originalClaims = jwt.decode(original.refreshToken)
+    const attempts = await Promise.all([
+      api('POST', '/auth/refresh', { refreshToken: original.refreshToken }),
+      api('POST', '/auth/refresh', { refreshToken: original.refreshToken }),
+    ])
+    const succeeded = attempts.filter((item) => item.status === 200)
+    const rejected = attempts.filter((item) => item.status === 401)
+    assert.equal(succeeded.length, 1)
+    assert.equal(rejected.length, 1)
+
+    const successor = succeeded[0].payload.data
+    const successorClaims = jwt.decode(successor.refreshToken)
+    const sessions = await prisma.authSession.findMany({
+      where: { id: { in: [originalClaims.sid, successorClaims.sid] } },
+      orderBy: { createdAt: 'asc' },
+    })
+    assert.equal(sessions.length, 2)
+    assert.ok(sessions.find((item) => item.id === originalClaims.sid)?.revokedAt)
+    assert.equal(sessions.find((item) => item.id === successorClaims.sid)?.revokedAt, null)
+    assert.equal((await api('GET', '/user/profile', null, original.token)).status, 401)
+    assert.equal((await api('POST', '/auth/refresh', {
+      refreshToken: original.refreshToken,
+    })).status, 401)
+    assert.equal((await api('GET', '/user/profile', null, successor.token)).status, 200)
+  })
+
   await t.test('个人资料接口不能修改账号行政区划', async () => {
     const before = await prisma.user.findUnique({ where: { username: 'security-farmer' } })
     const result = await api('PUT', '/user/profile', {
@@ -154,6 +190,27 @@ test('Phase B 认证、会话轮换与一次性重置码闭环', async (t) => {
   await t.test('退出会撤销当前设备会话', async () => {
     assert.equal((await api('POST', '/auth/logout', {}, rotatedSession.token)).status, 200)
     assert.equal((await api('GET', '/user/profile', null, rotatedSession.token)).status, 401)
+  })
+
+  await t.test('access 不可用时可用 refresh 幂等撤销当前会话', async () => {
+    const login = await api('POST', '/auth/login', {
+      username: 'security-farmer',
+      password: 'old-password',
+      deviceName: 'refresh 退出测试机',
+    })
+    assert.equal(login.status, 200)
+    const session = login.payload.data
+
+    assert.equal((await api('POST', '/auth/logout', {
+      refreshToken: session.refreshToken,
+    })).status, 200)
+    assert.equal((await api('POST', '/auth/logout', {
+      refreshToken: session.refreshToken,
+    })).status, 200)
+    assert.equal((await api('GET', '/user/profile', null, session.token)).status, 401)
+    assert.equal((await api('POST', '/auth/refresh', {
+      refreshToken: session.refreshToken,
+    })).status, 401)
   })
 
   await t.test('只有 ADMIN 能生成重置码，错误五次后作废', async () => {
