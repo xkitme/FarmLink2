@@ -128,7 +128,7 @@ export const config = {
       .filter(Boolean),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Name'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Name', 'X-CSRF-Token'],
   },
 
 }
