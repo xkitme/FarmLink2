@@ -35,6 +35,8 @@ export async function issueSession(user, metadata = {}, replaceSessionId = null)
   const now = new Date()
 
   await prisma.$transaction(async (tx) => {
+    // 仅当 replaceSessionId 非 null 时执行 revoke
+    // null = 并发降级模式：旧 session 已被另一标签 revoke，跳过 revoke 直接新建
     if (replaceSessionId) {
       const revoked = await tx.authSession.updateMany({
         where: {

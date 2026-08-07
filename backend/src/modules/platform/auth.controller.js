@@ -12,12 +12,41 @@ import {
 } from './auth-session.service.js'
 import { verifyTokenClaims } from './auth-token.js'
 import { resetPasswordWithCode } from './password-reset.service.js'
+import { config } from '../../config/index.js'
+import { setCsrfCookie, clearCsrfCookie } from '../../middleware/csrf.js'
+import { hashOpaqueToken, safeHashEquals } from './auth.security.js'
 
 /** 去除敏感字段 */
 export function sanitizeUser(user) {
   if (!user) return null
   const { passwordHash, passwordChangedAt, ...rest } = user
   return rest
+}
+
+/** 设置认证相关 cookie */
+function setAuthCookies(res, token, refreshToken) {
+  res.cookie('access_token', token, {
+    httpOnly: true,
+    secure: config.cookie.secure,
+    sameSite: config.cookie.sameSite,
+    path: '/api',
+    maxAge: config.cookie.accessTokenMaxAge,
+  })
+  res.cookie('refresh_token', refreshToken, {
+    httpOnly: true,
+    secure: config.cookie.secure,
+    sameSite: config.cookie.sameSite,
+    path: '/api/v1/auth',
+    maxAge: config.cookie.refreshTokenMaxAge,
+  })
+  setCsrfCookie(res)
+}
+
+/** 清除认证相关 cookie */
+function clearAuthCookies(res) {
+  res.clearCookie('access_token', { path: '/api' })
+  res.clearCookie('refresh_token', { path: '/api/v1/auth' })
+  clearCsrfCookie(res)
 }
 
 /** 构建登录会话返回体 */
@@ -28,6 +57,11 @@ export async function buildSession(user, req, replaceSessionId = null) {
     refreshToken: session.refreshToken,
     user: sanitizeUser(user),
   }
+}
+
+/** 当前用户 — 管理台页面恢复从 cookie 读 access_token，requireAuth 已完成校验 */
+export async function me(req, res) {
+  ok(res, sanitizeUser(req.user))
 }
 
 /** 注册 */
@@ -64,7 +98,9 @@ export async function login(req, res) {
   if (user.status !== 1) throw errors.forbidden('账号已被禁用')
 
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
-  ok(res, await buildSession(user, req), '登录成功')
+  const session = await issueSession(user, sessionMetadata(req))
+  setAuthCookies(res, session.token, session.refreshToken)
+  ok(res, { user: sanitizeUser(user) }, '登录成功')
 }
 
 /** 忘记密码：使用管理员生成的一次性重置码 */
@@ -79,8 +115,9 @@ export async function resetPassword(req, res) {
 
 /** 刷新 Token */
 export async function refresh(req, res) {
-  const { refreshToken } = req.body
+  const refreshToken = req.cookies?.refresh_token || req.body?.refreshToken
   if (!refreshToken) throw errors.param('缺少 refreshToken')
+
   let sessionUser
   try {
     sessionUser = await verifyAuthToken(refreshToken, 'refresh')
@@ -88,21 +125,33 @@ export async function refresh(req, res) {
     if (e.name === 'BusinessError') throw e
     throw errors.unauthorized('refreshToken 无效或已过期')
   }
+
   const user = await prisma.user.findUnique({ where: { id: sessionUser.id } })
   if (!user) throw errors.unauthorized()
-  const session = await issueSession(user, sessionMetadata(req), sessionUser.sessionId)
-  ok(res, { token: session.token, refreshToken: session.refreshToken })
+
+  // 并发 refresh：如果 session 已被另一标签 revoke，验证 hash 匹配后降级为新建
+  let replaceId = sessionUser.sessionId
+  if (replaceId) {
+    const existing = await prisma.authSession.findUnique({ where: { id: replaceId } })
+    if (!existing || existing.revokedAt) {
+      if (!existing || !safeHashEquals(existing.refreshTokenHash, hashOpaqueToken(refreshToken))) {
+        throw errors.unauthorized('refreshToken 已失效')
+      }
+      replaceId = null // 降级：旧 session 已撤销，跳过 revoke 直接新建
+    }
+  }
+
+  const session = await issueSession(user, sessionMetadata(req), replaceId)
+  setAuthCookies(res, session.token, session.refreshToken)
+  ok(res, { user: sanitizeUser(user) })
 }
 
 /** 退出当前设备 */
 export async function logout(req, res) {
-  const refreshToken = `${req.body?.refreshToken || ''}`.trim()
+  const refreshToken = req.cookies?.refresh_token || req.body?.refreshToken || ''
   let userId = req.user?.id
   let sessionId = req.user?.sessionId
 
-  // access 已过期时，客户端仍可用持有的 refresh 凭据撤销服务端会话。
-  // 此处只校验 JWT 签名与类型，不要求会话仍为 active，使重复 logout 保持幂等；
-  // 已 rotation 的旧 refresh 只会指向已经撤销的旧 sid，不会影响后继会话。
   if (refreshToken) {
     try {
       const claims = verifyTokenClaims(refreshToken, 'refresh')
@@ -116,6 +165,7 @@ export async function logout(req, res) {
 
   if (!userId || !sessionId) throw errors.unauthorized()
   await revokeUserSession(userId, sessionId)
+  clearAuthCookies(res)
   ok(res, null, '已退出登录')
 }
 
