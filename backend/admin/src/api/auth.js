@@ -1,31 +1,57 @@
-const TOKEN_KEY = 'farmlink_admin_token'
-const REFRESH_KEY = 'farmlink_admin_refresh'
-const USER_KEY = 'farmlink_admin_user'
+let _cachedUser = null
 
-export function saveSession(session) {
-  localStorage.setItem(TOKEN_KEY, session.token)
-  localStorage.setItem(USER_KEY, JSON.stringify(session.user || {}))
-  localStorage.removeItem(REFRESH_KEY)
+function parseCsrfToken() {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/)
+  return match ? match[1] : null
 }
 
-export function clearSession() {
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(REFRESH_KEY)
-  localStorage.removeItem(USER_KEY)
+/** 获取 CSRF token（前端注入 X-CSRF-Token 头用） */
+export function getCsrfToken() {
+  return parseCsrfToken()
 }
 
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY)
+/** 缓存用户信息（login/me 成功后调用） */
+export function setCurrentUser(user) {
+  _cachedUser = user || null
 }
 
+/** 获取缓存的用户信息 */
 export function getCurrentUser() {
+  return _cachedUser || {}
+}
+
+/** 从 /auth/me 恢复登录态（页面刷新/新标签页） */
+export async function fetchUser() {
   try {
-    return JSON.parse(localStorage.getItem(USER_KEY) || '{}')
+    const resp = await fetch('/api/v1/auth/me', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    const payload = await resp.json()
+    if (resp.ok && payload.code === 200) {
+      _cachedUser = payload.data || null
+      return _cachedUser
+    }
+    _cachedUser = null
+    return null
   } catch {
-    return {}
+    _cachedUser = null
+    return null
   }
 }
 
-export function isLoggedIn() {
-  return Boolean(getToken())
+/** 检查是否已登录（通过 /auth/me） */
+export async function isLoggedIn() {
+  const user = await fetchUser()
+  return Boolean(user)
+}
+
+/** 登录成功回调（缓存 user + CSRF cookie 由服务端 Set-Cookie） */
+export function saveSession(user) {
+  _cachedUser = user || null
+}
+
+/** 清除本地登录态 */
+export function clearSession() {
+  _cachedUser = null
 }
