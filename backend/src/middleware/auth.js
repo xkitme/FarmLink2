@@ -12,6 +12,18 @@ function extractToken(req) {
   return h.startsWith('Bearer ') ? h.slice(7) : h
 }
 
+// --- cookie 读取 + 客户端分流 ---
+
+const NATIVE_UA_RE = /capacitor|ionic|cordova/i
+
+function isNativeClient(req) {
+  return NATIVE_UA_RE.test((req.headers['user-agent'] || '').toLowerCase())
+}
+
+function extractTokenFromCookie(req) {
+  return req.cookies?.access_token || null
+}
+
 function tokenChangedBeforePassword(decoded, user) {
   if (!user.passwordChangedAt || !decoded.iat) return false
   return decoded.iat * 1000 < user.passwordChangedAt.getTime()
@@ -83,7 +95,12 @@ export async function verifyAuthToken(token, expectedTokenType = 'access') {
 
 /** 必须登录 */
 export async function requireAuth(req, res, next) {
-  const token = extractToken(req)
+  let token = null
+  if (isNativeClient(req)) {
+    token = extractToken(req)
+  } else {
+    token = extractTokenFromCookie(req) || extractToken(req)
+  }
   if (!token) return next(errors.unauthorized())
   try {
     req.user = await verifyAuthToken(token)
@@ -95,7 +112,12 @@ export async function requireAuth(req, res, next) {
 
 /** 可选登录：有 token 解析，无则跳过 */
 export async function optionalAuth(req, res, next) {
-  const token = extractToken(req)
+  let token = null
+  if (isNativeClient(req)) {
+    token = extractToken(req)
+  } else {
+    token = extractTokenFromCookie(req) || extractToken(req)
+  }
   if (token) {
     try { req.user = await verifyAuthToken(token) } catch { /* 忽略 */ }
   }
