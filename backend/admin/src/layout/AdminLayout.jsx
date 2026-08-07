@@ -27,7 +27,7 @@ import {
 import { Avatar, Button, Dropdown, Layout, Menu, Space, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { clearSession, getCurrentUser } from '../api/auth.js'
+import { clearSession, fetchUser, getCurrentUser } from '../api/auth.js'
 import { API_BASE, api, rawRequest } from '../api/request.js'
 
 const { Header, Sider, Content } = Layout
@@ -89,9 +89,16 @@ function resolveUrl(imageUrl) {
 export default function AdminLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const user = getCurrentUser()
+  const [user, setUser] = useState(() => getCurrentUser())
   const [collapsed, setCollapsed] = useState(false)
   const [brandLogo, setBrandLogo] = useState('')
+
+  // 页面恢复：如果内存无 user 则从 /auth/me 拉取
+  useEffect(() => {
+    if (!user || !user.id) {
+      fetchUser().then(u => { if (u) setUser(u) })
+    }
+  }, [])
 
   useEffect(() => {
     api.get('/site/images')
