@@ -20,6 +20,7 @@ export function setCsrfCookie(res) {
     secure: config.cookie.secure,
     sameSite: config.cookie.sameSite,
     path: '/',
+    maxAge: config.cookie.refreshTokenMaxAge, // 与 refresh_token 同生命周期，浏览器重启不丢失
   })
   return token
 }

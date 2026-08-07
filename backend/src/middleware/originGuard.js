@@ -36,6 +36,10 @@ function originRequired(req) {
   if (ua.includes('capacitor') || ua.includes('ionic') || ua.includes('cordova')) {
     return false
   }
+  // 同源请求无 Origin 头，配合 SameSite=Strict cookie 已防御 CSRF
+  if (!req.headers['origin'] && !req.headers['referer']) {
+    return false
+  }
   // 其他请求必须带 Origin
   return true
 }
