@@ -23,6 +23,12 @@ export function sanitizeUser(user) {
   return rest
 }
 
+const NATIVE_UA_RE = /capacitor|ionic|cordova/i
+
+function isNativeClient(req) {
+  return NATIVE_UA_RE.test((req.headers['user-agent'] || '').toLowerCase())
+}
+
 /** 设置认证相关 cookie */
 function setAuthCookies(res, token, refreshToken) {
   res.cookie('access_token', token, {
@@ -99,8 +105,14 @@ export async function login(req, res) {
 
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
   const session = await issueSession(user, sessionMetadata(req))
-  setAuthCookies(res, session.token, session.refreshToken)
-  ok(res, { user: sanitizeUser(user) }, '登录成功')
+  if (isNativeClient(req)) {
+    // Capacitor 原生壳：保持 Bearer token 响应，不设 cookie
+    ok(res, { token: session.token, refreshToken: session.refreshToken, user: sanitizeUser(user) }, '登录成功')
+  } else {
+    // 管理台浏览器：HttpOnly cookie，不暴露 token 给 JS
+    setAuthCookies(res, session.token, session.refreshToken)
+    ok(res, { user: sanitizeUser(user) }, '登录成功')
+  }
 }
 
 /** 忘记密码：使用管理员生成的一次性重置码 */
@@ -142,8 +154,12 @@ export async function refresh(req, res) {
   }
 
   const session = await issueSession(user, sessionMetadata(req), replaceId)
-  setAuthCookies(res, session.token, session.refreshToken)
-  ok(res, { user: sanitizeUser(user) })
+  if (isNativeClient(req)) {
+    ok(res, { token: session.token, refreshToken: session.refreshToken })
+  } else {
+    setAuthCookies(res, session.token, session.refreshToken)
+    ok(res, { user: sanitizeUser(user) })
+  }
 }
 
 /** 退出当前设备 */

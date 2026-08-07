@@ -48,6 +48,7 @@ async function api(method, pathName, body, token) {
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'User-Agent': 'capacitor://localhost',
       'X-Device-Name': 'security-test-device',
       'X-Forwarded-For': `phase-b-test-${requestSequence++}`,
     },
