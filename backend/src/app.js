@@ -9,6 +9,7 @@ import { traceMiddleware, notFoundHandler, errorHandler } from './middleware/err
 import { optionalAuth } from './middleware/auth.js'
 import { apiSwitchMiddleware, operationLogMiddleware, rateLimitMiddleware } from './middleware/apiControl.js'
 import { originGuard, isOriginAllowed } from './middleware/originGuard.js'
+import { csrfGuard } from './middleware/csrf.js'
 import { ok } from './utils/response.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -30,6 +31,7 @@ app.use(rateLimitMiddleware)
 app.use(apiSwitchMiddleware)
 app.use(operationLogMiddleware)
 app.use(originGuard)
+app.use(csrfGuard)
 
 // 上传文件静态访问
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')))
