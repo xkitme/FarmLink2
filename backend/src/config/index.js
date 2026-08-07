@@ -68,7 +68,7 @@ export const config = {
   jwt: {
     secret: accessSecret,
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'village-dev-refresh-secret',
-    expiresIn: process.env.JWT_EXPIRES_IN || '2h',
+    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
   },
 
@@ -109,6 +109,14 @@ export const config = {
     port: parseInt(process.env.HTTPS_PORT) || 8443,
     certPath: process.env.HTTPS_CERT_PATH || '',
     keyPath: process.env.HTTPS_KEY_PATH || '',
+  },
+
+  // Cookie：管理台 HttpOnly 认证
+  cookie: {
+    secure: runtimeEnvironment !== 'dev',
+    sameSite: 'Strict',
+    accessTokenMaxAge: 15 * 60 * 1000,           // 15 min，与 JWT expiresIn 对齐
+    refreshTokenMaxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   },
 
   // CORS：dev 放行本地开发源 + Capacitor；demo/release 从 CORS_ORIGINS 环境变量读取
