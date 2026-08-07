@@ -28,6 +28,7 @@ router.post('/auth/reset-password', wrap(auth.resetPassword))
 router.post('/auth/refresh',   wrap(auth.refresh))
 // logout 可使用 access，或在 access 已过期时使用 refresh；控制器负责校验并幂等撤销。
 router.post('/auth/logout',    wrap(auth.logout))
+router.get('/auth/me',         requireAuth, wrap(auth.me))
 router.get('/auth/sessions',   requireAuth, wrap(auth.sessions))
 router.delete('/auth/sessions', requireAuth, wrap(auth.revokeAllSessions))
 router.delete('/auth/sessions/:id', requireAuth, wrap(auth.revokeSession))
