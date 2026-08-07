@@ -17,7 +17,10 @@ const app = express()
 
 // 基础中间件
 app.use(cors({
-  origin: isOriginAllowed,
+  origin: (origin, callback) => {
+    const allowed = isOriginAllowed(origin)
+    callback(null, allowed || false)
+  },
   credentials: config.cors.credentials,
   methods: config.cors.methods,
   allowedHeaders: config.cors.allowedHeaders,
