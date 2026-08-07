@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { message } from '../api/feedback.js'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { API_BASE, api, rawRequest } from '../api/request.js'
-import { clearSession, saveSession } from '../api/auth.js'
+import { setCurrentUser, clearSession } from '../api/auth.js'
 
 function resolveUrl(imageUrl) {
   if (!imageUrl) return ''
@@ -30,20 +30,22 @@ export default function Login() {
   }, [])
 
   async function onFinish(values) {
-    const session = await api.post('/auth/login', values)
-    if (session.user?.role !== 'ADMIN') {
-      saveSession(session)
+    const data = await api.post('/auth/login', values)
+    // data = { user: {...} }，不含 token/refreshToken
+    const user = data.user || data
+    if (user.role !== 'ADMIN') {
+      setCurrentUser(user)
       try {
         await rawRequest('/auth/logout', { method: 'POST' })
       } catch {
-        // 非管理员账号也必须立刻收口，本地态不能继续保留。
+        // 非管理员账号也必须立刻收口
       } finally {
         clearSession()
       }
       message.error('当前账号不是管理员')
       return
     }
-    saveSession(session)
+    setCurrentUser(user)
     message.success('登录成功')
     navigate('/dashboard', { replace: true })
   }
