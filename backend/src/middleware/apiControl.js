@@ -169,15 +169,37 @@ export async function apiSwitchMiddleware(req, res, next) {
   next()
 }
 
-export function sanitizeBody(body) {
-  if (!body || typeof body !== 'object') return body
+const SENSITIVE_KEY_PATTERN = /password|token|secret|resetCode|verificationCode|otp|passwd|api[_-]?key|credential|auth|sign(?:ature)?/i
+const MAX_SANITIZE_DEPTH = 3
+
+/**
+ * 递归脱敏对象，防止密码/token/密钥等写入审计日志。
+ * @param {*} value
+ * @param {number} depth 当前递归深度
+ * @returns {*}
+ */
+export function sanitizeBody(value, depth = 0) {
+  if (value == null) return value
+  if (typeof value !== 'object') {
+    if (typeof value === 'string' && value.length > 300) {
+      return `${value.slice(0, 300)}...`
+    }
+    return value
+  }
+  if (depth >= MAX_SANITIZE_DEPTH) return '[Nested]'
+
+  if (Array.isArray(value)) {
+    if (value.length > 8) return `[Array(${value.length})]`
+    return value.map((item) => sanitizeBody(item, depth + 1))
+  }
+
   const clean = {}
-  for (const [key, value] of Object.entries(body)) {
-    if (/password|token|secret|resetCode|verificationCode|otp/i.test(key)) clean[key] = '[FILTERED]'
-    else if (typeof value === 'string' && value.length > 300) clean[key] = `${value.slice(0, 300)}...`
-    else if (Array.isArray(value)) clean[key] = value.length > 8 ? `[Array(${value.length})]` : value
-    else if (value && typeof value === 'object') clean[key] = '[Object]'
-    else clean[key] = value
+  for (const [key, val] of Object.entries(value)) {
+    if (SENSITIVE_KEY_PATTERN.test(key)) {
+      clean[key] = '[FILTERED]'
+    } else {
+      clean[key] = sanitizeBody(val, depth + 1)
+    }
   }
   return clean
 }
@@ -199,7 +221,7 @@ export function operationLogMiddleware(req, res, next) {
       statusCode: res.statusCode,
       traceId: req.traceId,
       durationMs: Date.now() - started,
-      query: req.query || {},
+      query: sanitizeBody(req.query || {}),
       body: sanitizeBody(req.body),
       apiSwitchKey: req.apiSwitchKey || null,
       rateLimitPolicy: res.getHeader('X-RateLimit-Policy') || null,

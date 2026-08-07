@@ -1,4 +1,6 @@
 import app from './app.js'
+import https from 'node:https'
+import fs from 'node:fs'
 import { prisma } from './db.js'
 import { config, validateSecurityConfig } from './config/index.js'
 import { cleanDefaultPwdChangedAt } from './startup/clean-default-pwd-changed-at.js'
@@ -91,13 +93,54 @@ async function bootstrap() {
     console.warn('⚠ Ollama 未连接，平台知识库与规则服务可用；如需大模型推理请运行: ollama serve')
   }
 
-  app.listen(PORT, () => {
-    console.log('\n🌾 田园通服务已启动')
-    console.log(`   后端 API: http://localhost:${PORT}${config.apiPrefix}`)
-    console.log(`   健康检查: http://localhost:${PORT}/health`)
-    console.log()
-    void warmupVisionModelWithRetry()
-  })
+  function startHttpServer() {
+    app.listen(PORT, () => {
+      console.log('\n🌾 田园通服务已启动')
+      console.log(`   后端 API: http://localhost:${PORT}${config.apiPrefix}`)
+      console.log(`   健康检查: http://localhost:${PORT}/health`)
+      if (!config.https.enabled) {
+        const env = config.runtime.environment
+        console.log(`   ⚠ ${env === 'release' ? '生产' : '当前'}环境未启用 HTTPS，建议生产部署时配置 HTTPS`)
+        console.log('     设置 HTTPS_ENABLED=true 并指定 HTTPS_CERT_PATH / HTTPS_KEY_PATH')
+      }
+      console.log()
+      void warmupVisionModelWithRetry()
+    })
+    return app
+  }
+
+  function startHttpsServer() {
+    const { port: httpsPort, certPath, keyPath } = config.https
+
+    if (!certPath || !keyPath) {
+      console.warn(`⚠ HTTPS 已启用但未配置证书路径，跳过 HTTPS 监听`)
+      console.warn('   请设置 HTTPS_CERT_PATH 和 HTTPS_KEY_PATH 环境变量')
+      return null
+    }
+
+    if (!fs.existsSync(certPath)) {
+      console.warn(`⚠ HTTPS 证书文件不存在：${certPath}`)
+      return null
+    }
+    if (!fs.existsSync(keyPath)) {
+      console.warn(`⚠ HTTPS 私钥文件不存在：${keyPath}`)
+      return null
+    }
+
+    const httpsOptions = {
+      cert: fs.readFileSync(certPath),
+      key: fs.readFileSync(keyPath),
+    }
+
+    const httpsServer = https.createServer(httpsOptions, app)
+    httpsServer.listen(httpsPort, () => {
+      console.log(`🔒 HTTPS 服务已启动：https://localhost:${httpsPort}${config.apiPrefix}`)
+    })
+    return httpsServer
+  }
+
+  startHttpServer()
+  if (config.https.enabled) startHttpsServer()
 }
 
 bootstrap().catch((err) => {

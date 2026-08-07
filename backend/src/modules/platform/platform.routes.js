@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { requireAuth, optionalAuth, requireRole } from '../../middleware/auth.js'
 import { wrap } from '../../middleware/error.js'
 import { upload } from '../../middleware/upload.js'
+import { uploadQuota } from '../../middleware/uploadQuota.js'
 import * as auth from './auth.controller.js'
 import * as user from './user.controller.js'
 import * as noti from './notification.controller.js'
@@ -18,7 +19,7 @@ router.get('/site/images', optionalAuth, wrap(site.listSiteImages))
 router.get('/site/startup-ad', optionalAuth, wrap(site.getStartupAd))
 router.get('/site/auth-background', optionalAuth, wrap(site.getAuthBackground))
 router.post('/site/images/:key', requireAuth, requireRole('ADMIN'),
-  upload.single('file'), wrap(site.uploadSiteImage))
+  uploadQuota(), upload.single('file'), wrap(site.uploadSiteImage))
 
 // ── 认证（仅账号密码，后端校验） ─────────────
 router.post('/auth/register',  wrap(auth.register))
@@ -38,7 +39,7 @@ router.put('/user/password',    requireAuth, wrap(user.updatePassword))
 router.get('/user/points',      requireAuth, wrap(user.getPoints))
 router.get('/user/points/log',  requireAuth, wrap(user.getPointsLog))
 router.get('/user/growth',      requireAuth, wrap(user.getGrowth))
-router.post('/upload/image',    requireAuth, upload.single('image'), wrap(user.uploadImage))
+router.post('/upload/image',    requireAuth, uploadQuota(), upload.single('image'), wrap(user.uploadImage))
 
 // ── 通知 ────────────────────────────────────
 router.get('/notification/list',      requireAuth, wrap(noti.list))

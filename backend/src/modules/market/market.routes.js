@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { requireAuth, optionalAuth } from '../../middleware/auth.js'
 import { wrap } from '../../middleware/error.js'
 import { upload } from '../../middleware/upload.js'
+import { uploadQuota } from '../../middleware/uploadQuota.js'
 import * as price from './price.controller.js'
 import * as product from './product.controller.js'
 import * as order from './order.controller.js'
@@ -48,7 +49,7 @@ router.post('/market/groupbuy',       requireAuth,  wrap(buyer.groupBuyCreate))
 router.post('/market/groupbuy/:id/join', requireAuth, wrap(buyer.groupBuyJoin))
 
 // ── AI 能力 ─────────────────────────────────
-router.post('/market/grade/detect',     requireAuth, upload.single('image'), wrap(ai.gradeDetect))
+router.post('/market/grade/detect',     requireAuth, uploadQuota(), upload.single('image'), wrap(ai.gradeDetect))
 router.post('/market/package/generate', requireAuth, wrap(ai.packageGenerate))
 router.post('/market/live/script',      requireAuth, wrap(ai.liveScript))
 

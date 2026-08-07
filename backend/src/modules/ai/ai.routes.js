@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../../middleware/auth.js'
 import { upload } from '../../middleware/upload.js'
+import { uploadQuota } from '../../middleware/uploadQuota.js'
 import { wrap } from '../../middleware/error.js'
 import * as ai from './ai.controller.js'
 
@@ -34,9 +35,9 @@ router.post('/ai/tts', wrap(ai.tts))
 router.get('/ai/tts/status', wrap(ai.ttsStatus))
 
 // ── 语音与图像 ──────────────────────────────
-router.post('/ai/voice/recognize', upload.single('audio'), wrap(ai.voiceRecognize))
-router.post('/ai/image/analyze', upload.single('image'), wrap(ai.imageAnalyze))
-router.post('/ai/image/detect', upload.single('image'), wrap(ai.imageAnalyze))
+router.post('/ai/voice/recognize', uploadQuota(), upload.single('audio'), wrap(ai.voiceRecognize))
+router.post('/ai/image/analyze', uploadQuota(), upload.single('image'), wrap(ai.imageAnalyze))
+router.post('/ai/image/detect', uploadQuota(), upload.single('image'), wrap(ai.imageAnalyze))
 router.post('/ai/detect-feedback', wrap(ai.detectFeedback))
 
 export default router

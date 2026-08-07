@@ -103,6 +103,26 @@ export const config = {
     perHour: 20,
   },
 
+  // HTTPS：release 环境启用，demo/dev 默认关闭；通过环境变量控制
+  https: {
+    enabled: runtimeEnvironment === 'release' || process.env.HTTPS_ENABLED === 'true',
+    port: parseInt(process.env.HTTPS_PORT) || 8443,
+    certPath: process.env.HTTPS_CERT_PATH || '',
+    keyPath: process.env.HTTPS_KEY_PATH || '',
+  },
+
+  // CORS：dev 放行本地开发源 + Capacitor；demo/release 从 CORS_ORIGINS 环境变量读取
+  cors: {
+    allowDevOrigins: runtimeEnvironment === 'dev',
+    explicitOrigins: (process.env.CORS_ORIGINS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Name'],
+  },
+
 }
 
 // 角色常量

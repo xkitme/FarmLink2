@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { requireAuth } from '../../middleware/auth.js'
 import { wrap } from '../../middleware/error.js'
 import { upload } from '../../middleware/upload.js'
+import { uploadQuota } from '../../middleware/uploadQuota.js'
 import * as plot from './plot.controller.js'
 import * as record from './record.controller.js'
 import * as detect from './detect.controller.js'
@@ -31,10 +32,10 @@ router.get('/agri/carbon/list',  wrap(record.carbonList))
 
 // ── AI 识别 ─────────────────────────────────
 router.get('/agri/disease/list',     wrap(detect.diseaseList))
-router.post('/agri/disease/detect',  upload.single('image'), wrap(detect.diseaseDetect))
-router.post('/agri/weed/detect',     upload.single('image'), wrap(detect.weedDetect))
-router.post('/agri/seed/detect',     upload.single('image'), wrap(detect.seedDetect))
-router.post('/agri/crop/monitor',    upload.single('image'), wrap(detect.cropMonitor))
+router.post('/agri/disease/detect',  uploadQuota(), upload.single('image'), wrap(detect.diseaseDetect))
+router.post('/agri/weed/detect',     uploadQuota(), upload.single('image'), wrap(detect.weedDetect))
+router.post('/agri/seed/detect',     uploadQuota(), upload.single('image'), wrap(detect.seedDetect))
+router.post('/agri/crop/monitor',    uploadQuota(), upload.single('image'), wrap(detect.cropMonitor))
 router.get('/agri/detect/records',   wrap(detect.records))
 router.get('/agri/disease/:label',   wrap(detect.diseaseDetail))
 
