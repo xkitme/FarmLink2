@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { Spin } from 'antd'
 import AdminLayout from './layout/AdminLayout.jsx'
 import ApiDebugPage from './pages/ApiDebugPage.jsx'
 import ApiSwitchPage from './pages/ApiSwitchPage.jsx'
@@ -15,7 +17,20 @@ import { isLoggedIn } from './api/auth.js'
 import { RESOURCE_GROUPS } from './resourceGroups.js'
 
 function RequireAuth({ children }) {
-  return isLoggedIn() ? children : <Navigate to="/login" replace />
+  const [state, setState] = useState('loading') // 'loading' | 'ok' | 'no'
+
+  useEffect(() => {
+    isLoggedIn().then(ok => setState(ok ? 'ok' : 'no'))
+  }, [])
+
+  if (state === 'loading') {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
+  return state === 'ok' ? children : <Navigate to="/login" replace />
 }
 
 export default function App() {
