@@ -1,7 +1,9 @@
-import { clearSession, getToken } from './auth.js'
+import { clearSession, getCsrfToken } from './auth.js'
 import { message } from './feedback.js'
 
 export const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
+
+const WRITE_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH'])
 
 export function buildUrl(path, params) {
   const url = new URL(`${API_BASE}${path}`, window.location.origin)
@@ -14,16 +16,23 @@ export function buildUrl(path, params) {
 }
 
 export async function request(path, options = {}) {
-  const token = getToken()
+  const method = (options.method || 'GET').toUpperCase()
   const headers = {
     ...(options.headers || {}),
   }
   if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json'
-  if (token) headers.Authorization = token
+
+  // CSRF：写请求注入 X-CSRF-Token
+  if (WRITE_METHODS.has(method)) {
+    const csrf = getCsrfToken()
+    if (csrf) headers['X-CSRF-Token'] = csrf
+  }
 
   const response = await fetch(buildUrl(path, options.params), {
     ...options,
+    method,
     headers,
+    credentials: 'include',
     body: options.body instanceof FormData
       ? options.body
       : options.body
@@ -53,31 +62,28 @@ function normalizeDebugPath(path) {
   return buildUrl(value)
 }
 
-function isSameOriginUrl(value) {
-  try {
-    return new URL(value, window.location.origin).origin === window.location.origin
-  } catch {
-    return true
-  }
-}
-
 export async function rawRequest(path, options = {}) {
   const targetUrl = normalizeDebugPath(path)
-  const token = getToken()
   const method = (options.method || 'GET').toUpperCase()
   const headers = {
     Accept: 'application/json',
     ...(options.headers || {}),
   }
-  if (token && !headers.Authorization && isSameOriginUrl(targetUrl)) headers.Authorization = token
   if (options.body !== undefined && !(options.body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json'
+  }
+
+  // CSRF
+  if (WRITE_METHODS.has(method)) {
+    const csrf = getCsrfToken()
+    if (csrf) headers['X-CSRF-Token'] = csrf
   }
 
   const started = performance.now()
   const response = await fetch(targetUrl, {
     method,
     headers,
+    credentials: 'include',
     body: method === 'GET' || method === 'HEAD'
       ? undefined
       : options.body instanceof FormData
