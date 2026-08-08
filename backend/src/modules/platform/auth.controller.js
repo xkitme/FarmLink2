@@ -14,19 +14,14 @@ import { verifyTokenClaims } from './auth-token.js'
 import { resetPasswordWithCode } from './password-reset.service.js'
 import { config } from '../../config/index.js'
 import { setCsrfCookie, clearCsrfCookie } from '../../middleware/csrf.js'
-import { hashOpaqueToken, safeHashEquals } from './auth.security.js'
+import { hashOpaqueToken, safeHashEquals, REFRESH_ROTATION_GRACE_MS } from './auth.security.js'
+import { isNativeClient } from '../../utils/client-detect.js'
 
 /** 去除敏感字段 */
 export function sanitizeUser(user) {
   if (!user) return null
   const { passwordHash, passwordChangedAt, ...rest } = user
   return rest
-}
-
-const NATIVE_UA_RE = /capacitor|ionic|cordova/i
-
-function isNativeClient(req) {
-  return NATIVE_UA_RE.test((req.headers['user-agent'] || '').toLowerCase())
 }
 
 /** 设置认证相关 cookie */
@@ -104,12 +99,13 @@ export async function login(req, res) {
   if (user.status !== 1) throw errors.forbidden('账号已被禁用')
 
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
-  const session = await issueSession(user, sessionMetadata(req))
   if (isNativeClient(req)) {
-    // Capacitor 原生壳：保持 Bearer token 响应，不设 cookie
+    // Capacitor 原生壳：保持 Bearer token 响应 + 30 天 refresh JWT，不设 cookie
+    const session = await issueSession(user, sessionMetadata(req))
     ok(res, { token: session.token, refreshToken: session.refreshToken, user: sanitizeUser(user) }, '登录成功')
   } else {
-    // 管理台浏览器：HttpOnly cookie，不暴露 token 给 JS
+    // 管理台浏览器：HttpOnly cookie + 7 天 refresh JWT（与 cookie Max-Age 对齐）
+    const session = await issueSession(user, sessionMetadata(req), null, config.jwt.refreshExpiresInBrowser)
     setAuthCookies(res, session.token, session.refreshToken)
     ok(res, { user: sanitizeUser(user) }, '登录成功')
   }
@@ -132,7 +128,10 @@ export async function refresh(req, res) {
 
   let sessionUser
   try {
-    sessionUser = await verifyAuthToken(refreshToken, 'refresh')
+    // 浏览器客户端允许 rotation-revoked session 通过（并发 refresh grace）
+    // Capacitor 原生壳保持严格：revoked 的 session 直接拒绝
+    const verifyOpts = isNativeClient(req) ? {} : { allowRevokedForRotation: true }
+    sessionUser = await verifyAuthToken(refreshToken, 'refresh', verifyOpts)
   } catch (e) {
     if (e.name === 'BusinessError') throw e
     throw errors.unauthorized('refreshToken 无效或已过期')
@@ -141,22 +140,44 @@ export async function refresh(req, res) {
   const user = await prisma.user.findUnique({ where: { id: sessionUser.id } })
   if (!user) throw errors.unauthorized()
 
-  // 并发 refresh：如果 session 已被另一标签 revoke，验证 hash 匹配后降级为新建
+  // 并发 refresh：verifyAuthToken 可能允许 rotation-revoked session 通过
+  // 这里负责 CAS 消费一次性 grace，并确保不满足条件的请求被拒绝
   let replaceId = sessionUser.sessionId
   if (replaceId) {
     const existing = await prisma.authSession.findUnique({ where: { id: replaceId } })
-    if (!existing || existing.revokedAt) {
-      if (!existing || !safeHashEquals(existing.refreshTokenHash, hashOpaqueToken(refreshToken))) {
+    if (!existing) throw errors.unauthorized('refreshToken 已失效')
+
+    if (existing.revokedAt) {
+      // session 在 verifyAuthToken 后被另一个并发 refresh 撤销
+      // 必须同时满足：hash 匹配、rotation 标记（revokedAt==lastUsedAt）、5s 时间窗
+      if (!safeHashEquals(existing.refreshTokenHash, hashOpaqueToken(refreshToken))) {
         throw errors.unauthorized('refreshToken 已失效')
       }
-      replaceId = null // 降级：旧 session 已撤销，跳过 revoke 直接新建
+      if (existing.revokedAt.getTime() !== existing.lastUsedAt.getTime()) {
+        throw errors.unauthorized('refreshToken 已失效')
+      }
+      if (Math.abs(Date.now() - existing.revokedAt.getTime()) > REFRESH_ROTATION_GRACE_MS) {
+        throw errors.unauthorized('refreshToken 已失效')
+      }
+      const consumed = await prisma.authSession.updateMany({
+        where: {
+          id: replaceId,
+          revokedAt: existing.revokedAt,
+          lastUsedAt: existing.lastUsedAt,
+        },
+        data: { lastUsedAt: new Date(Date.now() + 1000) },
+      })
+      if (consumed.count !== 1) throw errors.unauthorized('refreshToken 已失效')
+      replaceId = null // grace 已消费，跳过 issueSession 中的 revoke 直接新建
     }
+    // 如果 !existing.revokedAt：session 仍活跃，保留 replaceId 由 issueSession 做正常轮换
   }
 
-  const session = await issueSession(user, sessionMetadata(req), replaceId)
   if (isNativeClient(req)) {
+    const session = await issueSession(user, sessionMetadata(req), replaceId)
     ok(res, { token: session.token, refreshToken: session.refreshToken })
   } else {
+    const session = await issueSession(user, sessionMetadata(req), replaceId, config.jwt.refreshExpiresInBrowser, true)
     setAuthCookies(res, session.token, session.refreshToken)
     ok(res, { user: sanitizeUser(user) })
   }

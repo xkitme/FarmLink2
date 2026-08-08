@@ -3,6 +3,8 @@ import { config } from '../../config/index.js'
 
 export const RESET_CODE_TTL_MS = 5 * 60 * 1000
 export const RESET_CODE_MAX_ATTEMPTS = 5
+/** refresh rotation CAS grace 窗口：从 revokedAt 起最多 5 秒内允许并发消费一次性 grace */
+export const REFRESH_ROTATION_GRACE_MS = 5000
 
 export function hashOpaqueToken(value) {
   return createHash('sha256').update(`${value}`).digest('hex')

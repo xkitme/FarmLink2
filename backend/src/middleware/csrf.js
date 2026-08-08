@@ -1,28 +1,21 @@
 import { randomUUID } from 'node:crypto'
 import { config } from '../config/index.js'
 import { errors } from '../utils/response.js'
+import { isNativeClient } from '../utils/client-detect.js'
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH'])
 const CSRF_COOKIE = 'csrf_token'
 const CSRF_HEADER = 'x-csrf-token'
 
-const NATIVE_UA = /capacitor|ionic|cordova/i
-
-function isNative(req) {
-  return NATIVE_UA.test((req.headers['user-agent'] || '').toLowerCase())
-}
-
-/** login 成功后调用：签发 csrf_token cookie（非 HttpOnly，JS 可读） */
+/** 签发 csrf_token cookie（非 HttpOnly，JS 可读），登录成功后调用 */
 export function setCsrfCookie(res) {
-  const token = randomUUID()
-  res.cookie(CSRF_COOKIE, token, {
+  res.cookie(CSRF_COOKIE, randomUUID(), {
     httpOnly: false,
     secure: config.cookie.secure,
     sameSite: config.cookie.sameSite,
     path: '/',
     maxAge: config.cookie.refreshTokenMaxAge, // 与 refresh_token 同生命周期，浏览器重启不丢失
   })
-  return token
 }
 
 /** 登出时清除 csrf cookie */
@@ -33,7 +26,7 @@ export function clearCsrfCookie(res) {
 /** CSRF 校验中间件：写请求 double-submit cookie 模式 */
 export function csrfGuard(req, res, next) {
   if (!WRITE_METHODS.has(req.method)) return next()
-  if (isNative(req)) return next()
+  if (isNativeClient(req)) return next()
 
   const path = (req.originalUrl || req.url || '').split('?')[0]
   // 登录/刷新是 cookie 的"发行方"，自身不需要 CSRF 保护

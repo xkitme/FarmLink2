@@ -70,6 +70,8 @@ export const config = {
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'village-dev-refresh-secret',
     expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+    // 浏览器管理台 refresh token 7 天（与 cookie Max-Age 对齐）；原生壳沿用 30 天
+    refreshExpiresInBrowser: process.env.JWT_REFRESH_EXPIRES_IN_BROWSER || '7d',
   },
 
   ollama: {

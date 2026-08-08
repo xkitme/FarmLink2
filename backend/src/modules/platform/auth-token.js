@@ -8,9 +8,9 @@ export function signToken(payload) {
   })
 }
 
-export function signRefreshToken(payload) {
+export function signRefreshToken(payload, expiresIn) {
   return jwt.sign({ ...payload, tokenType: 'refresh' }, config.jwt.refreshSecret, {
-    expiresIn: config.jwt.refreshExpiresIn,
+    expiresIn: expiresIn || config.jwt.refreshExpiresIn,
   })
 }
 

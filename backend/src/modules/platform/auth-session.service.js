@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { prisma } from '../../db.js'
 import { errors } from '../../utils/response.js'
 import { signRefreshToken, signToken, tokenExpiresAt } from './auth-token.js'
-import { hashOpaqueToken } from './auth.security.js'
+import { hashOpaqueToken, REFRESH_ROTATION_GRACE_MS } from './auth.security.js'
 
 function cleanMeta(value, maxLength) {
   const text = `${value || ''}`.trim()
@@ -27,16 +27,15 @@ function tokenPayload(user, sessionId) {
   }
 }
 
-export async function issueSession(user, metadata = {}, replaceSessionId = null) {
+export async function issueSession(user, metadata = {}, replaceSessionId = null, refreshExpiresIn = null, allowGrace = false) {
   const sessionId = randomUUID()
   const payload = tokenPayload(user, sessionId)
   const token = signToken(payload)
-  const refreshToken = signRefreshToken(payload)
+  const refreshToken = signRefreshToken(payload, refreshExpiresIn)
   const now = new Date()
 
   await prisma.$transaction(async (tx) => {
-    // 仅当 replaceSessionId 非 null 时执行 revoke
-    // null = 并发降级模式：旧 session 已被另一标签 revoke，跳过 revoke 直接新建
+    // 标准路径：主动 revoke 旧 session 后创建新 session
     if (replaceSessionId) {
       const revoked = await tx.authSession.updateMany({
         where: {
@@ -47,7 +46,36 @@ export async function issueSession(user, metadata = {}, replaceSessionId = null)
         },
         data: { revokedAt: now, lastUsedAt: now },
       })
-      if (revoked.count !== 1) throw errors.unauthorized('会话已失效，请重新登录')
+      if (revoked.count !== 1) {
+        if (!allowGrace) throw errors.unauthorized('会话已失效，请重新登录')
+        // 并发降级：旧 session 已被另一个 refresh 并发 revoke，尝试 CAS 消费一次性 grace
+        // 只有 rotation 撤销（revokedAt == lastUsedAt）才允许 grace；
+        // logout / admin 强制撤销只设 revokedAt 不更新 lastUsedAt，不满足条件
+        const session = await tx.authSession.findUnique({ where: { id: replaceSessionId } })
+        if (
+          !session
+          || session.userId !== user.id
+          || !session.revokedAt
+          || session.expiresAt <= now
+          || session.revokedAt.getTime() !== session.lastUsedAt.getTime()
+          || Math.abs(now.getTime() - session.revokedAt.getTime()) > REFRESH_ROTATION_GRACE_MS
+        ) {
+          throw errors.unauthorized('会话已失效，请重新登录')
+        }
+        // CAS：仅当 revokedAt/lastUsedAt 仍处于 rotation 状态时消费 grace
+        const graceConsumed = await tx.authSession.updateMany({
+          where: {
+            id: replaceSessionId,
+            revokedAt: session.revokedAt,
+            lastUsedAt: session.lastUsedAt,
+          },
+          data: { lastUsedAt: new Date(now.getTime() + 1000) },
+        })
+        if (graceConsumed.count !== 1) {
+          throw errors.unauthorized('会话已失效，请重新登录')
+        }
+        // grace 已消费 → 继续创建新 session
+      }
     }
 
     await tx.authSession.create({

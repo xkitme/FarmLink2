@@ -18,7 +18,7 @@
     "db:seed":      "node seeds/index.js",
     "db:studio":    "prisma studio",
     "db:reset":     "prisma migrate reset",
-    "test":         "node --test test/auth-security.test.js test/auth-session.integration.test.js",
+    "test":         "node --test test/auth-security.test.js test/auth-session.integration.test.js test/c2b-cookie-auth.integration.test.js",
     "install:all":  "npm install && npm install --prefix admin"
   },
   "dependencies": {

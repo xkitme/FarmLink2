@@ -1,5 +1,6 @@
 import { config } from '../config/index.js'
 import { errors } from '../utils/response.js'
+import { isNativeClient } from '../utils/client-detect.js'
 
 const DEV_ORIGIN_PREFIXES = [
   'http://localhost:',
@@ -32,8 +33,7 @@ export function isOriginAllowed(origin) {
 
 function originRequired(req) {
   // Capacitor 等原生壳跨域请求无 Origin 头，视为受信来源
-  const ua = (req.headers['user-agent'] || '').toLowerCase()
-  if (ua.includes('capacitor') || ua.includes('ionic') || ua.includes('cordova')) {
+  if (isNativeClient(req)) {
     return false
   }
   // 同源请求无 Origin 头，配合 SameSite=Strict cookie 已防御 CSRF

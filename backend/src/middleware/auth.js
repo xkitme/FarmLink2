@@ -1,7 +1,8 @@
 import { prisma } from '../db.js'
 import { errors } from '../utils/response.js'
+import { isNativeClient } from '../utils/client-detect.js'
 import { verifyTokenClaims } from '../modules/platform/auth-token.js'
-import { hashOpaqueToken, safeHashEquals } from '../modules/platform/auth.security.js'
+import { hashOpaqueToken, safeHashEquals, REFRESH_ROTATION_GRACE_MS } from '../modules/platform/auth.security.js'
 
 export { signToken, signRefreshToken } from '../modules/platform/auth-token.js'
 
@@ -12,14 +13,7 @@ function extractToken(req) {
   return h.startsWith('Bearer ') ? h.slice(7) : h
 }
 
-// --- cookie 读取 + 客户端分流 ---
-
-const NATIVE_UA_RE = /capacitor|ionic|cordova/i
-
-function isNativeClient(req) {
-  return NATIVE_UA_RE.test((req.headers['user-agent'] || '').toLowerCase())
-}
-
+/** 从 cookie 读取 access_token */
 function extractTokenFromCookie(req) {
   return req.cookies?.access_token || null
 }
@@ -38,7 +32,8 @@ function tokenPasswordSnapshotStale(decoded, user) {
 }
 
 /** 校验 JWT 并确保签发时间晚于最近一次改密时间 */
-export async function verifyAuthToken(token, expectedTokenType = 'access') {
+export async function verifyAuthToken(token, expectedTokenType = 'access', opts = {}) {
+  const { allowRevokedForRotation = false } = opts
   try {
     const decoded = verifyTokenClaims(token, expectedTokenType)
     const sessionId = `${decoded.sid || ''}`
@@ -49,10 +44,20 @@ export async function verifyAuthToken(token, expectedTokenType = 'access') {
     if (
       !session
       || session.userId !== Number(decoded.id)
-      || session.revokedAt
       || session.expiresAt <= now
     ) {
       throw errors.unauthorized('会话已失效，请重新登录')
+    }
+    if (session.revokedAt) {
+      // 并发 refresh 降级：允许 rotation 撤销的 session（revokedAt == lastUsedAt）通过
+      // 且撤销时间必须在短时间窗内，防止旧 rotation token 被滥用
+      if (
+        !allowRevokedForRotation
+        || session.revokedAt.getTime() !== session.lastUsedAt.getTime()
+        || Math.abs(Date.now() - session.revokedAt.getTime()) > REFRESH_ROTATION_GRACE_MS
+      ) {
+        throw errors.unauthorized('会话已失效，请重新登录')
+      }
     }
     if (
       expectedTokenType === 'refresh'

@@ -46,11 +46,6 @@ export async function isLoggedIn() {
   return Boolean(user)
 }
 
-/** 登录成功回调（缓存 user + CSRF cookie 由服务端 Set-Cookie） */
-export function saveSession(user) {
-  _cachedUser = user || null
-}
-
 /** 清除本地登录态 */
 export function clearSession() {
   _cachedUser = null
