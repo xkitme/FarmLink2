@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import cache from '../utils/cache.js'
+import { clientIp } from '../utils/client-ip.js'
 import { prisma } from '../db.js'
 import { config, CODES } from '../config/index.js'
 import { fail } from '../utils/response.js'
@@ -43,10 +44,6 @@ const RULES = [
   { key: 'media_upload', method: 'POST', pattern: /^\/(agri|market|ai|disaster)\/.*(detect|analyze|recognize|report|assess)/ },
   { key: 'offline_sync', method: 'POST', pattern: /^\/data\/sync$/ },
 ]
-
-function clientIp(req) {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket.remoteAddress || 'unknown'
-}
 
 function apiPath(req) {
   const original = req.originalUrl.split('?')[0]
@@ -258,4 +255,14 @@ export function rateLimitPolicies() {
     { name: 'admin-read', ...RATE_LIMITS.adminRead, scope: '管理员用户' },
     { name: 'admin-write', ...RATE_LIMITS.adminWrite, scope: '管理员用户' },
   ]
+}
+
+/**
+ * 清空所有内存限流计数器。
+ * 仅供测试隔离使用，不得暴露为生产 API 端点。
+ */
+export function clearRateLimits() {
+  const keys = cache.keys().filter((k) => k.startsWith('ratelimit:'))
+  for (const k of keys) cache.del(k)
+  return keys.length
 }

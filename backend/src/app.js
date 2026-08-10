@@ -15,6 +15,9 @@ import { ok } from './utils/response.js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 
+// 代理信任：必须在任何中间件之前设置
+app.set('trust proxy', config.trustProxy)
+
 // 基础中间件
 app.use(cors({
   origin: (origin, callback) => {

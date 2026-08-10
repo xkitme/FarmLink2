@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import { isIP } from 'node:net'
 
 const INSECURE_SECRETS = new Set([
   'village-dev-secret',
@@ -38,6 +39,93 @@ export function validateSecurityConfig(target) {
     throw new Error(`安全配置校验失败（${environment}）：${issues.join('；')}`)
   }
   return target
+}
+
+/**
+ * 解析 TRUST_PROXY 环境变量为 Express trust proxy 配置。
+ *
+ * 使用 node:net isIP 进行可靠 IP/CIDR 校验，拒绝 999.999.999.999、
+ * 10.0.0.1/99、::::、IPv6 /999 等非法地址。
+ * 仍然拒绝 true/1（过于危险）。
+ *
+ * @param {object} env
+ * @returns {false|string[]}
+ */
+export function resolveTrustProxy(env = process.env) {
+  const raw = `${env.TRUST_PROXY || ''}`.trim()
+
+  if (!raw || raw === 'false' || raw === '0') {
+    return false
+  }
+
+  if (raw === 'true' || raw === '1') {
+    throw new Error(
+      'TRUST_PROXY=true 过于危险（会信任任意来源的 X-Forwarded-For）。'
+      + '请显式指定可信代理的 IP 地址或 CIDR（逗号分隔多个），'
+      + '或使用 TRUST_PROXY=loopback 仅信任本机反向代理。',
+    )
+  }
+
+  if (raw === 'loopback') {
+    return ['loopback']
+  }
+
+  // 逗号分隔的 IP 地址/CIDR 列表。空段（纯逗号、尾逗号、双逗号）fail-fast，
+  // 不静默降级：显式配置必须完全可解析。
+  const segments = raw.split(',')
+  const addrs = []
+  for (const seg of segments) {
+    const trimmed = seg.trim()
+    if (!trimmed) {
+      throw new Error(
+        'TRUST_PROXY 含空段（如连续逗号、头尾逗号）。'
+        + '请使用合法地址列表，如 10.0.0.1,192.168.0.0/24。',
+      )
+    }
+    addrs.push(trimmed)
+  }
+
+  for (const addr of addrs) {
+    if (addr === 'loopback') continue
+
+    const slashIdx = addr.indexOf('/')
+    if (slashIdx !== -1) {
+      const ipPart = addr.slice(0, slashIdx)
+      const prefixStr = addr.slice(slashIdx + 1)
+
+      const version = isIP(ipPart)
+      if (!version) {
+        throw new Error(
+          `TRUST_PROXY 地址 "${addr}" 的 IP 部分非法。`
+          + '请使用合法的 IPv4/IPv6 地址加可选 CIDR 前缀（如 10.0.0.1 或 10.0.0.0/24）。',
+        )
+      }
+
+      // 严格纯数字：拒绝空串、+1、空格等 Number() 会接受但非法的值
+      if (!/^\d+$/.test(prefixStr)) {
+        throw new Error(
+          `TRUST_PROXY CIDR "${addr}" 的前缀必须是 0..32 (IPv4) 或 0..128 (IPv6) 的非负整数。`,
+        )
+      }
+      const prefix = Number(prefixStr)
+      const maxPrefix = version === 4 ? 32 : 128
+      if (prefix > maxPrefix) {
+        throw new Error(
+          `TRUST_PROXY CIDR "${addr}" 前缀 ${prefix} 超出 IPv${version} 最大 ${maxPrefix}。`,
+        )
+      }
+    } else {
+      if (!isIP(addr)) {
+        throw new Error(
+          `TRUST_PROXY 包含无法识别的地址: "${addr}"。`
+          + '请使用 IPv4/IPv6 地址或 CIDR（如 10.0.0.1 或 10.0.0.0/24），'
+          + '多个地址用逗号分隔。',
+        )
+      }
+    }
+  }
+
+  return addrs
 }
 
 export function resolveSeedPassword(target, env = process.env) {
@@ -120,6 +208,9 @@ export const config = {
     accessTokenMaxAge: 15 * 60 * 1000,           // 15 min，与 JWT expiresIn 对齐
     refreshTokenMaxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   },
+
+  // 代理信任：控制 Express 对 X-Forwarded-For 的信任策略
+  trustProxy: resolveTrustProxy(),
 
   // CORS：dev 放行本地开发源 + Capacitor；demo/release 从 CORS_ORIGINS 环境变量读取
   cors: {

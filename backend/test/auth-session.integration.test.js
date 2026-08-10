@@ -4,6 +4,7 @@ import path from 'node:path'
 import assert from 'node:assert/strict'
 import test, { after, before } from 'node:test'
 import jwt from 'jsonwebtoken'
+import { clearRateLimits } from '../src/middleware/apiControl.js'
 
 const backendRoot = path.resolve(import.meta.dirname, '..')
 const testRoot = mkdtempSync(path.join(backendRoot, 'prisma', '.test-auth-'))
@@ -40,7 +41,6 @@ const [{ default: app }, { prisma }, { default: bcrypt }] = await Promise.all([
 
 let server
 let baseUrl
-let requestSequence = 1
 
 async function api(method, pathName, body, token) {
   const response = await fetch(`${baseUrl}/api/v1${pathName}`, {
@@ -50,7 +50,6 @@ async function api(method, pathName, body, token) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       'User-Agent': 'capacitor://localhost',
       'X-Device-Name': 'security-test-device',
-      'X-Forwarded-For': `phase-b-test-${requestSequence++}`,
     },
     body: body ? JSON.stringify(body) : undefined,
   })
@@ -91,7 +90,10 @@ after(async () => {
 })
 
 test('Phase B 认证、会话轮换与一次性重置码闭环', async (t) => {
+  clearRateLimits()
+
   await t.test('公开注册不能写入角色和区域', async () => {
+    clearRateLimits()
     const result = await api('POST', '/auth/register', {
       username: 'security-register',
       password: 'register-password',
@@ -112,6 +114,7 @@ test('Phase B 认证、会话轮换与一次性重置码闭环', async (t) => {
   let adminSession
 
   await t.test('登录建立持久会话，refresh 轮换并立即撤销旧会话', async () => {
+    clearRateLimits()
     const login = await api('POST', '/auth/login', {
       username: 'security-farmer',
       password: 'old-password',
@@ -143,6 +146,7 @@ test('Phase B 认证、会话轮换与一次性重置码闭环', async (t) => {
   })
 
   await t.test('同一 refresh 并发轮换只允许一个后继会话', async () => {
+    clearRateLimits()
     const login = await api('POST', '/auth/login', {
       username: 'security-farmer',
       password: 'old-password',
@@ -189,11 +193,13 @@ test('Phase B 认证、会话轮换与一次性重置码闭环', async (t) => {
   })
 
   await t.test('退出会撤销当前设备会话', async () => {
+    clearRateLimits()
     assert.equal((await api('POST', '/auth/logout', {}, rotatedSession.token)).status, 200)
     assert.equal((await api('GET', '/user/profile', null, rotatedSession.token)).status, 401)
   })
 
   await t.test('access 不可用时可用 refresh 幂等撤销当前会话', async () => {
+    clearRateLimits()
     const login = await api('POST', '/auth/login', {
       username: 'security-farmer',
       password: 'old-password',
@@ -215,6 +221,7 @@ test('Phase B 认证、会话轮换与一次性重置码闭环', async (t) => {
   })
 
   await t.test('只有 ADMIN 能生成重置码，错误五次后作废', async () => {
+    clearRateLimits()
     const farmerLogin = await api('POST', '/auth/login', {
       username: 'security-farmer',
       password: 'old-password',
@@ -254,6 +261,7 @@ test('Phase B 认证、会话轮换与一次性重置码闭环', async (t) => {
   })
 
   await t.test('过期码失败；新码只能使用一次并撤销旧会话', async () => {
+    clearRateLimits()
     const expired = await api('POST', '/admin/security/password-reset-code', {
       username: 'security-farmer',
     }, adminSession.token)
@@ -293,6 +301,7 @@ test('Phase B 认证、会话轮换与一次性重置码闭环', async (t) => {
   })
 
   await t.test('ADMIN 可强制撤销指定账号全部设备会话', async () => {
+    clearRateLimits()
     const revoked = await api('POST', '/admin/security/revoke-sessions', {
       username: 'security-farmer',
     }, adminSession.token)

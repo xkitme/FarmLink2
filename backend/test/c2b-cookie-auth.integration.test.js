@@ -18,6 +18,7 @@ import path from 'node:path'
 import assert from 'node:assert/strict'
 import test, { after, before } from 'node:test'
 import { REFRESH_ROTATION_GRACE_MS } from '../src/modules/platform/auth.security.js'
+import { clearRateLimits } from '../src/middleware/apiControl.js'
 
 const backendRoot = path.resolve(import.meta.dirname, '..')
 const testRoot = mkdtempSync(path.join(backendRoot, 'prisma', '.test-c2b-'))
@@ -41,7 +42,6 @@ const [{ default: app }, { prisma }, { default: bcrypt }] = await Promise.all([
 
 let server
 let baseUrl
-let requestSequence = 1
 
 // ── cookie jar ──────────────────────────────────
 
@@ -139,8 +139,6 @@ async function apiWithJar(method, pathName, opts = {}) {
   if (cookieHeader) headers['Cookie'] = cookieHeader
 
   const finalHeaders = { ...headers, ...(opts.rawHeaders || {}) }
-  // 每个请求唯一 X-Forwarded-For，避免被全局限流聚合
-  finalHeaders['X-Forwarded-For'] = `c2b-test-${requestSequence++}`
 
   const fetchOpts = {
     method,
@@ -185,10 +183,14 @@ after(async () => {
 // ── tests ────────────────────────────────────────
 
 test('C2b HttpOnly Cookie 认证集成', async (t) => {
+  // 每次子测试前清空限流计数器，避免同一 IP（127.0.0.1）触发 429
+  clearRateLimits()
+
   // ================================================================
   // 1. 浏览器登录 → 3 个 Set-Cookie，token 不出现在 body
   // ================================================================
   await t.test('浏览器登录返回 3 个 Set-Cookie，body 不含 token', async () => {
+    clearRateLimits()
     const { status, payload, jar } = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -240,6 +242,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
   // 2. GET /auth/me 仅凭 cookie 恢复用户
   // ================================================================
   await t.test('GET /auth/me 仅凭 cookie 恢复用户', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -266,6 +269,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
   // 3. CSRF double-submit
   // ================================================================
   await t.test('CSRF：写请求无 X-CSRF-Token → 403', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -281,6 +285,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
   })
 
   await t.test('CSRF：错误 X-CSRF-Token → 403', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -299,6 +304,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
   })
 
   await t.test('CSRF：正确 double-submit → 200', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -320,6 +326,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
   })
 
   await t.test('CSRF：GET 请求免校验', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -337,6 +344,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
   // 4. Refresh 从 cookie 读取并轮换认证 cookie
   // ================================================================
   await t.test('Refresh：从 cookie 读取 refresh_token，轮换后 body 不泄露 token', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -382,6 +390,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
   // 5. 两标签并发 refresh → 两个都成功 + 第三次旧 token 401
   // ================================================================
   await t.test('并发 Refresh：两标签同 refresh cookie 并发刷新，两个均 200', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -434,6 +443,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
 
   // 5b. 三标签并发 refresh：最多两个成功，其余 401（grace 仅一次性）
   await t.test('并发 Refresh：三标签同 refresh cookie 并发刷新，最多两个 200、其余 401', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -468,6 +478,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
 
   // 5c. rotation 撤销超出 grace 窗口 → 必须 401（直接操作 prisma 回拨时间）
   await t.test('并发 Refresh：rotation 撤销超出 grace 窗口的旧 refresh → 401', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -501,6 +512,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
   // 6. Logout（均带 CSRF token）
   // ================================================================
   await t.test('Logout：access 可用时撤销会话并清 cookie', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -535,6 +547,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
   })
 
   await t.test('Logout：access 缺失/过期时用 refresh cookie + CSRF 撤销', async () => {
+    clearRateLimits()
     const login = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: { 'User-Agent': 'Mozilla/5.0 Chrome/120' },
@@ -581,6 +594,7 @@ test('C2b HttpOnly Cookie 认证集成', async (t) => {
   // 7. Capacitor Bearer 回归
   // ================================================================
   await t.test('Capacitor Bearer：登录返回 token 在 body（不设 cookie）', async () => {
+    clearRateLimits()
     const resp = await apiWithJar('POST', '/auth/login', {
       body: { username: 'c2b-admin', password: 'test-password' },
       rawHeaders: {

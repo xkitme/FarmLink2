@@ -1,6 +1,14 @@
+## 历史交接文档：C2b HttpOnly Cookie 迁移
+
+> 状态：✅ 已完成并提交
+> 提交：`6e441ac4`（fix: 收口 C2b Cookie 认证审查问题），已推送至 `codex/refactor-farmlink`
+> 后续：C2a/C2b 均在 `6e441ac4` 及之前提交中完成；C2c 代理来源信任为本分支后续交付。
+
+---
+
 ## 背景
 
-你接手的代码在分支 `codex/refactor-farmlink`，上一轮刚完成 **C2a 安全加固批次**（4 个子项独立交付），文件全部在 working copy 未提交。本轮要交付 **C2b：管理台 HttpOnly Cookie 迁移**。
+你接手的代码在分支 `codex/refactor-farmlink`，上一轮刚完成 **C2a 安全加固批次**（4 个子项独立交付）。历史上 C2a 完成后进入 C2b，相关改动最终由 `6e441ac4` 提交推送。
 
 ---
 
@@ -36,7 +44,7 @@ csrf_token    → 服务端签发，前端读的非 HttpOnly cookie 或 X-CSRF-T
 1. **管理台 only，Capacitor 不动**：原生壳继续走 `Authorization: Bearer`。`requireAuth` 按 User-Agent 或请求来源分流
 2. **不删 `extractToken` / `verifyAuthToken`**：Capacitor 路径仍依赖它
 3. **不碰 schema 不清数据库**
-4. **不要 push**
+4. 历史约束：实施时不 push（现已由 `6e441ac4` 提交推送）
 
 ### 预估改动范围
 
@@ -50,7 +58,9 @@ backend/src/app.js                              — CSRF middleware 挂载点
 backend/admin/src/                              — 前端删 localStorage token → cookie + CSRF header
 ```
 
-## 当前 working copy（C2a 未提交）
+## C2a 历史文件快照（现已提交）
+
+以下为 C2a 完成后、C2b 开始前的工作区快照。所有文件已在 `6e441ac4` 提交。
 
 ```
 backend/package.json                   +3  (optionalDependencies: sharp)
@@ -76,7 +86,7 @@ npm run dev                                          # 浏览器 admin 测试登
 
 ---
 
-## 实施备注（2026-08-08 Codex 实施）
+## 实施备注（2026-08-08 Codex 实施，已提交 6e441ac4）
 
 ### I1：提取共享 UA 检测模块
 

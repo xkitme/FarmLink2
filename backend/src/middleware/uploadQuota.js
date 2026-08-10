@@ -1,4 +1,5 @@
 import cache from '../utils/cache.js'
+import { clientIp } from '../utils/client-ip.js'
 import { errors } from '../utils/response.js'
 
 const DEFAULT_WINDOW_SEC = 3600
@@ -13,7 +14,7 @@ export function uploadQuota(limit = DEFAULT_LIMIT, windowSec = DEFAULT_WINDOW_SE
   return (req, res, next) => {
     const actor = req.user?.id
       ? `user:${req.user.id}`
-      : `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`
+      : `ip:${clientIp(req)}`
 
     const bucket = Math.floor(Date.now() / (windowSec * 1000))
     const key = `upload-quota:${actor}:${bucket}`
