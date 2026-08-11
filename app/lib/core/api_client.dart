@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'constants.dart';
 
@@ -29,6 +29,13 @@ class SseEvent {
 class ApiClient {
   static String baseUrl = kBaseUrl;
   static String? _token;
+  static http.Client? _clientForTesting;
+
+  @visibleForTesting
+  static void setClientForTesting(http.Client? client) {
+    _clientForTesting = client;
+  }
+
   static Future<bool> Function()? _refreshHandler;
   static Future<void> Function()? _sessionExpiredHandler;
   static Future<bool>? _refreshInFlight;
@@ -74,10 +81,15 @@ class ApiClient {
   }
 
   static Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
+    final client = _clientForTesting;
     final res = await _sendAuthenticated(
-      (headers) => http
-          .get(_uri(path, query), headers: headers)
-          .timeout(const Duration(seconds: 15)),
+      (headers) {
+        final uri = _uri(path, query);
+        final future = client != null
+            ? client.get(uri, headers: headers)
+            : http.get(uri, headers: headers);
+        return future.timeout(const Duration(seconds: 15));
+      },
     );
     return _parse(res);
   }

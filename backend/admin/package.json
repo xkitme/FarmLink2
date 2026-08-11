@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --import ./test/vite-env-register.js --test test/auth-contract.test.js test/apiCatalog-resourceGroups.test.js"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.1",

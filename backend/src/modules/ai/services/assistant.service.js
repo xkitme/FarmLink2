@@ -211,7 +211,7 @@ function sanitizeCommand(command, availableProductIds) {
   return null
 }
 
-function sanitizeAssistantOutput(parsed, products) {
+export function sanitizeAssistantOutput(parsed, products) {
   const availableProductIds = new Set(products.map((p) => p.id))
   const rawCommands = Array.isArray(parsed.commands) ? parsed.commands : []
   const commands = rawCommands
