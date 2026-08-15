@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-08-15 · 116f-A 决策冻结：工作单 D1~D9 人工确认（docs-only 单条提交，未 push）
+
+**分支/工作树**：`codex/refactor-farmlink`。本轮只改 3 个 docs 文件，以单条 commit（`docs: 冻结 116f API v2 与能力注册表方案`）入库、未 push；GitHub 网络缺口未重试（按 D8：网络恢复后先 fetch 复核无分叉再 push，分叉则停手报告）。
+
+**本轮人工审查结论**：
+- **D1/D3/D4/D5/D7/D8 已确认**，采用推荐方案：注册表静态文件 / market product 样板 / 116f 只冻结 OpenAPI 格式 / feature_catalog 构建期生成+提交产物 / 每批独立 commit 默认不 push / 推送缺口按 D8 处置。
+- **D2 确认**：`aiDetectRecord` 唯一 primaryGroup=agri；ai 作为 tag/secondaryGroup 表达；注册表内能力 ID 全局唯一；既有 B20 characterization 契约修改等实施批次正式开始后进行，本轮只记录迁移方案。
+- **D6 修订**：① 注册表 schema、重复 ID、非法权限元数据 → 所有环境启动时 fail-fast；② 「已有路由尚未登记」覆盖缺口 → 116f 迁移期间 dev/test fail-fast、demo/release 告警；③ 116f 标记完成前，覆盖完整性必须升级为所有环境硬门禁。
+- **新增 D9**：`GET /v2/ping` 公开且只返回最小健康信息；`GET /v2/capabilities`、`GET /v2/api-catalog` 第一阶段 requireAuth + ADMIN；响应不得暴露 controller 路径、内部正则、密钥、限流实现细节或安全配置。
+- **「235+ 端点」降级为当前估算**：116f-B 由可重复执行的盘点脚本产出精确数量，六项契约门禁——实际路由总数、已登记数量、未登记路由列表、重复 method+path、无鉴权/角色元数据的路由列表、输出不受文件扫描顺序影响。
+- **116f-B 退出条件强化**：v1 业务语义完全不变；v1/v2 薄适配器复用同一 controller/service、不复制业务逻辑；operationLog 同时覆盖 /api/v1 与 /api/v2 写请求并有契约测试；Cookie/Bearer/CSRF/角色权限/限流/代理来源策略在 v2 不得弱化；正式 village.db 指纹不变；无 Prisma schema/migration 改动。
+
+**验证**：`git diff --check`、`git diff --cached --check` 通过；`git status -sb` 复核仅 3 个 docs 文件；未跑长测试、未重试 GitHub 网络。
+
+**下个会话注意**：① 116f-A（源码盘点、工作单与决策冻结）已完成；注册表、API v2 与任何业务代码尚未实施，下一步 116f-B（先写可重复执行的盘点脚本，产出 §6.3 六项契约门禁数据）；② 推送缺口未关（D8）；③ 不要重复跑 116d/116e 长测试；④ B19/B20 契约本轮不动，更新等实施批次正式开始后。
+
+---
+
+## 2026-08-11 · 116f 只读盘点与工作单建立（未实施、未提交；116d 推送缺口未关闭）
+
+**分支/工作树**：`codex/refactor-farmlink` 干净，HEAD=`679a87d8`（116d 收口），跟踪分支 `origin/codex/refactor-farmlink`=`6dd9f0b3`，本地 ahead 1。**GitHub 443 连接失败（fetch/ls-remote 两次重试均超时重置），推送未执行，未声称成功**。网络恢复后先 fetch 复核无分叉再 push；分叉则停手报告。
+
+**本轮产出（全部未 commit，待人工审查）**：
+- 新增 `docs/116f-APIv2与能力注册表.md`：正式工作单，含真实基线/9 项缺口与源码证据/注册表 schema 草案/映射矩阵/116f-A~F 分阶段/决策 D1~D8。
+- 更新 `docs/进度总览.md`：加 116f 行 + 当前状态/下一步。
+
+**盘点关键事实（写工作单时用）**：v1 前缀唯一 `config.apiPrefix='/api/v1'`；10 模块 244 行路由注册；中间件链 app.js L19-40（trust proxy→cors→optionalAuth→rateLimit→apiSwitch→opLog→originGuard→csrfGuard）；限流/开关是 `apiControl.js` 里的 method+regex 手工清单（20 个 switch key 存 DB apiSwitch 表）；`aiDetectRecord` 在 resource.config.js L12/L47 与 admin resourceGroups.js L10/L45 双组重复（116d B20 锁定的 gap）；Flutter 135 处 ApiClient 调用、71 项 feature_catalog 与后端 assistant.service.js 的 ROUTE_CATALOG/ROUTE_FEATURES 是手工镜像；admin apiCatalog 手写 24 条；无 OpenAPI；无能力注册表。village.db 指纹复核一致（SHA256 FAEECC...E96 / 1155072B / 2026-08-07T08:34:59Z）。
+
+**下个会话注意**：① 116f 未实施，等人工审查工作单（重点决策：注册表静态文件落点、aiDetectRecord 去重、v2 样板选 market product、OpenAPI 工具链延后）；② 推送缺口未关；③ 不要重复跑 116d 长测试（工作树无变化）。
+
+---
+
 ## 2026-08-02 · 116e Phase C1 完成：客户端凭据生命周期 + 管理台 stopgap
 
 当前实施分支仍为 `codex/refactor-farmlink`。本批已按后端 / Flutter 客户端 / 管理台拆成三个本地里程碑提交：
