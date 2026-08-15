@@ -1,6 +1,6 @@
 # 116f — API v2 与单一能力注册表（M2 工作单）
 
-> 状态：工作单已建立；116f-A（源码盘点、工作单与决策冻结）✅ 完成——已完成的仅是盘点、工作单与 D1~D9 决策冻结（2026-08-15 人工确认）；能力注册表、API v2 与任何业务代码尚未实施，待 116f-B 开工
+> 状态：116f-A ✅；**116f-B ✅ 已完成（2026-08-15 实施并全部验收通过 + 集中审查整改）**——可重复执行盘点脚本（v1=242、登记 242/242；v2=3、登记 3/3；capabilities 245）、静态注册表初版、D6 分层校验器、API v2 三端点（D9）、operationLog v1/v2 覆盖与 50 项新增契约测试；116f-C 未开始（本轮不实施）；本轮未 commit、未 push
 > 上位计划：[116-大重构总计划.md](116-大重构总计划.md) M2（第 5 章 5.3、第 9 章 M2）
 > 决策来源：[116a-大重构决策记录.md](116a-大重构决策记录.md) ADR-009、[116b-大重构三档方案对比.md](116b-大重构三档方案对比.md)
 > 风险依据：[116c-大重构风险报告.md](116c-大重构风险报告.md) R1-05（API v1/v2 漂移）、G3 架构闸门
@@ -14,8 +14,8 @@
 
 | 维度 | 现状（含源码证据） |
 |---|---|
-| 版本前缀 | `backend/src/config/index.js` L150 `apiPrefix: '/api/v1'`，**全局唯一前缀，无 v2 骨架** |
-| 路由注册 | `backend/src/routes/index.js`：`registerRoutes(app, config.apiPrefix)` 把 10 个模块 router（platform/agri/market/machinery/disaster/policy/life/data/iot/ai）顺序挂到同一前缀；共 **244 行路由注册**（platform 50、market 27、agri 28、machinery 23、disaster 16、policy 25、life 33、data 12、iot 5、ai 24，另加 `/ping`） |
+| 版本前缀 | `backend/src/config/index.js` L150 `apiPrefix: '/api/v1'`（v1 全局唯一前缀）；116f-B 起新增 `apiPrefixV2: '/api/v2'`，与 v1 共存（三端点骨架，复用同一条安全链） |
+| 路由注册 | `backend/src/routes/index.js`：`registerRoutes(app, config.apiPrefix)` 把 10 个模块 router（platform/agri/market/machinery/disaster/policy/life/data/iot/ai）顺序挂到同一前缀。历史口径「244 行路由注册」是**源码注册语法命中数**（含 data/ai 两条 `router.use` 鉴权挂载，不等于外部 API 数量）；2026-08-15 实际枚举：终端 method+path 注册 **242** 条（platform 50、market 27、agri 28、machinery 23、disaster 16、policy 25、life 33、data 11、iot 5、ai 23，另加 `GET /ping`），分类明细见 §6.3 |
 | 模块形态 | 每个模块 `X.routes.js` + 若干 `*.controller.js`，controller 直连 Prisma（`prisma.*`），**无 application service / repository 层**（属于 M3/M5，不在 116f） |
 | 鉴权挂载 | `middleware/auth.js`：`optionalAuth` 全局（`app.js` L35）；`requireAuth`/`requireRole` **逐路由手写**（各 routes 文件）。原生端（`utils/client-detect.js` 判定）走 `Authorization: Bearer`；浏览器端走 HttpOnly cookie `access_token` 优先、Bearer 兜底（`extractTokenFromCookie`） |
 | 中间件链 | `app.js` L19-40 顺序：trust proxy → CORS（`originGuard.isOriginAllowed` allowlist + credentials）→ json 10mb → cookieParser → traceMiddleware → optionalAuth → rateLimitMiddleware → apiSwitchMiddleware → operationLogMiddleware → originGuard → csrfGuard |
@@ -27,7 +27,7 @@
 | 操作日志 | `operationLogMiddleware`：非 GET 且 `originalUrl.startsWith(config.apiPrefix)` 才记录；v2 挂上后必须显式扩展，否则静默漏记 |
 | 响应契约 | `utils/response.js`：`{ code, msg, data, timestamp, traceId }`；`ok/okPage/fail/errors.*`；业务码 200/40001/40101/40301/40401/42901/50001/60001/60002 |
 | 弃用先例 | `modules/ai/ai.controller.js` L437-439：`DELETE /ai/qa/records/:id` 保留为 deprecated alias（console.warn），**无正式弃用策略（无响应头、无 sunset、无使用率观测）** |
-| 能力注册表 | **不存在**。仅 AI 状态响应里有 `capability` 字段（`ai.controller.js` L214），是运行时能力描述，不是注册表 |
+| 能力注册表 | 116f-B 已建立：`backend/src/contracts/capabilities.js`（schemaVersion=1 静态 ESM；242 条 v1 只读对账登记 + 3 条 v2 骨架端点；由盘点脚本生成）。此前仅 AI 状态响应里有 `capability` 字段（`ai.controller.js` L214），是运行时能力描述，不是注册表 |
 | OpenAPI/Swagger | **不存在**（全仓 grep 仅 docs 目标提及） |
 
 ### 1.2 Admin（`backend/admin/src/` 20 个源文件）
@@ -72,7 +72,7 @@
 | P3 | **Admin apiCatalog 手写且残缺**（24 条 vs 全量端点，当前估算 235+），ApiDebugPage 预设与真实路由脱节 | `backend/admin/src/apiCatalog.js` | 116f |
 | P4 | **resourceGroups 双份镜像 + `aiDetectRecord` 跨组重复**（后端+Admin 各一处重复） | `resource.config.js` L12/L47；`resourceGroups.js` L10/L45 | 116f（去重需人工确认） |
 | P5 | **限流/开关按路径 regex 手工分类**，新 v2 路由若不登记会落 global 桶/无开关，且漂移无检测 | `apiControl.js` `RATE_LIMITS`+`RULES`+`ratePlan` | 116f |
-| P6 | **无 v2 骨架、无版本化路由结构、无契约文件**；唯一弃用先例是 console.warn 级 alias，无正式弃用策略 | `routes/index.js`；`ai.controller.js` L437 | 116f |
+| P6 | ✅ v2 骨架/注册表已由 116f-B 建立（`routes/v2/index.js` + `contracts/*`）；弃用策略已冻结为规则（§5.5，只登记 1 条既有 alias），正式弃用观测待后续批次 | `routes/v2/index.js`；`contracts/*` | 116f-B 已落地 |
 | P7 | **Flutter 无 typed DTO / Repository**，页面直连 ApiClient 并深解析动态 Map（135 处调用） | grep 证据见 1.3 | 116f 开样板，全量迁移属 M4-M7 |
 | P8 | **operationLog 只认 `config.apiPrefix`**，v2 挂载后写日志会静默漏记 | `apiControl.js` L212 | 116f 必须同步处理 |
 | P9 | Admin 存在 3 处硬编码 `/api/v1` 文本（auth.js L26、ApiDebugPage L172、Placeholder L21），切 v2 时易漏 | 见 1.2 证据行 | 116f |
@@ -168,7 +168,14 @@ export const CAPABILITY_REGISTRY = {
 
 - `apiId` 全局唯一；`capability.id` 全局唯一；capability 的 `apis[].path` 无重复方法+路径。
 - 每个 api 必须带 `v1` 对账块（116f-B 由盘点脚本从现有 routes 文件生成初版；「235+ 端点」只是当前估算，精确数量由盘点脚本产出）。
-- **116f-B 盘点脚本六项契约门禁**（可重复执行，输出不受文件扫描顺序影响）：实际路由总数、已登记数量、未登记路由列表、重复 method+path、无鉴权/角色元数据的路由列表；盘点结果与注册表对账，未登记路由按 D6 分层强度处置。
+- **116f-B 盘点脚本契约门禁**（可重复执行，输出不受文件扫描顺序影响）：① 实际路由总数（v1=242）；② 已登记数量（v1=242/242）；③ 未登记路由列表（0，含 file:line）；④ 重复 method+path（0）；⑤ 源路由未挂 requireAuth 的公开/可选认证端点（6，人工确认行为，非缺口）；⑥ 非法/无法解析定义（0）。另有注册表侧指标：注册表缺 auth 元数据 = 0（校验器 fail-fast 兜底）。分版本口径：v2 实际 3、登记 3/3；注册表 capability 总数 245 = 242(v1)+3(v2)。
+- **「244 注册语法命中」与「242 条 v1 终端路由」的差异（2026-08-15 实际枚举，非假设）**：
+  - 终端 HTTP method+path 注册（`router.get/post/put/delete('path', ...)`，含多行写法）：10 个模块共 **241** 条（platform 50、market 27、agri 28、machinery 23、disaster 16、policy 25、life 33、data 11、iot 5、ai 23）+ `routes/index.js` 的 `GET /ping` 1 条 = **242**，即最终可外部访问的 v1 API 数。
+  - `router.use` 中间件鉴权挂载（带路径，非终端路由）：**3** 条（`/agri`、`/ai`、`/data`，均为 requireAuth 作用域）。
+  - `router.use` 子路由挂载（无路径字符串，非终端路由）：**10** 条（`routes/index.js` 挂载 10 个模块 router）。
+  - 不在 `/api/v1` 下的 app 级路由：**2** 条（`GET /health`、`GET /admin/*`）+ 静态挂载 2 条（`/uploads`、`/admin`），均不在注册表范围内。
+  - 历史口径「244」（116f-A）＝ 242 终端 + 2 条 `router.use` 鉴权挂载（data、ai 各 1 条被计入行数；agri 的同型行未计入）——该口径为源码语法命中数，**不等于外部 API 数量，本工作单不再使用**；完整注册语法命中（3 条 use 全计入）为 245，与注册表 capability 总数 245 恰好同值纯属巧合，两者含义不同（capability 245 = 242 v1 + 3 v2）。
+- **注册表 path 是 mount-relative**：`capabilities[].apis[].path` 不含版本前缀。外部完整路径 = apiVersion 对应前缀 + path：**v1 → `/api/v1` + path**（`app.use(config.apiPrefix, router)`）；**v2 → `/api/v2` + path**（`app.use(config.apiPrefixV2, v2Routes)`）。既有测试锁定该组合规则：`contract-v2-skeleton.test.js` 断言注册表 path `/ping` 对应外部 `GET /api/v2/ping` 200、注册表 path `/market/product/list` 对应外部 `GET /api/v1/market/product/list` 200（v1 不回归测试）；`contract-registry.test.js` 锁定注册表 v1 path 的代表行（`/market/order`、`/auth/login` 等无前缀）与 `V2_ROUTE_DEFS`/注册表 v2 path 恰为 `/ping`、`/capabilities`、`/api-catalog`。
 - 新增 v2 端点强制先登记后挂载（routes/v2 从注册表装配中间件），未登记即挂载属启动错误（fail-fast，见 D6）。
 - `ratePlan` 枚举 = 现有桶名 + `tts`；`switchKey` 引用现有 `apiSwitch.key` 集合。
 
@@ -216,7 +223,7 @@ export const CAPABILITY_REGISTRY = {
 | 批 | 内容 | 文件级预计改动 | 退出条件 |
 |---|---|---|---|
 | **116f-A**（✅ 已完成）源码盘点、工作单与决策冻结 | 源码盘点（§1/§2）+ 本工作单冻结 + D1~D9 决策冻结 | 仅 docs（单条 commit，未 push） | 已完成的仅是盘点、工作单与 D1~D9 决策冻结（2026-08-15 确认）；**能力注册表、API v2 与任何业务代码尚未实施** |
-| **116f-B** 注册表与 v2 骨架 | ① 可重复执行的盘点脚本生成 `contracts/capabilities.js` 初版（覆盖全部 v1 路由元数据，只登记不改行为；输出不受文件扫描顺序影响，产出 §6.3 六项契约门禁数据）② `contracts/registry.js` 校验器（D6 分层）③ `routes/v2/index.js` + `/v2/ping`、`/v2/capabilities`、`/v2/api-catalog`（访问控制按 D9）④ `app.js` 挂 v2（复用安全链）⑤ `operationLogMiddleware` 兼容 v2 | 新增 `backend/src/contracts/*`、`backend/src/routes/v2/*`、`backend/test/contract-registry.test.js`；编辑 `routes/index.js`、`app.js`、`apiControl.js`（仅日志判定）、`config/index.js`(apiPrefixV2) | 注册表校验通过（结构错误全环境 fail-fast；覆盖缺口按 D6 分层）；盘点六项契约门禁通过；v2 三端点契约测试绿；**v1 业务语义完全不变**（全套测试 B1–B13 不回归）；operationLog 同时覆盖 /api/v1 与 /api/v2 写请求并有契约测试；Cookie/Bearer/CSRF/角色权限/限流/代理来源策略在 v2 不得弱化；正式 village.db 指纹不变；无 Prisma schema/migration 改动；v1/v2 薄适配器复用同一 controller/service、不复制业务逻辑（自 116f-C 首个适配器起验证） |
+| **116f-B** ✅ 已完成（2026-08-15）注册表与 v2 骨架 | ① 可重复执行的盘点脚本生成 `contracts/capabilities.js` 初版（覆盖全部 v1 路由元数据，只登记不改行为；输出不受文件扫描顺序影响，产出 §6.3 六项契约门禁数据）② `contracts/registry.js` 校验器（D6 分层）③ `routes/v2/index.js` + `/v2/ping`、`/v2/capabilities`、`/v2/api-catalog`（访问控制按 D9）④ `app.js` 挂 v2（复用安全链）⑤ `operationLogMiddleware` 兼容 v2 | 新增 `backend/src/contracts/*`、`backend/src/routes/v2/*`、`backend/scripts/inventory-routes.mjs`、`backend/scripts/gen-capabilities.mjs`、`backend/test/contract-registry.test.js`、`backend/test/contract-v2-skeleton.test.js`；编辑 `routes/index.js` 无改动、`app.js`、`apiControl.js`（仅日志判定）、`config/index.js`(apiPrefixV2) | ✅ 全部满足（验收数据见 §17 实施备注 2026-08-15）：注册表校验通过（结构错误全环境 fail-fast；覆盖缺口按 D6 分层）；盘点六项契约门禁通过；v2 三端点契约测试绿；**v1 业务语义完全不变**（全套测试 B1–B13 不回归）；operationLog 同时覆盖 /api/v1 与 /api/v2 写请求并有契约测试；Cookie/Bearer/CSRF/角色权限/限流/代理来源策略在 v2 不得弱化；正式 village.db 指纹不变；无 Prisma schema/migration 改动；v1/v2 薄适配器复用同一 controller/service、不复制业务逻辑（自 116f-C 首个适配器起验证） |
 | **116f-C** v2 只读样板（推荐 market product list/detail） | ① 注册表登记 `market.product.list/detail` 的 v2 形态 ② `modules/market/market.v2.controller.js` 薄适配器（**复用 v1 controller 内部逻辑，不复制业务**）③ v2 与 v1 响应逐字段契约测试 | 新增 `market.v2.controller.js`（或 `market.v2.routes.js`）、`backend/test/contract-v2-market.test.js` | v1/v2 同数据不同前缀，逐字段一致；临时库隔离 |
 | **116f-D** Flutter typed DTO 样板 | ① `core/dto/` MarketProduct/DashboardStats typed model ② `core/repository/` 接口 + `HttpRepository` ③ `ApiClient.v2` ④ 迁移 `product_detail_page.dart`（或 `data_dashboard_page.dart`）到 repository+DTO，行为不变 ⑤ DTO 解析单测 | 新增 `app/lib/core/dto/*`、`app/lib/core/repository/*`、`app/test/dto_*.dart`；编辑 `api_client.dart`、样板页 | flutter test 新单测绿；B14-B16 不回归；页面浏览器截图无视觉变化 |
 | **116f-E** 管理台目录生成化 + 资源组去重 | ① `scripts/gen-admin-api-catalog.mjs` 从注册表生成 `apiCatalog.js`（v1 调试预设保留）② `resourceGroups.js` 与后端 `resource.config.js` 的 `aiDetectRecord` 去重（D2：agri 为唯一 primaryGroup，ai 转 tag/secondaryGroup）③ 实施批次正式开始后更新 B19/B20 契约测试（本轮只记录迁移方案） | 编辑/生成 `backend/admin/src/apiCatalog.js`、`resourceGroups.js`、`backend/src/modules/platform/resource.config.js`、`backend/admin/test/apiCatalog-resourceGroups.test.js`、新增生成脚本 | admin test 绿、admin build 绿；管理台资源页分组正确 |
@@ -263,8 +270,8 @@ export const CAPABILITY_REGISTRY = {
 
 | # | 测试 | 断言要点 | 位置 |
 |---|---|---|---|
-| C1 | 注册表 schema 校验 | 无重复 apiId/capability id/方法+路径；roles 合法；ratePlan/switchKey 引用存在 | `backend/test/contract-registry.test.js` |
-| C2 | v2 骨架契约 | `GET /v2/ping` 公开、只返回最小健康信息（200 envelope）；`/v2/capabilities`、`/v2/api-catalog` 第一阶段 requireAuth + ADMIN；响应不暴露 controller 路径、内部正则、密钥、限流实现细节或安全配置（D9） | 同上 |
+| C1 | 注册表 schema 校验 | 无重复 apiId/capability id/方法+路径；roles 合法；ratePlan/switchKey 引用存在 | `backend/test/contract-registry.test.js` ✅（33 项断言，2026-08-15 落地） |
+| C2 | v2 骨架契约 | `GET /v2/ping` 公开、只返回最小健康信息（200 envelope）；`/v2/capabilities`、`/v2/api-catalog` 第一阶段 requireAuth + ADMIN；响应不暴露 controller 路径、内部正则、密钥、限流实现细节或安全配置（D9） | `backend/test/contract-v2-skeleton.test.js` ✅（17 项断言，2026-08-15 落地） |
 | C3 | v2 样板与 v1 逐字段一致 | `GET /v2/market/products` 与 `GET /market/product/list` 同数据集逐字段相同（含分页字段） | `backend/test/contract-v2-market.test.js` |
 | C4 | v1 不回归 | 116d B1–B13 原样跑（临时库） | 现有 7 个测试文件 |
 | C5 | 派生一致性（drift guard） | 注册表派生的 ROUTE_CATALOG/ROUTE_FEATURES 与当前手工表**内容一致**（迁移期过渡断言，116f-F 后删除手工表）；生成的 admin apiCatalog 与注册表子集一致 | `backend/test/registry-derive.test.js` |
@@ -272,7 +279,7 @@ export const CAPABILITY_REGISTRY = {
 | C7 | 管理台契约 | B19/B20 更新版：key 唯一、去重后的资源组归属正确、生成目录与注册表一致 | `backend/admin/test/apiCatalog-resourceGroups.test.js` |
 | C8 | 安全回归 | C2b Cookie/CSRF、C2c 代理信任测试套件原样通过（不修改） | 现有 4 个 116e 测试文件 |
 | C9 | 数据库指纹 | 各批结束后 village.db SHA256/Size/Mtime 与 §1.4 记录一致 | `verify-all.ps1` |
-| C10 | 盘点脚本契约门禁 | 可重复执行：两次运行（含打乱文件扫描顺序）输出一致；报告含实际路由总数、已登记数量、未登记路由列表、重复 method+path、无鉴权/角色元数据的路由列表（§6.3 六项） | 盘点脚本（116f-B 引入）+ 相应断言 |
+| C10 | 盘点脚本契约门禁 | 可重复执行：两次运行（含打乱文件扫描顺序）输出一致；报告含实际路由总数、已登记数量、未登记路由列表、重复 method+path、无鉴权/角色元数据的路由列表（§6.3 六项） | 盘点脚本（116f-B 引入）+ 相应断言 ✅（`backend/scripts/inventory-routes.mjs` + `contract-registry.test.js`） |
 
 ## 14. 验证命令
 
@@ -314,7 +321,7 @@ Get-ChildItem backend/src,backend/test -Recurse -Filter *.js | ForEach-Object { 
 
 ## 16. 完成标准（116f 验收口径）
 
-1. `GET /v2/ping`（公开、最小健康信息）与 `GET /v2/capabilities`、`GET /v2/api-catalog`（第一阶段 requireAuth + ADMIN，D9）可用；注册表初版覆盖现有全部 v1 路由的元数据登记；盘点脚本六项契约门禁通过。
+1. ✅（116f-B 达成）`GET /v2/ping`（公开、最小健康信息）与 `GET /v2/capabilities`、`GET /v2/api-catalog`（第一阶段 requireAuth + ADMIN，D9）可用；注册表初版覆盖现有全部 v1 路由的元数据登记（242/242）；盘点脚本六项契约门禁通过。
 2. 至少一条 v2 只读样板（market product list/detail）上线，与 v1 逐字段契约测试通过。
 3. Flutter 样板页经 typed DTO + Repository 读取，页面行为与视觉无变化（截图验收）。
 4. Admin apiCatalog 由注册表生成；`aiDetectRecord` 去重完成（agri 唯一 primaryGroup、ai 转 tag/secondaryGroup，B19/B20 更新版通过）。
@@ -326,3 +333,12 @@ Get-ChildItem backend/src,backend/test -Recurse -Filter *.js | ForEach-Object { 
 
 - 2026-08-11：工作单建立。只读盘点完成（源码证据见 §1/§2）；未实施任何代码改动；未 commit。GitHub 网络不可达，`679a87d8` 尚未推送（详见交接报告）。
 - 2026-08-15（116f-A 决策冻结，docs-only）：人工审查通过——D1/D3/D4/D5/D7/D8 确认采用推荐方案；D2 确认 agri 为 `aiDetectRecord` 唯一 primaryGroup、ai 作 tag/secondaryGroup、注册表能力 ID 全局唯一、B20 契约更新延至实施批次正式开始后；D6 修订为分层校验（结构错误全环境 fail-fast；覆盖缺口迁移期 dev/test fail-fast、demo/release 告警，116f 标记完成前升级为全环境硬门禁）；新增 D9（v2 目录端点鉴权与暴露面）；「235+ 端点」降级为当前估算，116f-B 由可重复执行的盘点脚本产出精确数量并设六项契约门禁；116f-B 退出条件强化。仅文档修订，未实施代码；随提交 `docs: 冻结 116f API v2 与能力注册表方案` 入库，未 push。
+- 2026-08-15（116f-B 实施并验收 + 集中审查整改，未 commit）：
+  - **统一数量口径**：v1 实际路由 **242**、注册表 v1 已登记 **242/242**；v2 实际路由 **3**（`GET /ping`、`/capabilities`、`/api-catalog`）、注册表 v2 已登记 **3/3**；注册表 capability 总数 **245 = 242(v1) + 3(v2)**。不再使用估算「235+」，不再用「242/242」含糊描述总注册表（代码注释、测试、三份 docs 均已同步）。
+  - **盘点六项门禁**：① 总数 242；② 已登记 242；③ 未登记 0；④ 重复 method+path 0；⑤ 源路由未挂 requireAuth 的公开/可选认证端点 6（`GET /ping`、`POST /auth/login|register|refresh|reset-password|logout`，逐项人工确认的 116e 公开契约行为，注册表显式登记 auth=optional）；⑥ 非法定义 0。**注册表缺 auth 元数据 = 0**（独立指标，校验器 fail-fast 兜底）。输出不依赖文件扫描顺序（打乱文件列表逐字节一致；连续两次执行产物逐字节一致；fixture 构造重复/非法定义时精确失败并含 file:line）。
+  - **新增文件（精确 9 个）**：`backend/scripts/inventory-routes.mjs`、`backend/scripts/gen-capabilities.mjs`、`backend/src/contracts/route-scanner.js`、`backend/src/contracts/capabilities.js`、`backend/src/contracts/inventory-report.json`、`backend/src/contracts/registry.js`、`backend/src/routes/v2/index.js`、`backend/test/contract-registry.test.js`（33 项）、`backend/test/contract-v2-skeleton.test.js`（17 项）。
+  - **修改文件（6 个代码/脚本 + 3 个 docs）**：`backend/src/app.js`（启动校验 + v2 挂载，日志含 v1/v2/capabilities 三口径）、`backend/src/config/index.js`（apiPrefixV2）、`backend/src/middleware/apiControl.js`（导出 RULES；v1/v2 双前缀；operationLog v2 且 v1 行为不变）、`backend/package.json`（test 接入 2 个新文件，**无 --test-isolation 标志**）、`scripts/verify-all.ps1`（scripts/*.mjs 语法检查；drift 单步内顺序执行两个子门禁且失败传播非零，Note 标明两个子检查）、本文件/进度总览/claude-memory。
+  - **POST /api/v2/ping 生产不存在**：生产 v2 路由表只有 3 个 GET（`V2_ROUTE_DEFS` + 注册表双重断言）；POST /api/v2/ping 真实请求 → 404 envelope（`接口不存在: POST /api/v2/ping`）；挂载未登记的 POST /ping 在 dev/demo/release 全环境 fail-fast（校验器测试证明）。operationLog 的 v2 写请求测试改用**测试专用 middleware harness**（`POST /api/v2/__contract/write`），该路径不挂载进生产 app、不进入正式注册表。
+  - **backend/.gitignore**：本轮**零改动**（临时测试库一律由测试 finally/after 确定性清理，不用 .gitignore 隐藏验收残留；盘点 drift 产物为已提交契约文件，必须可见）。
+  - **验收**：Backend **161/161**（原 111 + 新增 50）；C2b 19/19；C2c 34/34；Flutter 13/13；Admin 28/28；Admin build 通过；`verify-all.ps1` **15/15** 全绿（比基线多 1 个 drift 门禁步骤，该步骤 Note 明确两个子检查均执行）；正式 village.db 指纹前后一致（SHA256 `FAEECC...E96` / 1155072B / 2026-08-07T08:34:59.2995944Z）；`backend/prisma/.test-*` 残留 0；全仓库额外 DB 文件检查通过；Prisma schema/migrations 零改动。
+  - **未实施**：116f-C（market product v2 样板）、Flutter feature_catalog 生成、OpenAPI 工具链、`aiDetectRecord` 实际去重与 B20 契约修改（仅在注册表 migrationNotes 记录 D2 迁移方案）；本轮未 commit、未 push。

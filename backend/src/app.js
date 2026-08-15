@@ -5,6 +5,8 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { config } from './config/index.js'
 import { registerRoutes } from './routes/index.js'
+import v2Routes, { V2_ROUTE_DEFS } from './routes/v2/index.js'
+import { validateRegistry } from './contracts/registry.js'
 import { traceMiddleware, notFoundHandler, errorHandler } from './middleware/error.js'
 import { optionalAuth } from './middleware/auth.js'
 import { apiSwitchMiddleware, operationLogMiddleware, rateLimitMiddleware } from './middleware/apiControl.js'
@@ -14,6 +16,17 @@ import { ok } from './utils/response.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
+
+// 能力注册表启动校验（D6）：结构错误全环境 fail-fast；
+// v1 覆盖缺口 dev/test fail-fast、demo/release 告警；v2 未登记即挂载全环境 fail-fast。
+const registryAudit = validateRegistry({
+  environment: config.runtime.environment,
+  v2Routes: V2_ROUTE_DEFS,
+})
+if (registryAudit.warnings.length > 0) {
+  for (const warning of registryAudit.warnings) console.warn(`⚠ ${warning}`)
+}
+console.log(`✓ 能力注册表校验通过：v1 ${registryAudit.v1RegisteredCount}/${registryAudit.v1TotalRoutes} 已登记；v2 ${registryAudit.v2RegisteredCount}/${registryAudit.v2TotalRoutes} 已登记；capabilities 共 ${registryAudit.capabilityCount}（${config.runtime.environment}）`)
 
 // 代理信任：必须在任何中间件之前设置
 app.set('trust proxy', config.trustProxy)
@@ -51,6 +64,9 @@ app.get('/health', (req, res) => ok(res, { status: 'ok', env: config.isProd ? 'p
 
 // 业务路由
 registerRoutes(app, config.apiPrefix)
+
+// API v2 骨架（116f-B）：与 v1 同一位置注册，复用同一条安全链（D9 端点见 routes/v2）
+app.use(config.apiPrefixV2, v2Routes)
 
 app.get('/admin/*', (req, res, next) => {
   res.sendFile(path.join(adminDist, 'index.html'), (err) => {

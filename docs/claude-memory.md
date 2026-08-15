@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-08-15 · 116f-B 实施并全部验收通过 + 集中审查整改（未 commit、未 push）
+
+**分支/工作树**：`codex/refactor-farmlink`，HEAD=`fe79c6a2` 不变。116f-B 全部验收通过并经集中审查整改，**未 commit**。GitHub 网络未重试（本地仍 ahead 2）。
+
+**统一数量口径（代码注释/测试/docs 三处一致）**：v1 实际路由 **242**、注册表 v1 登记 **242/242**；v2 实际路由 **3**（GET /ping、/capabilities、/api-catalog）、注册表 v2 登记 **3/3**；注册表 capability 总数 **245 = 242(v1)+3(v2)**。禁止再用「242/242」含糊描述总注册表。
+
+**做了什么（116f-B 交付 + 审查整改）**：
+- **盘点脚本** `backend/scripts/inventory-routes.mjs`（--write/--check）+ 纯静态扫描器 `backend/src/contracts/route-scanner.js`（只读源码、不执行业务、不连库）。六项门禁：总数 242 / 已登记 242 / 未登记 0 / 重复 method+path 0 / 源路由未挂 requireAuth 的公开端点 6（/auth/login|register|refresh|reset-password|logout、GET /ping，逐项人工确认的 116e 公开契约，注册表显式登记 optional——**独立指标「注册表缺 auth 元数据」= 0**）/ 非法定义 0。确定性：打乱文件列表逐字节一致；连跑两次产物逐字节一致；--check 一致时退出 0；fixture 构造重复/非法定义精确失败含 file:line。
+- **注册表** `backend/src/contracts/capabilities.js`（schemaVersion=1，242 v1 + 3 v2，由 `gen-capabilities.mjs` 生成；switchKey 复用 apiControl.RULES；`migrationNotes.aiDetectRecordResourceGroups` 只记录 D2 方案，未实施）。
+- **校验器** `backend/src/contracts/registry.js`（D6：结构错误/重复 ID/非法角色/重复 method+path/v2 未登记即挂载 → 全环境 fail-fast；覆盖缺口 dev/test fail-fast、demo/release 告警；`HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 预留在 116f 完成前升硬门禁）。`app.js` 启动打印三口径。
+- **v2 三端点** `backend/src/routes/v2/index.js`：GET /v2/ping 公开最小健康（断库后仍 200）；/v2/capabilities、/v2/api-catalog requireAuth+ADMIN；显式投影不含 routesFile/line/ratePlan/switchKey/regex/密钥/安全配置。**生产不存在 POST /api/v2/ping**：真实请求 404（接口不存在），注册表 + V2_ROUTE_DEFS 仅 3 个 GET，挂载未登记 POST /ping 全环境 fail-fast。
+- **operationLog**：v1/v2 双前缀；v2 写记录 `/api/v2/...` 完整路径 + module 归一（system）；v1 行为不变；XFF 伪造仍被既有可信代理策略忽略。**v2 写契约测试用测试专用 middleware harness（`POST /api/v2/__contract/write`）**——不挂载进生产 app、不进正式注册表。
+- **backend/.gitignore 本轮零改动**：临时测试库一律 finally/after 确定性清理（contract 测试 rmSync + fixture mkdtemp finally），不用 gitignore 隐藏残留；inventory-report.json/capabilities.js 是已提交契约产物，必须可见可 diff。
+- **测试**：新增 50 项（`contract-registry.test.js` 33 + `contract-v2-skeleton.test.js` 17），接入 `backend/package.json` npm test（**无 --test-isolation 标志**）。**Backend 161/161**（原 111）；C2b 19/19；C2c 34/34；Admin 28/28 + build；Flutter 13/13；`verify-all.ps1` **15/15**（比基线多 1 个 drift 门禁步骤，该步骤 Note 标明 inventory--check 与 gen--check 两个子检查均执行，失败传播非零）。
+- **数据库/安全**：village.db 指纹前后一致（FAEECC...E96 / 1155072B / 2026-08-07T08:34:59Z）；Prisma schema/migrations 零改动；`backend/prisma/.test-*` 残留 0；全仓库额外 DB 文件检查通过；resourceGroups/B20 未动。
+
+**⚠️ 环境坑（本会话实测，已解决）**：
+- 早期沙箱（workspace-write）禁止子进程 stdio 管道，曾用 `--test-isolation=none` 临时跑单文件；**当前会话已切 danger-full-access，正式口径一律用普通 `node --test` / `npm test`，不用 isolation=none**。
+- `verify-all.ps1` 被 Windows PowerShell 5.1 按 ANSI 读取：**该文件保持纯 ASCII**（新增说明用英文），中文只出现在 docs/业务文件。
+- Flutter 工具链 `flutter --version` 会自动 `git fetch --tags`（flutter 官方仓库），离线打 stderr 但 exit 0——不是 FarmLink 仓库操作，无需处理。
+
+**下个会话注意**：① 116f-B 改动未 commit（git status 清单：9 M + 9 个新增文件 + 2 个新目录），等人工审查决定；② 下一步 116f-C（market product v2 只读样板 + 薄适配器复用 v1 controller），需人工确认后再开；③ 116f 完成前把 `HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 翻 true；④ B19/B20 与 aiDetectRecord 去重仍未动（D2 延后到实施批次）；⑤ 推送缺口未关（ahead 2）。
+
+---
+
 ## 2026-08-15 · 116f-A 决策冻结：工作单 D1~D9 人工确认（docs-only 单条提交，未 push）
 
 **分支/工作树**：`codex/refactor-farmlink`。本轮只改 3 个 docs 文件，以单条 commit（`docs: 冻结 116f API v2 与能力注册表方案`）入库、未 push；GitHub 网络缺口未重试（按 D8：网络恢复后先 fetch 复核无分叉再 push，分叉则停手报告）。

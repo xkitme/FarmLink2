@@ -26,12 +26,13 @@ function Add-Result {
 function Invoke-Step {
   param(
     [string]$Name,
-    [scriptblock]$Action
+    [scriptblock]$Action,
+    [string]$Note = ''
   )
   Write-Host "`n===== $Name =====" -ForegroundColor Cyan
   & $Action
   $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
-  Add-Result -Name $Name -ExitCode $exitCode
+  Add-Result -Name $Name -ExitCode $exitCode -Note $Note
 }
 
 function Resolve-Flutter {
@@ -98,10 +99,14 @@ if ($Flutter) {
   Pop-Location
 }
 
-# node --check: backend/src + backend/test (116d extend)
+# node --check: backend/src + backend/test + backend/scripts (116d/116f extension, includes .mjs)
 $backendSrcFiles = Get-ChildItem (Join-Path $BackendDir 'src') -Recurse -File -Filter '*.js'
 $backendTestFiles = Get-ChildItem (Join-Path $BackendDir 'test') -Recurse -File -Filter '*.js' -ErrorAction SilentlyContinue
-$backendAllFiles = @($backendSrcFiles) + @($backendTestFiles)
+$backendScriptFiles = @(
+  (Get-ChildItem (Join-Path $BackendDir 'scripts') -Recurse -File -Filter '*.js' -ErrorAction SilentlyContinue),
+  (Get-ChildItem (Join-Path $BackendDir 'scripts') -Recurse -File -Filter '*.mjs' -ErrorAction SilentlyContinue)
+) | ForEach-Object { $_ }
+$backendAllFiles = @($backendSrcFiles) + @($backendTestFiles) + @($backendScriptFiles)
 if ($backendAllFiles.Count -eq 0) {
   Add-Result -Name 'Backend node --check' -ExitCode 1 -Note 'No backend JavaScript files found.'
 } else {
@@ -112,7 +117,7 @@ if ($backendAllFiles.Count -eq 0) {
       $nodeFailures++
     }
   }
-  Add-Result -Name 'Backend node --check' -ExitCode $(if ($nodeFailures) { 1 } else { 0 }) -Note "$($backendAllFiles.Count) files (src + test)"
+  Add-Result -Name 'Backend node --check' -ExitCode $(if ($nodeFailures) { 1 } else { 0 }) -Note "$($backendAllFiles.Count) files (src + test + scripts)"
 }
 
 $backendPackage = Join-Path $BackendDir 'package.json'
@@ -128,6 +133,20 @@ if (Test-Path -LiteralPath $backendPackage) {
   } else {
     Add-Result -Name 'Backend lint' -ExitCode 0 -Note 'No lint script configured; recorded as baseline gap.'
   }
+}
+
+# 116f contract drift gate: inventory report + generated registry must match source (deterministic, repeatable)
+# Both sub-gates run sequentially; a nonzero exit from either propagates as this step's ExitCode.
+Invoke-Step -Name '116f inventory/registry drift' -Note 'inventory-routes --check OK + gen-capabilities --check OK (both executed)' -Action {
+  Push-Location $BackendDir
+  node scripts/inventory-routes.mjs --check
+  if ($LASTEXITCODE -ne 0) {
+    Pop-Location
+    Write-Host 'ERROR: inventory-report.json drifted from source (run: node scripts/inventory-routes.mjs --write)' -ForegroundColor Red
+    return
+  }
+  node scripts/gen-capabilities.mjs --check
+  Pop-Location
 }
 
 # Admin build (skippable via -SkipAdminBuild)

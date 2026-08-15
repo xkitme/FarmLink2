@@ -17,7 +17,7 @@ const RATE_LIMITS = {
   adminWrite: { windowSec: 60, limit: 120 },
 }
 
-const RULES = [
+export const RULES = [
   { key: 'user_register', method: 'POST', pattern: /^\/auth\/register$/ },
   { key: 'ai_disease_detect', method: 'POST', pattern: /^\/agri\/disease\/detect$/ },
   { key: 'ai_weed_detect', method: 'POST', pattern: /^\/agri\/weed\/detect$/ },
@@ -45,9 +45,22 @@ const RULES = [
   { key: 'offline_sync', method: 'POST', pattern: /^\/data\/sync$/ },
 ]
 
+function apiOriginalPath(req) {
+  return req.originalUrl.split('?')[0]
+}
+
+/** 是否为 API 请求：/api/v1 或 /api/v2（116f-B：v2 复用同一条安全链）。 */
+function isApiRequest(req) {
+  const original = apiOriginalPath(req)
+  return original.startsWith(config.apiPrefix) || original.startsWith(config.apiPrefixV2)
+}
+
 function apiPath(req) {
-  const original = req.originalUrl.split('?')[0]
-  return original.startsWith(config.apiPrefix) ? original.slice(config.apiPrefix.length) || '/' : original
+  const original = apiOriginalPath(req)
+  for (const prefix of [config.apiPrefixV2, config.apiPrefix]) {
+    if (original.startsWith(prefix)) return original.slice(prefix.length) || '/'
+  }
+  return original
 }
 
 function bearerPayload(req) {
@@ -115,7 +128,7 @@ function incrRate(plan) {
 
 /** 全局限流：NodeCache 内存计数，适合轻量化运行。 */
 export function rateLimitMiddleware(req, res, next) {
-  if (!req.originalUrl.startsWith(config.apiPrefix)) return next()
+  if (!isApiRequest(req)) return next()
   const plan = ratePlan(req)
   const state = incrRate(plan)
   res.setHeader('X-RateLimit-Policy', plan.name)
@@ -150,7 +163,7 @@ function matchedSwitch(req) {
 
 /** API 功能开关：开关缺失时默认放行，便于开发阶段逐步补齐。 */
 export async function apiSwitchMiddleware(req, res, next) {
-  if (!req.originalUrl.startsWith(config.apiPrefix)) return next()
+  if (!isApiRequest(req)) return next()
   const rule = matchedSwitch(req)
   if (!rule) return next()
   try {
@@ -205,13 +218,27 @@ function moduleName(path) {
   return path.split('/').filter(Boolean)[0] || 'system'
 }
 
-/** 操作日志：记录非 GET API，供后续管理台审计。 */
+const KNOWN_MODULE_SEGMENTS = new Set(['platform', 'agri', 'market', 'machinery', 'disaster', 'policy', 'life', 'data', 'iot', 'ai'])
+
+/** v2 路径的模块归属：去掉版本前缀后按首段归类，未知归 system（与 v1 的 moduleName 语义对齐但不改变 v1 行为）。 */
+function v2ModuleName(strippedPath) {
+  const seg = strippedPath.split('/').filter(Boolean)[0]
+  return seg && KNOWN_MODULE_SEGMENTS.has(seg) ? seg : 'system'
+}
+
+/** 操作日志：记录非 GET API（同时覆盖 /api/v1 与 /api/v2），供后续管理台审计。 */
 export function operationLogMiddleware(req, res, next) {
   const started = Date.now()
   res.on('finish', () => {
-    if (!req.originalUrl.startsWith(config.apiPrefix)) return
+    if (!isApiRequest(req)) return
     if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return
-    const path = apiPath(req)
+    const original = apiOriginalPath(req)
+    const isV2 = original.startsWith(config.apiPrefixV2)
+    // v1 行为不变：记录去掉 /api/v1 前缀后的路径；
+    // v2 记录带版本前缀的完整路径（如 /api/v2/ping），审计可区分版本。
+    const stripped = isV2 ? original.slice(config.apiPrefixV2.length) || '/' : apiPath(req)
+    const path = isV2 ? config.apiPrefixV2 + stripped : stripped
+    const module = isV2 ? v2ModuleName(stripped) : moduleName(path)
     const detail = {
       method: req.method,
       path,
@@ -226,7 +253,7 @@ export function operationLogMiddleware(req, res, next) {
     prisma.operationLog.create({
       data: {
         userId: req.user?.id || bearerPayload(req)?.id || null,
-        module: moduleName(path),
+        module,
         action: `${req.method} ${path}`,
         detail: JSON.stringify(detail),
         ip: clientIp(req),

@@ -148,6 +148,7 @@ export const config = {
   port: parseInt(process.env.PORT) || 8000,
   isProd: process.env.NODE_ENV === 'production',
   apiPrefix: '/api/v1',
+  apiPrefixV2: '/api/v2',
 
   runtime: {
     environment: runtimeEnvironment,

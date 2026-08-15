@@ -1,0 +1,2542 @@
+{
+  "schemaVersion": 1,
+  "scannedFiles": [
+    "src/modules/agri/agri.routes.js",
+    "src/modules/ai/ai.routes.js",
+    "src/modules/data/data.routes.js",
+    "src/modules/disaster/disaster.routes.js",
+    "src/modules/iot/iot.routes.js",
+    "src/modules/life/life.routes.js",
+    "src/modules/machinery/machinery.routes.js",
+    "src/modules/market/market.routes.js",
+    "src/modules/platform/platform.routes.js",
+    "src/modules/policy/policy.routes.js",
+    "src/routes/index.js"
+  ],
+  "totalRoutes": 242,
+  "registeredCount": 242,
+  "unregistered": [],
+  "duplicates": [],
+  "noExplicitAuthMiddleware": [
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 26,
+      "auth": "optional"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout",
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 30,
+      "auth": "optional"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 28,
+      "auth": "optional"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/register",
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 25,
+      "auth": "optional"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 27,
+      "auth": "optional"
+    },
+    {
+      "method": "GET",
+      "path": "/ping",
+      "module": "system",
+      "file": "src/routes/index.js",
+      "line": 22,
+      "auth": "optional"
+    }
+  ],
+  "registryMissingAuthMeta": [],
+  "invalid": [],
+  "routes": [
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 65,
+      "method": "GET",
+      "path": "/admin/ai-assistant/config",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 66,
+      "method": "PUT",
+      "path": "/admin/ai-assistant/config",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 67,
+      "method": "POST",
+      "path": "/admin/ai-assistant/test",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 61,
+      "method": "POST",
+      "path": "/admin/api-switch",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 64,
+      "method": "DELETE",
+      "path": "/admin/api-switch/:id",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 62,
+      "method": "PUT",
+      "path": "/admin/api-switch/:id",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 63,
+      "method": "PUT",
+      "path": "/admin/api-switch/:id/toggle",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 60,
+      "method": "GET",
+      "path": "/admin/api-switch/categories",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 59,
+      "method": "GET",
+      "path": "/admin/api-switch/list",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 68,
+      "method": "GET",
+      "path": "/admin/operation-log/list",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 69,
+      "method": "GET",
+      "path": "/admin/rate-limit/status",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 79,
+      "method": "POST",
+      "path": "/admin/resource/:resource",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 81,
+      "method": "DELETE",
+      "path": "/admin/resource/:resource/:id",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 78,
+      "method": "GET",
+      "path": "/admin/resource/:resource/:id",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 80,
+      "method": "PUT",
+      "path": "/admin/resource/:resource/:id",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 76,
+      "method": "GET",
+      "path": "/admin/resource/:resource/config",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 77,
+      "method": "GET",
+      "path": "/admin/resource/:resource/list",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 75,
+      "method": "GET",
+      "path": "/admin/resource/index",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 71,
+      "method": "POST",
+      "path": "/admin/security/password-reset-code",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 72,
+      "method": "POST",
+      "path": "/admin/security/revoke-sessions",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 70,
+      "method": "GET",
+      "path": "/admin/seed/summary",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 73,
+      "method": "GET",
+      "path": "/admin/site/startup-ad",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 74,
+      "method": "PUT",
+      "path": "/admin/site/startup-ad",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 50,
+      "method": "GET",
+      "path": "/agri/calendar",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 30,
+      "method": "POST",
+      "path": "/agri/carbon/calc",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 31,
+      "method": "GET",
+      "path": "/agri/carbon/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 38,
+      "method": "POST",
+      "path": "/agri/crop/monitor",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 39,
+      "method": "GET",
+      "path": "/agri/detect/records",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 40,
+      "method": "GET",
+      "path": "/agri/disease/:label",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 35,
+      "method": "POST",
+      "path": "/agri/disease/detect",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 34,
+      "method": "GET",
+      "path": "/agri/disease/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 44,
+      "method": "POST",
+      "path": "/agri/fertilizer/advise",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 45,
+      "method": "POST",
+      "path": "/agri/irrigation/plan",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 51,
+      "method": "GET",
+      "path": "/agri/pesticide",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 52,
+      "method": "GET",
+      "path": "/agri/pesticide/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 18,
+      "method": "POST",
+      "path": "/agri/plot",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 21,
+      "method": "DELETE",
+      "path": "/agri/plot/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 19,
+      "method": "GET",
+      "path": "/agri/plot/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 20,
+      "method": "PUT",
+      "path": "/agri/plot/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 17,
+      "method": "GET",
+      "path": "/agri/plot/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 25,
+      "method": "POST",
+      "path": "/agri/record",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 27,
+      "method": "DELETE",
+      "path": "/agri/record/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 26,
+      "method": "PUT",
+      "path": "/agri/record/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 24,
+      "method": "GET",
+      "path": "/agri/record/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 54,
+      "method": "GET",
+      "path": "/agri/report/annual",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 37,
+      "method": "POST",
+      "path": "/agri/seed/detect",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 43,
+      "method": "POST",
+      "path": "/agri/soil/advise",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 53,
+      "method": "GET",
+      "path": "/agri/weather",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 36,
+      "method": "POST",
+      "path": "/agri/weed/detect",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 47,
+      "method": "GET",
+      "path": "/agri/yield/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "agri",
+      "file": "src/modules/agri/agri.routes.js",
+      "line": 46,
+      "method": "POST",
+      "path": "/agri/yield/predict",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 22,
+      "method": "POST",
+      "path": "/ai/agri/ask",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 20,
+      "method": "POST",
+      "path": "/ai/assistant/command-result",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 18,
+      "method": "GET",
+      "path": "/ai/assistant/config",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 19,
+      "method": "POST",
+      "path": "/ai/assistant/turn",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 17,
+      "method": "POST",
+      "path": "/ai/chat",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 41,
+      "method": "POST",
+      "path": "/ai/detect-feedback",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 39,
+      "method": "POST",
+      "path": "/ai/image/analyze",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 40,
+      "method": "POST",
+      "path": "/ai/image/detect",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 24,
+      "method": "GET",
+      "path": "/ai/kb/search",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 23,
+      "method": "POST",
+      "path": "/ai/legal/ask",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 14,
+      "method": "GET",
+      "path": "/ai/model/version",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 21,
+      "method": "POST",
+      "path": "/ai/policy/ask",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 29,
+      "method": "DELETE",
+      "path": "/ai/qa/record-items/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 28,
+      "method": "DELETE",
+      "path": "/ai/qa/records",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 25,
+      "method": "GET",
+      "path": "/ai/qa/records",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 31,
+      "method": "DELETE",
+      "path": "/ai/qa/records/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 27,
+      "method": "POST",
+      "path": "/ai/qa/records/detect",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 30,
+      "method": "DELETE",
+      "path": "/ai/qa/threads/:threadId",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 26,
+      "method": "GET",
+      "path": "/ai/qa/threads/:threadId",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 13,
+      "method": "GET",
+      "path": "/ai/status",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 34,
+      "method": "POST",
+      "path": "/ai/tts",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 35,
+      "method": "GET",
+      "path": "/ai/tts/status",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "ai",
+      "file": "src/modules/ai/ai.routes.js",
+      "line": 38,
+      "method": "POST",
+      "path": "/ai/voice/recognize",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 26,
+      "method": "POST",
+      "path": "/auth/login",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": false
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 30,
+      "method": "POST",
+      "path": "/auth/logout",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": false
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 31,
+      "method": "GET",
+      "path": "/auth/me",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 28,
+      "method": "POST",
+      "path": "/auth/refresh",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": false
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 25,
+      "method": "POST",
+      "path": "/auth/register",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": false
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 27,
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": false
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 33,
+      "method": "DELETE",
+      "path": "/auth/sessions",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 32,
+      "method": "GET",
+      "path": "/auth/sessions",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 34,
+      "method": "DELETE",
+      "path": "/auth/sessions/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 16,
+      "method": "POST",
+      "path": "/data/annual-report/generate",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 15,
+      "method": "GET",
+      "path": "/data/annual-report/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 13,
+      "method": "GET",
+      "path": "/data/dashboard",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 14,
+      "method": "GET",
+      "path": "/data/remote-sensing",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 19,
+      "method": "GET",
+      "path": "/data/statistics",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 22,
+      "method": "PUT",
+      "path": "/data/statistics/:id/status",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 21,
+      "method": "POST",
+      "path": "/data/statistics/report",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 20,
+      "method": "GET",
+      "path": "/data/statistics/summary",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 25,
+      "method": "POST",
+      "path": "/data/sync",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 27,
+      "method": "GET",
+      "path": "/data/sync/logs",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "data",
+      "file": "src/modules/data/data.routes.js",
+      "line": 26,
+      "method": "GET",
+      "path": "/data/sync/status",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 12,
+      "method": "GET",
+      "path": "/disaster/alert/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 30,
+      "method": "GET",
+      "path": "/disaster/claim/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 28,
+      "method": "POST",
+      "path": "/disaster/claim/assess",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 29,
+      "method": "GET",
+      "path": "/disaster/claim/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 15,
+      "method": "GET",
+      "path": "/disaster/drought/index",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 19,
+      "method": "GET",
+      "path": "/disaster/emergency/:id",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 18,
+      "method": "GET",
+      "path": "/disaster/emergency/guide",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 14,
+      "method": "GET",
+      "path": "/disaster/fire/risk",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 13,
+      "method": "GET",
+      "path": "/disaster/frost/advice",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 22,
+      "method": "POST",
+      "path": "/disaster/report",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 24,
+      "method": "GET",
+      "path": "/disaster/report/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 25,
+      "method": "PUT",
+      "path": "/disaster/report/:id/status",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 23,
+      "method": "GET",
+      "path": "/disaster/report/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 33,
+      "method": "POST",
+      "path": "/disaster/sos",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 35,
+      "method": "PUT",
+      "path": "/disaster/sos/:id/status",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "disaster",
+      "file": "src/modules/disaster/disaster.routes.js",
+      "line": 34,
+      "method": "GET",
+      "path": "/disaster/sos/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 52,
+      "method": "POST",
+      "path": "/feedback",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 53,
+      "method": "GET",
+      "path": "/feedback/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "iot",
+      "file": "src/modules/iot/iot.routes.js",
+      "line": 9,
+      "method": "GET",
+      "path": "/iot/devices",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "iot",
+      "file": "src/modules/iot/iot.routes.js",
+      "line": 10,
+      "method": "GET",
+      "path": "/iot/devices/:id",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "iot",
+      "file": "src/modules/iot/iot.routes.js",
+      "line": 14,
+      "method": "GET",
+      "path": "/iot/linkage/logs",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "iot",
+      "file": "src/modules/iot/iot.routes.js",
+      "line": 13,
+      "method": "GET",
+      "path": "/iot/linkage/rules",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "iot",
+      "file": "src/modules/iot/iot.routes.js",
+      "line": 15,
+      "method": "POST",
+      "path": "/iot/linkage/rules/:id/toggle",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 44,
+      "method": "POST",
+      "path": "/land/transfer",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 46,
+      "method": "DELETE",
+      "path": "/land/transfer/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 43,
+      "method": "GET",
+      "path": "/land/transfer/:id",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 45,
+      "method": "PUT",
+      "path": "/land/transfer/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 42,
+      "method": "GET",
+      "path": "/land/transfer/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 13,
+      "method": "POST",
+      "path": "/life/clinic/consult",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 12,
+      "method": "GET",
+      "path": "/life/clinic/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 15,
+      "method": "PUT",
+      "path": "/life/consult/:id/reply",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 14,
+      "method": "GET",
+      "path": "/life/consult/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 46,
+      "method": "POST",
+      "path": "/life/edu/ask",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 19,
+      "method": "POST",
+      "path": "/life/elder/checkin",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 18,
+      "method": "GET",
+      "path": "/life/elder/services",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 66,
+      "method": "PUT",
+      "path": "/life/env/:id/status",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 65,
+      "method": "GET",
+      "path": "/life/env/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 64,
+      "method": "POST",
+      "path": "/life/env/report",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 22,
+      "method": "GET",
+      "path": "/life/express/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 23,
+      "method": "GET",
+      "path": "/life/express/query",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 60,
+      "method": "POST",
+      "path": "/life/folk",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 61,
+      "method": "GET",
+      "path": "/life/folk/:id",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 59,
+      "method": "GET",
+      "path": "/life/folk/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 50,
+      "method": "POST",
+      "path": "/life/help",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 51,
+      "method": "POST",
+      "path": "/life/help/:id/accept",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 49,
+      "method": "GET",
+      "path": "/life/help/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 37,
+      "method": "POST",
+      "path": "/life/job",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 36,
+      "method": "GET",
+      "path": "/life/job/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 38,
+      "method": "POST",
+      "path": "/life/job/match",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 43,
+      "method": "GET",
+      "path": "/life/loan/applications",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 42,
+      "method": "POST",
+      "path": "/life/loan/assess",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 41,
+      "method": "GET",
+      "path": "/life/loan/products",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 55,
+      "method": "POST",
+      "path": "/life/secondhand",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 56,
+      "method": "PUT",
+      "path": "/life/secondhand/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 54,
+      "method": "GET",
+      "path": "/life/secondhand/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 31,
+      "method": "POST",
+      "path": "/life/tourism",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 33,
+      "method": "GET",
+      "path": "/life/tourism/:id",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 30,
+      "method": "GET",
+      "path": "/life/tourism/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 32,
+      "method": "POST",
+      "path": "/life/tourism/promote",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 26,
+      "method": "GET",
+      "path": "/life/utility/bill",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "life",
+      "file": "src/modules/life/life.routes.js",
+      "line": 27,
+      "method": "POST",
+      "path": "/life/utility/pay",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 14,
+      "method": "POST",
+      "path": "/machinery",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 39,
+      "method": "DELETE",
+      "path": "/machinery/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 37,
+      "method": "GET",
+      "path": "/machinery/:id",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 38,
+      "method": "PUT",
+      "path": "/machinery/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 15,
+      "method": "POST",
+      "path": "/machinery/booking",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 17,
+      "method": "PUT",
+      "path": "/machinery/booking/:id/status",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 16,
+      "method": "GET",
+      "path": "/machinery/booking/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 33,
+      "method": "POST",
+      "path": "/machinery/cert/apply",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 34,
+      "method": "GET",
+      "path": "/machinery/cert/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 28,
+      "method": "GET",
+      "path": "/machinery/cost/summary",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 25,
+      "method": "POST",
+      "path": "/machinery/fault/diagnose",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 31,
+      "method": "POST",
+      "path": "/machinery/insurance",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 32,
+      "method": "GET",
+      "path": "/machinery/insurance/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 12,
+      "method": "GET",
+      "path": "/machinery/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 24,
+      "method": "GET",
+      "path": "/machinery/maintain/remind",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 13,
+      "method": "GET",
+      "path": "/machinery/mine",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 20,
+      "method": "POST",
+      "path": "/machinery/track",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "machinery",
+      "file": "src/modules/machinery/machinery.routes.js",
+      "line": 21,
+      "method": "GET",
+      "path": "/machinery/track/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 46,
+      "method": "GET",
+      "path": "/market/buyer/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 45,
+      "method": "GET",
+      "path": "/market/buyer/map",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 20,
+      "method": "GET",
+      "path": "/market/export",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 19,
+      "method": "GET",
+      "path": "/market/futures",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 52,
+      "method": "POST",
+      "path": "/market/grade/detect",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 48,
+      "method": "POST",
+      "path": "/market/groupbuy",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 49,
+      "method": "POST",
+      "path": "/market/groupbuy/:id/join",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 47,
+      "method": "GET",
+      "path": "/market/groupbuy/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 54,
+      "method": "POST",
+      "path": "/market/live/script",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 38,
+      "method": "GET",
+      "path": "/market/logistics/:no",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 34,
+      "method": "POST",
+      "path": "/market/order",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 36,
+      "method": "GET",
+      "path": "/market/order/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 37,
+      "method": "PUT",
+      "path": "/market/order/:id/status",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 35,
+      "method": "GET",
+      "path": "/market/order/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 53,
+      "method": "POST",
+      "path": "/market/package/generate",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 16,
+      "method": "GET",
+      "path": "/market/price",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 18,
+      "method": "GET",
+      "path": "/market/price/predict",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 17,
+      "method": "GET",
+      "path": "/market/price/trend",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 29,
+      "method": "POST",
+      "path": "/market/product",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 31,
+      "method": "DELETE",
+      "path": "/market/product/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 28,
+      "method": "GET",
+      "path": "/market/product/:id",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 30,
+      "method": "PUT",
+      "path": "/market/product/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 26,
+      "method": "GET",
+      "path": "/market/product/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 27,
+      "method": "GET",
+      "path": "/market/product/mine",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 23,
+      "method": "GET",
+      "path": "/market/trace/:code",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 42,
+      "method": "POST",
+      "path": "/market/trace/:code/record",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "market",
+      "file": "src/modules/market/market.routes.js",
+      "line": 41,
+      "method": "POST",
+      "path": "/market/trace/generate",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 49,
+      "method": "PUT",
+      "path": "/notification/:id/read",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 46,
+      "method": "GET",
+      "path": "/notification/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 48,
+      "method": "PUT",
+      "path": "/notification/read-all",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 47,
+      "method": "GET",
+      "path": "/notification/unread",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 33,
+      "method": "GET",
+      "path": "/party/learn/log",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 31,
+      "method": "GET",
+      "path": "/party/lesson/:id",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 32,
+      "method": "POST",
+      "path": "/party/lesson/:id/finish",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 30,
+      "method": "GET",
+      "path": "/party/lesson/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "system",
+      "file": "src/routes/index.js",
+      "line": 22,
+      "method": "GET",
+      "path": "/ping",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": false
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 27,
+      "method": "GET",
+      "path": "/policy/:id",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 19,
+      "method": "POST",
+      "path": "/policy/ai/ask",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 20,
+      "method": "POST",
+      "path": "/policy/legal/ask",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 12,
+      "method": "GET",
+      "path": "/policy/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 25,
+      "method": "POST",
+      "path": "/policy/points/exchange",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 24,
+      "method": "GET",
+      "path": "/policy/points/items",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 23,
+      "method": "GET",
+      "path": "/policy/points/rank",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 15,
+      "method": "POST",
+      "path": "/policy/subsidy/apply",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 16,
+      "method": "GET",
+      "path": "/policy/subsidy/list",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 56,
+      "method": "GET",
+      "path": "/search",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 20,
+      "method": "GET",
+      "path": "/site/auth-background",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 18,
+      "method": "GET",
+      "path": "/site/images",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 21,
+      "method": "POST",
+      "path": "/site/images/:key",
+      "auth": "required",
+      "roles": [
+        "ADMIN"
+      ],
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 19,
+      "method": "GET",
+      "path": "/site/startup-ad",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 53,
+      "method": "POST",
+      "path": "/talent",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 52,
+      "method": "GET",
+      "path": "/talent/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 47,
+      "method": "GET",
+      "path": "/training/course/:id",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 48,
+      "method": "POST",
+      "path": "/training/course/:id/enroll",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 49,
+      "method": "POST",
+      "path": "/training/course/:id/progress",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 45,
+      "method": "GET",
+      "path": "/training/course/list",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 46,
+      "method": "GET",
+      "path": "/training/my",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 43,
+      "method": "POST",
+      "path": "/upload/image",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 42,
+      "method": "GET",
+      "path": "/user/growth",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 39,
+      "method": "PUT",
+      "path": "/user/password",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 40,
+      "method": "GET",
+      "path": "/user/points",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 41,
+      "method": "GET",
+      "path": "/user/points/log",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 37,
+      "method": "GET",
+      "path": "/user/profile",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "platform",
+      "file": "src/modules/platform/platform.routes.js",
+      "line": 38,
+      "method": "PUT",
+      "path": "/user/profile",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 36,
+      "method": "GET",
+      "path": "/village/affairs",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 37,
+      "method": "POST",
+      "path": "/village/affairs",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 40,
+      "method": "GET",
+      "path": "/village/honor",
+      "auth": "optional",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 41,
+      "method": "POST",
+      "path": "/village/honor",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    },
+    {
+      "module": "policy",
+      "file": "src/modules/policy/policy.routes.js",
+      "line": 42,
+      "method": "POST",
+      "path": "/village/honor/:id/vote",
+      "auth": "required",
+      "roles": null,
+      "authExplicit": true
+    }
+  ]
+}
