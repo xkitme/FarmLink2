@@ -11,8 +11,8 @@
  * 另有注册表侧指标 registryMissingAuthMeta（注册表缺 auth 元数据，恒为 0）。
  * 盘点结果不依赖文件扫描顺序：文件列表与输出全部固定排序。
  *
- * 数量口径（116f-B 基线，2026-08-15）：v1 实际 242、v1 登记 242/242；
- * v2 实际 3、v2 登记 3/3；注册表 capability 总数 245。
+ * 数量口径（116f-C 基线，2026-08-15）：v1 实际 242、v1 登记 242/242；
+ * v2 实际 5、v2 登记 5/5；注册表 capability 总数 247。
  *
  * 用法（cwd = backend/）：
  *   node scripts/inventory-routes.mjs            输出 JSON 报告到 stdout

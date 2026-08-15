@@ -4,6 +4,7 @@ import { clientIp } from '../utils/client-ip.js'
 import { prisma } from '../db.js'
 import { config, CODES } from '../config/index.js'
 import { fail } from '../utils/response.js'
+import { CAPABILITY_REGISTRY } from '../contracts/capabilities.js'
 
 const SWITCH_CACHE_KEY = 'api-switch:map'
 const SWITCH_CACHE_TTL = 10
@@ -63,6 +64,153 @@ function apiPath(req) {
   return original
 }
 
+/**
+ * v2 注册表索引（116f-C）：v2 请求的 ratePlan/switchKey 由注册表元数据驱动
+ * （docs/116f-APIv2与能力注册表.md §5.4），v1 的 regex 分类逻辑保持不动。
+ * capabilities.js 为零依赖纯数据模块，此处构建索引无循环依赖。
+ * 索引值为 { api, capabilityId }，供 resolveV2ApiPolicy 返回命中证据。
+ */
+const V2_API_INDEX = new Map()
+for (const cap of CAPABILITY_REGISTRY.capabilities) {
+  for (const api of cap.apis) {
+    if (api.version === 'v2') V2_API_INDEX.set(`${api.method} ${api.path}`, { api, capabilityId: cap.id })
+  }
+}
+
+/** 模板路径匹配：'/market/products/:id' 命中 '/market/products/123'（':seg' 通配单段，段数必须相等）。 */
+function templatePathMatches(concrete, template) {
+  const a = concrete.split('/').filter(Boolean)
+  const b = template.split('/').filter(Boolean)
+  if (a.length !== b.length) return false
+  return b.every((seg, i) => seg.startsWith(':') || seg === a[i])
+}
+
+/**
+ * v2 请求策略解析（纯函数，无副作用；生产中间件与测试共用同一实现）。
+ *
+ * 接受的 path 形态（middleware 实际到达的形态 + 直接调用形态）：
+ * - mount-relative：'/market/products'、'/market/products/123'；
+ * - 完整路径：'/api/v2/market/products'（自动剥离 apiPrefixV2）；
+ * - 带 query string：'...?pageNum=1'（剥离 '?...'）；
+ * - 参数路径：具体 id 与模板 ':id' 双向命中；
+ * - 尾斜杠：'/market/products/' 与 '/market/products' 等价（与 Express 非严格路由一致）。
+ *
+ * @returns {{matched:boolean, capabilityId:string|null, apiId:string|null, ratePlan:string|null, switchKey:string|null}}
+ * matched=false 表示未命中注册表——明确走既有 fallback（global 桶 / 无开关），绝不假装已登记。
+ */
+export function resolveV2ApiPolicy(method, path) {
+  const raw = `${path || ''}`.split('?')[0]
+  let relative = raw
+  if (relative.startsWith(config.apiPrefixV2)) {
+    relative = relative.slice(config.apiPrefixV2.length) || '/'
+  }
+  const methodKey = `${method}`.toUpperCase()
+
+  const exact = V2_API_INDEX.get(`${methodKey} ${relative}`)
+  if (exact) {
+    return {
+      matched: true,
+      capabilityId: exact.capabilityId,
+      apiId: exact.api.apiId,
+      ratePlan: exact.api.ratePlan,
+      switchKey: exact.api.switchKey,
+    }
+  }
+  for (const [key, entry] of V2_API_INDEX) {
+    const [m, template] = key.split(' ')
+    if (m === methodKey && templatePathMatches(relative, template)) {
+      return {
+        matched: true,
+        capabilityId: entry.capabilityId,
+        apiId: entry.api.apiId,
+        ratePlan: entry.api.ratePlan,
+        switchKey: entry.api.switchKey,
+      }
+    }
+  }
+  return { matched: false, capabilityId: null, apiId: null, ratePlan: null, switchKey: null }
+}
+
+/** v1 限流桶纯解析（既有 ratePlan 分类逻辑的纯函数形态，供中间件与测试共用，不改行为）。 */
+export function v1RateBucket(method, path) {
+  if (path.startsWith('/auth/login') || path.startsWith('/auth/reset-password')) {
+    return { name: 'auth-login', ...RATE_LIMITS.authLogin }
+  }
+  if (path.startsWith('/auth/sms')) {
+    return { name: 'sms', ...RATE_LIMITS.sms }
+  }
+  if (path.startsWith('/ai/tts')) {
+    return { name: 'tts', windowSec: 3600, limit: 300 }
+  }
+  const isAi = path.startsWith('/ai/')
+    || path === '/policy/ai/ask'
+    || path === '/policy/legal/ask'
+    || path.includes('/detect')
+    || path.includes('/diagnose')
+    || path.includes('/assess')
+    || path.includes('/generate')
+  if (isAi) return { name: 'ai', windowSec: 3600, limit: config.aiRateLimit.perHour }
+
+  const isUpload = method === 'POST' && (
+    path.includes('/detect')
+    || path.includes('/analyze')
+    || path.includes('/recognize')
+    || path.includes('/report')
+  )
+  if (isUpload) return { name: 'upload', ...RATE_LIMITS.upload }
+
+  return { name: 'global', ...RATE_LIMITS.global }
+}
+
+/** v2 限流桶纯解析：注册表 ratePlan 元数据驱动；未登记/缺省 → global（与 v1 缺省语义一致）。 */
+export function v2RateBucket(method, path) {
+  const policy = resolveV2ApiPolicy(method, path)
+  const name = policy.matched && policy.ratePlan ? policy.ratePlan : 'global'
+  if (name === 'authLogin' || name === 'sms' || name === 'upload' || name === 'adminRead' || name === 'adminWrite') {
+    return { name, ...RATE_LIMITS[name] }
+  }
+  if (name === 'tts') return { name, windowSec: 3600, limit: 300 }
+  if (name === 'ai') return { name, windowSec: 3600, limit: config.aiRateLimit.perHour }
+  return { name: 'global', ...RATE_LIMITS.global }
+}
+
+/** v1 开关 key 纯解析（RULES method+regex，行为与 116f-B 之前完全一致）。 */
+export function v1SwitchKeyFor(method, path) {
+  for (const rule of RULES) {
+    if ((!rule.method || rule.method === method) && rule.pattern.test(path)) return rule.key
+  }
+  return null
+}
+
+/**
+ * v1 限流策略纯解析（含 ADMIN 分桶；116f-C 提取重构，行为与重构前逐项一致）。
+ * ratePlan() 与测试共用本函数，ADMIN 分支保持「先于普通分类」的既有优先级。
+ */
+export function resolveV1RatePolicy(method, path, role) {
+  if (role === 'ADMIN' && path.startsWith('/admin/')) {
+    const plan = ADMIN_READ_METHODS.has(method)
+      ? { name: 'admin-read', ...RATE_LIMITS.adminRead }
+      : { name: 'admin-write', ...RATE_LIMITS.adminWrite }
+    return plan
+  }
+  return v1RateBucket(method, path)
+}
+
+/** v2 开关 key 纯解析：注册表 switchKey 元数据驱动；未登记 → null（与 v1 未命中一致）。 */
+export function v2SwitchKeyFor(method, path) {
+  const policy = resolveV2ApiPolicy(method, path)
+  return policy.matched ? policy.switchKey : null
+}
+
+/** 限流桶 key 语义：auth-login/sms/global 按 IP；其余按用户（无用户回落 IP）。 */
+function bucketKey(bucket, payload, req) {
+  const actor = payload?.id ? `user:${payload.id}` : `ip:${clientIp(req)}`
+  if (bucket.name === 'auth-login' || bucket.name === 'sms' || bucket.name === 'global') {
+    return `ip:${clientIp(req)}`
+  }
+  return actor
+}
+
 function bearerPayload(req) {
   const h = req.headers.authorization || ''
   const token = h.startsWith('Bearer ') ? h.slice(7) : h
@@ -71,47 +219,25 @@ function bearerPayload(req) {
 }
 
 function ratePlan(req) {
-  const path = apiPath(req)
+  const original = apiOriginalPath(req)
   const method = req.method.toUpperCase()
-  if (path.startsWith('/auth/login') || path.startsWith('/auth/reset-password')) {
-    return { name: 'auth-login', ...RATE_LIMITS.authLogin, key: `ip:${clientIp(req)}` }
-  }
-  if (path.startsWith('/auth/sms')) {
-    return { name: 'sms', ...RATE_LIMITS.sms, key: `ip:${clientIp(req)}` }
+  const path = apiPath(req)
+
+  // 116f-C：v2 请求的限流桶由注册表 ratePlan 元数据确定（v1 regex 分类逻辑保持不动）
+  if (original.startsWith(config.apiPrefixV2)) {
+    const bucket = v2RateBucket(method, path)
+    const payload = req.user || bearerPayload(req)
+    return { ...bucket, key: bucketKey(bucket, payload, req) }
   }
 
+  // v1：既有行为逐项保留（ADMIN 分桶在前，其余走纯分类器；与 resolveV1RatePolicy 同一实现）
   const payload = req.user || bearerPayload(req)
+  const bucket = resolveV1RatePolicy(method, path, payload?.role)
   const actor = payload?.id ? `user:${payload.id}` : `ip:${clientIp(req)}`
-  if (payload?.role === 'ADMIN' && path.startsWith('/admin/')) {
-    const plan = ADMIN_READ_METHODS.has(method)
-      ? { name: 'admin-read', ...RATE_LIMITS.adminRead }
-      : { name: 'admin-write', ...RATE_LIMITS.adminWrite }
-    return { ...plan, key: actor }
+  if (bucket.name === 'admin-read' || bucket.name === 'admin-write') {
+    return { ...bucket, key: actor }
   }
-
-  // 本地 TTS 合成便宜,且适老模式点读会高频调用,单独给宽松桶,不挤占 AI 20/hour 配额。
-  if (path.startsWith('/ai/tts')) {
-    return { name: 'tts', windowSec: 3600, limit: 300, key: actor }
-  }
-
-  const isAi = path.startsWith('/ai/')
-    || path === '/policy/ai/ask'
-    || path === '/policy/legal/ask'
-    || path.includes('/detect')
-    || path.includes('/diagnose')
-    || path.includes('/assess')
-    || path.includes('/generate')
-  if (isAi) return { name: 'ai', windowSec: 3600, limit: config.aiRateLimit.perHour, key: actor }
-
-  const isUpload = method === 'POST' && (
-    path.includes('/detect')
-    || path.includes('/analyze')
-    || path.includes('/recognize')
-    || path.includes('/report')
-  )
-  if (isUpload) return { name: 'upload', ...RATE_LIMITS.upload, key: actor }
-
-  return { name: 'global', ...RATE_LIMITS.global, key: `ip:${clientIp(req)}` }
+  return { ...bucket, key: bucketKey(bucket, payload, req) }
 }
 
 function incrRate(plan) {
@@ -158,7 +284,12 @@ function matchedSwitch(req) {
   const path = apiPath(req)
   const method = req.method.toUpperCase()
   if (path.startsWith('/admin/api-switch')) return null
-  return RULES.find((rule) => (!rule.method || rule.method === method) && rule.pattern.test(path))
+  const original = apiOriginalPath(req)
+  // v2 由注册表 switchKey 元数据驱动；v1 沿用 RULES method+regex（行为不变）
+  const key = original.startsWith(config.apiPrefixV2)
+    ? v2SwitchKeyFor(method, path)
+    : v1SwitchKeyFor(method, path)
+  return key ? { key } : null
 }
 
 /** API 功能开关：开关缺失时默认放行，便于开发阶段逐步补齐。 */

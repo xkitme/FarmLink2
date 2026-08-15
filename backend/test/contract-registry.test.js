@@ -186,32 +186,34 @@ test('116f-B 注册表与盘点契约（纯单元）', async (t) => {
     assert.deepEqual(registryMissingAuthMeta(registryV1Index()), [])
   })
 
-  await t.test('数量口径：v1 242/242、v2 3/3、capabilities 总数 245', () => {
+  await t.test('数量口径：v1 242/242、v2 5/5、capabilities 总数 247', () => {
     const registry = CAPABILITY_REGISTRY
     const v1Apis = registry.capabilities.flatMap((c) => c.apis).filter((a) => a.version === 'v1')
     const v2Apis = registry.capabilities.flatMap((c) => c.apis).filter((a) => a.version === 'v2')
     assert.equal(v1Apis.length, 242, '注册表 v1 api 数必须为 242')
-    assert.equal(v2Apis.length, 3, '注册表 v2 api 数必须为 3')
-    assert.equal(registry.capabilities.length, 245, 'capability 总数必须为 245 = 242(v1) + 3(v2)')
+    assert.equal(v2Apis.length, 5, '注册表 v2 api 数必须为 5（116f-B 3 + 116f-C 2）')
+    assert.equal(registry.capabilities.length, 247, 'capability 总数必须为 247 = 242(v1) + 5(v2)')
 
     // 校验器返回分版本口径
     const audit = validateRegistry({ environment: 'dev', v2Routes: V2_ROUTE_DEFS })
     assert.equal(audit.v1TotalRoutes, 242)
     assert.equal(audit.v1RegisteredCount, 242)
-    assert.equal(audit.v2TotalRoutes, 3)
-    assert.equal(audit.v2RegisteredCount, 3)
-    assert.equal(audit.capabilityCount, 245)
+    assert.equal(audit.v2TotalRoutes, 5)
+    assert.equal(audit.v2RegisteredCount, 5)
+    assert.equal(audit.capabilityCount, 247)
 
-    // 生产 v2 路由表：只有 3 个 GET，不存在 POST /api/v2/ping
+    // 生产 v2 路由表：只有 5 个 GET，不存在 POST /api/v2/ping
     assert.deepEqual(V2_ROUTE_DEFS, [
       { method: 'GET', path: '/ping' },
       { method: 'GET', path: '/capabilities' },
       { method: 'GET', path: '/api-catalog' },
+      { method: 'GET', path: '/market/products' },
+      { method: 'GET', path: '/market/products/:id' },
     ])
     assert.deepEqual(
       v2Apis.map((a) => `${a.method} ${a.path}`).sort(),
-      ['GET /api-catalog', 'GET /capabilities', 'GET /ping'],
-      '生产注册表中 v2 只能有 3 个 GET 端点',
+      ['GET /api-catalog', 'GET /capabilities', 'GET /market/products', 'GET /market/products/:id', 'GET /ping'],
+      '生产注册表中 v2 只能有 5 个 GET 端点',
     )
     assert.ok(!v2Apis.some((a) => a.method !== 'GET'), '生产注册表不得存在任何非 GET 的 v2 端点')
   })
@@ -492,14 +494,10 @@ test('116f-B 注册表与盘点契约（纯单元）', async (t) => {
   })
 
   // ── v2 未登记即挂载：所有环境 fail-fast ────────────────────
-  await t.test('v2 三端点已登记 → 校验通过', () => {
+  await t.test('v2 五端点已登记 → 校验通过', () => {
     assert.doesNotThrow(() => validateRegistry({
       environment: 'dev',
-      v2Routes: [
-        { method: 'GET', path: '/ping' },
-        { method: 'GET', path: '/capabilities' },
-        { method: 'GET', path: '/api-catalog' },
-      ],
+      v2Routes: V2_ROUTE_DEFS,
     }))
   })
 

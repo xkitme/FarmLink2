@@ -19,10 +19,11 @@
  * - 当前源码不存在 `router.route('/p').get(...)` 链式形式与 app 级 /api 挂载，
  *   若未来出现，scanner 会把它们报进 invalid 清单强制人工处理（不静默漏计）。
  *
- * 数量口径（116f-B 基线，2026-08-15）：
+ * 数量口径（116f-C 基线，2026-08-15）：
  * - v1 实际路由：242；注册表 v1 已登记：242/242；
- * - v2 实际路由：3（GET /ping、/capabilities、/api-catalog）；注册表 v2 已登记：3/3；
- * - 注册表 capability 总数：245 = 242(v1) + 3(v2)。
+ * - v2 实际路由：5（GET /ping、/capabilities、/api-catalog + 116f-C GET /market/products、/market/products/:id）；
+ *   注册表 v2 已登记：5/5；
+ * - 注册表 capability 总数：247 = 242(v1) + 5(v2)。
  * 口径由 inventory-report.json + --check 漂移门禁锁定，改路由必须同步 --write。
  */
 

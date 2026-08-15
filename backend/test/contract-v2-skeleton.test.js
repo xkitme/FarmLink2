@@ -3,7 +3,7 @@
  *
  * 覆盖（docs/116f-APIv2与能力注册表.md §13 C2 + D9 + §5.6/§12）：
  * - GET /v2/ping 公开、最小健康信息、不查询数据库（断开 Prisma 后仍 200）；
- * - 生产路由表证据：POST /api/v2/ping 精确 404（生产 v2 只有 3 个 GET，见 contract-registry.test.js 注册表断言）；
+ * - 生产路由表证据：POST /api/v2/ping 精确 404（生产 v2 只有 5 个 GET，见 contract-registry.test.js 注册表断言）；
  * - GET /v2/capabilities、GET /v2/api-catalog：requireAuth + ADMIN 权限矩阵（401/403/200 envelope 精确断言）；
  * - 外部响应敏感字段缺失（controller 路径/内部正则/密钥/限流细节/安全配置）；
  * - api-catalog 与能力注册表可验证一致 + 稳定排序；
@@ -236,7 +236,7 @@ test('116f-B v2 骨架与操作日志契约', async (t) => {
     assert.equal(data.schemaVersion, 1)
     assert.deepEqual(data.apiVersions, ['v1', 'v2'])
     assert.ok(data.sections && typeof data.sections === 'object')
-    assert.equal(data.total, 245, 'capability 总数必须为 245 = 242(v1) + 3(v2)')
+    assert.equal(data.total, 247, 'capability 总数必须为 247 = 242(v1) + 5(v2)')
     assert.equal(data.total, data.capabilities.length)
 
     const ids = data.capabilities.map((cap) => cap.id)
@@ -250,7 +250,13 @@ test('116f-B v2 骨架与操作日志契约', async (t) => {
       .filter((api) => api.version === 'v2')
       .map((api) => `${api.method} ${api.path}`)
       .sort()
-    assert.deepEqual(v2Paths, ['GET /api-catalog', 'GET /capabilities', 'GET /ping'])
+    assert.deepEqual(v2Paths, [
+      'GET /api-catalog',
+      'GET /capabilities',
+      'GET /market/products',
+      'GET /market/products/:id',
+      'GET /ping',
+    ])
 
     const v1Paths = data.capabilities
       .flatMap((cap) => cap.apis)

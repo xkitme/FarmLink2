@@ -1,10 +1,12 @@
 /**
- * API v2 最小骨架（116f-B，D9）。
+ * API v2 骨架与只读样板（116f-B D9 + 116f-C market product）。
  *
- * 访问控制（D9，已确认）：
+ * 访问控制：
  * - GET /v2/ping           公开，只返回最小、稳定、精确的健康信息；不查库。
  * - GET /v2/capabilities   requireAuth + ADMIN，显式投影的安全字段。
  * - GET /v2/api-catalog    requireAuth + ADMIN，稳定、确定排序的安全目录视图。
+ * - GET /v2/market/products、GET /v2/market/products/:id  公开读取（optionalAuth），
+ *   116f-C 薄适配器直接复用 v1 market controller，不复制业务逻辑。
  *
  * 外部响应绝不暴露：controller 路径、内部正则、密钥、限流实现细节
  * （ratePlan/switchKey）、安全配置与 v1 对账块（routesFile/line）。
@@ -16,12 +18,15 @@ import { Router } from 'express'
 import { requireAuth, requireRole } from '../../middleware/auth.js'
 import { ok } from '../../utils/response.js'
 import { CAPABILITY_REGISTRY } from '../../contracts/capabilities.js'
+import marketV2Routes from '../../modules/market/market.v2.routes.js'
 
 /** 已挂载的 v2 路由定义：注册表校验器据此做「未登记即挂载」fail-fast 检查。 */
 export const V2_ROUTE_DEFS = Object.freeze([
   { method: 'GET', path: '/ping' },
   { method: 'GET', path: '/capabilities' },
   { method: 'GET', path: '/api-catalog' },
+  { method: 'GET', path: '/market/products' },
+  { method: 'GET', path: '/market/products/:id' },
 ])
 
 /** 确定性比较（按码点，不依赖 locale）。 */
@@ -120,5 +125,8 @@ router.get('/capabilities', adminGuard, (req, res) => {
 router.get('/api-catalog', adminGuard, (req, res) => {
   ok(res, buildApiCatalogPayload())
 })
+
+// 116f-C：market product 只读样板（薄适配器复用 v1 controller，公开读取）
+router.use(marketV2Routes)
 
 export default router

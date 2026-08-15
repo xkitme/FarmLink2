@@ -118,6 +118,52 @@ const V2_CAPABILITIES = Object.freeze([
       sunset: null,
     }],
   },
+  // 116f-C：market product 只读样板（薄适配器复用 v1 controller）。
+  // ratePlan/switchKey 与对应 v1 能力同语义：GET /market/product/list|/:id 无开关规则、global 桶。
+  {
+    id: 'cap.v2.market.products',
+    section: 'market',
+    name: '流通销售 · GET /market/products（v2 商品列表）',
+    aliases: [],
+    enabled: true,
+    regionScoped: false,
+    deprecated: false,
+    apis: [{
+      apiId: 'api.v2.market.products',
+      version: 'v2',
+      method: 'GET',
+      path: '/market/products',
+      auth: 'optional',
+      roles: null,
+      switchKey: null,
+      ratePlan: 'global',
+      deprecated: false,
+      deprecatedSince: null,
+      sunset: null,
+    }],
+  },
+  {
+    id: 'cap.v2.market.products.detail',
+    section: 'market',
+    name: '流通销售 · GET /market/products/:id（v2 商品详情）',
+    aliases: [],
+    enabled: true,
+    regionScoped: false,
+    deprecated: false,
+    apis: [{
+      apiId: 'api.v2.market.products.detail',
+      version: 'v2',
+      method: 'GET',
+      path: '/market/products/:id',
+      auth: 'optional',
+      roles: null,
+      switchKey: null,
+      ratePlan: 'global',
+      deprecated: false,
+      deprecatedSince: null,
+      sunset: null,
+    }],
+  },
 ])
 
 function slugForPath(routePath) {

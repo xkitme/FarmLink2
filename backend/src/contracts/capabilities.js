@@ -6903,6 +6903,54 @@ export const CAPABILITY_REGISTRY =
       ]
     },
     {
+      "id": "cap.v2.market.products",
+      "section": "market",
+      "name": "流通销售 · GET /market/products（v2 商品列表）",
+      "aliases": [],
+      "enabled": true,
+      "regionScoped": false,
+      "deprecated": false,
+      "apis": [
+        {
+          "apiId": "api.v2.market.products",
+          "version": "v2",
+          "method": "GET",
+          "path": "/market/products",
+          "auth": "optional",
+          "roles": null,
+          "switchKey": null,
+          "ratePlan": "global",
+          "deprecated": false,
+          "deprecatedSince": null,
+          "sunset": null
+        }
+      ]
+    },
+    {
+      "id": "cap.v2.market.products.detail",
+      "section": "market",
+      "name": "流通销售 · GET /market/products/:id（v2 商品详情）",
+      "aliases": [],
+      "enabled": true,
+      "regionScoped": false,
+      "deprecated": false,
+      "apis": [
+        {
+          "apiId": "api.v2.market.products.detail",
+          "version": "v2",
+          "method": "GET",
+          "path": "/market/products/:id",
+          "auth": "optional",
+          "roles": null,
+          "switchKey": null,
+          "ratePlan": "global",
+          "deprecated": false,
+          "deprecatedSince": null,
+          "sunset": null
+        }
+      ]
+    },
+    {
       "id": "cap.v2.system.api-catalog",
       "section": "system",
       "name": "系统 · GET /api-catalog（API 目录）",

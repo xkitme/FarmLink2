@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-08-15 · 116f-C 实施并全部验收通过（market product 只读 v2 样板；未 commit、未 push）
+
+**分支/工作树**：`codex/refactor-farmlink`，HEAD=`1d6f3341` 不变。116f-C 全部验收通过，**未 commit**。GitHub 网络未重试（本地仍 ahead 3）。
+
+**做了什么（116f-C 交付）**：
+- **外部路径**：`GET /api/v2/market/products`、`GET /api/v2/market/products/:id`（mount-relative；与工作单建议一致，无别名冲突）。
+- **薄适配器**：新增 `backend/src/modules/market/market.v2.routes.js`——只有 2 条挂载，直接 `optionalAuth + wrap(product.list|detail)` 复用 v1 `product.controller.js`，零业务逻辑复制。挂载进 `routes/v2/index.js`（`router.use(marketV2Routes)` + `V2_ROUTE_DEFS` 扩到 5 条）。
+- **注册表/目录/限流/开关**：`gen-capabilities.mjs` overlay 新增 `cap.v2.market.products`、`cap.v2.market.products.detail`（auth=optional、ratePlan=global、switchKey=null，与对应 v1 能力同语义——v1 list/detail 无开关规则、global 桶）。`apiControl.js` 新增 `V2_API_INDEX`（注册表 v2 元数据索引）+ 纯函数 `v2RateBucket`/`v2SwitchKeyFor`；v1 分类逻辑提取为纯函数 `v1RateBucket`/`v1SwitchKeyFor`（行为不变，供测试直接断言）；`ratePlan`/`matchedSwitch` 仅加 v2 分支，v1 regex 逻辑不动。
+- **口径**：v1 保持 242/242；v2 3→**5**（5/5 登记）；capability 总数 245→**247**；两个 --check drift 门禁通过；ADMIN 安全投影含新条目且无内部字段泄露。
+- **测试**：新增 `backend/test/contract-v2-market.test.js`（21 项，独立临时 SQLite，接入 npm test 普通 node --test）：list/detail v1/v2 完整 payload 等价（code/msg/data deepEqual + timestamp/traceId 结构性）；status=1、createdAt 降序、分页五字段、category/keyword、images 数组、seller 投影、404 与边界 id（abc/-1/0）一致；POST/PUT/DELETE 两个 v2 路径均 404 且无写库副作用；ratePlan/switchKey 纯函数直接断言 + X-RateLimit-Policy=global 头实证；GET 不产生操作日志。**聚焦整改新增 4 项**：① 七类认证输入（无凭据/合法 FARMER Bearer/合法 Cookie/格式错误 Authorization/空 Bearer/过期 Bearer/无效 Cookie）v1/v2 状态+code+msg+data 全等价——`optional` 的真实语义是 optionalAuth「尽力解析凭据，非法/过期忽略不阻断」，v1 与 v2 同链（market.routes.js 与 market.v2.routes.js 均显式挂 optionalAuth）；② `resolveV2ApiPolicy(method,path)` 纯函数命中证据（matched=true + capabilityId 直接断言，覆盖 mount-relative/完整 /api/v2 前缀/query/参数路径/尾斜杠五种形态；生产 v2RateBucket/v2SwitchKeyFor 走同一实现）；③ 未知 v2 路由 matched=false → 明确 fallback（global/null），不假装已登记；④ v1 ratePlan/switchKey 硬编码 characterization 表（41 行含 admin-read/write 分桶、method 不误命中、参数路径），锁定重构前既有行为（非从 RULES 动态生成）。**Backend 182/182**（161+21）；C2b 19/19；C2c 34/34；Admin 28/28+build；Flutter 13/13；verify-all 15/15（node --check 106 文件）。
+- **数据库/安全**：village.db 指纹不变（FAEECC...E96 / 1155072B / 2026-08-07T08:34:59Z）；Prisma schema/migrations 零改动；`.test-*` 残留 0；116d/116e 状态未动；`HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 未翻转；B19/B20 与 aiDetectRecord 未动。
+
+**⚠️ 下个会话注意**：① 116f-C 改动未 commit（11 个 M + 2 个 ??：market.v2.routes.js、contract-v2-market.test.js），等人工审查；② 下一步 116f-D（Flutter typed DTO 样板：core/dto + repository + ApiClient.v2 + 样板页迁移），需人工确认后再开；③ 边界 id（非数字）在 v1/v2 都返回 50001（Prisma validation error），是既有行为、等价契约已锁定，不算缺陷；④ 116f 完成前仍要把覆盖缺口升级为全环境硬门禁；⑤ 推送缺口未关（ahead 3）。
+
+---
+
 ## 2026-08-15 · 116f-B 实施并全部验收通过 + 集中审查整改（未 commit、未 push）
 
 **分支/工作树**：`codex/refactor-farmlink`，HEAD=`fe79c6a2` 不变。116f-B 全部验收通过并经集中审查整改，**未 commit**。GitHub 网络未重试（本地仍 ahead 2）。
