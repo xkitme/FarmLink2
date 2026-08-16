@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
+import '../../core/dto/market_product.dart';
+import '../../core/repository/http_repository.dart';
+import '../../core/repository/product_repository.dart';
 import '../../core/site_images.dart';
 import '../../widgets/common.dart';
 
@@ -21,11 +24,24 @@ class ProductPreview {
 
 /// 集市商品整页详情：顶部图廊 + 商品介绍流式分区 + 卖家信息 + 吸底「加入合计」。
 ///
-/// 内容全部来自 `GET /market/product/:id`，确认数量后 `context.pop(数量)` 把结果带回集市页合并进购物车。
+/// 116f-D 起内容经 `ProductRepository` + `MarketProduct` typed DTO 读取：
+/// 生产走 `HttpRepository` → `ApiClient.v2` → 外部 `GET /api/v2/market/products/:id`
+/// （mount-relative `/market/products/:id`，与 v1 `GET /market/product/:id` 同数据同语义），
+/// 页面解析容错与迁移前逐项一致；测试可注入 fake 仓储。
+/// 确认数量后 `context.pop(数量)` 把结果带回集市页合并进购物车。
 class ProductDetailPage extends StatefulWidget {
   final int? productId;
   final ProductPreview? preview;
-  const ProductDetailPage({super.key, required this.productId, this.preview});
+
+  /// 测试注入用（116f-D C6）；为 null 时使用 `HttpRepository`。
+  final ProductRepository? repository;
+
+  const ProductDetailPage({
+    super.key,
+    required this.productId,
+    this.preview,
+    this.repository,
+  });
 
   @override
   State<ProductDetailPage> createState() => _ProductDetailPageState();
@@ -34,7 +50,7 @@ class ProductDetailPage extends StatefulWidget {
 class _ProductDetailPageState extends State<ProductDetailPage> {
   bool _loading = true;
   String? _error;
-  Map<String, dynamic>? _data;
+  MarketProduct? _product;
   final _pageCtrl = PageController();
   int _gallery = 0;
 
@@ -63,10 +79,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       _error = null;
     });
     try {
-      final data = await ApiClient.get('/market/product/${widget.productId}');
+      final repository = widget.repository ?? const HttpRepository();
+      final product = await repository.fetchDetail(widget.productId!);
       if (!mounted) return;
       setState(() {
-        _data = data;
+        _product = product;
         _loading = false;
       });
     } catch (e) {
@@ -78,25 +95,25 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
   }
 
-  // ── 取值（详情优先，回退 preview）─────────────────────
-  String get _title => '${_data?['title'] ?? widget.preview?.title ?? '乡村好物'}';
-  double get _price =>
-      (_data?['price'] as num?)?.toDouble() ?? widget.preview?.price ?? 0;
-  String get _unit => '${_data?['unit'] ?? widget.preview?.unit ?? '件'}';
-  int get _stock => (_data?['stock'] as num?)?.toInt() ?? 0;
-  String get _category => '${_data?['category'] ?? '农产品'}';
-  bool get _canBuy => widget.productId != null && _data != null && _stock > 0;
+  // ── 取值（详情优先，回退 preview；与迁移前的回退链逐项一致）──
+  String get _title =>
+      _product?.title ?? widget.preview?.title ?? '乡村好物';
+  double get _price => _product?.price ?? widget.preview?.price ?? 0;
+  String get _unit => _product?.unit ?? widget.preview?.unit ?? '件';
+  int get _stock => _product?.stock ?? 0;
+  String get _category => _product?.category ?? '农产品';
+  bool get _canBuy =>
+      widget.productId != null && _product != null && _stock > 0;
 
   List<String> get _images {
-    final raw = (_data?['images'] as List?) ?? const [];
-    final urls = raw.map((e) => '$e').where((e) => e.isNotEmpty).toList();
+    final urls = _product?.images ?? const <String>[];
     if (urls.isNotEmpty) return urls;
     final fallback = widget.preview?.image;
-    return fallback != null ? [fallback] : const [];
+    return fallback != null ? [fallback] : const <String>[];
   }
 
   String get _description {
-    final d = '${_data?['description'] ?? ''}'.trim();
+    final d = _product?.description ?? '';
     if (d.isNotEmpty) return d;
     // 兜底文案（按分类），不露馅、不写「暂无」
     const map = {
@@ -108,28 +125,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     return map[_category] ?? '源头乡村直供，品质甄选，现采现发，让城市餐桌也能尝到地道乡野风味。';
   }
 
-  Map<String, dynamic>? get _seller =>
-      (_data?['seller'] as Map?)?.cast<String, dynamic>();
-  String get _sellerName => '${_seller?['nickname'] ?? '乡村合作社'}';
-  String get _sellerVillage => '${_seller?['villageName'] ?? '乡村产地'}';
-  String? get _regionCode {
-    final value = '${_data?['regionCode'] ?? ''}'.trim();
-    return value.isEmpty ? null : value;
-  }
-
-  String? get _traceCode {
-    final value = '${_data?['traceCode'] ?? ''}'.trim();
-    return value.isEmpty ? null : value;
-  }
+  String get _sellerName => _product?.seller?.nickname ?? '乡村合作社';
+  String get _sellerVillage => _product?.seller?.villageName ?? '乡村产地';
+  String? get _regionCode => _product?.regionCode;
+  String? get _traceCode => _product?.traceCode;
 
   String get _origin {
-    final village = '${_seller?['villageName'] ?? ''}'.trim();
+    final village = (_product?.seller?.villageName ?? '').trim();
     // 无村名时用地区码→名称映射，绝不向用户展示裸数字码
     return village.isNotEmpty ? village : regionName(_regionCode);
   }
 
   String? get _sellerPhone {
-    final p = '${_seller?['phone'] ?? ''}'.trim();
+    final p = (_product?.seller?.phone ?? '').trim();
     return p.isEmpty ? null : p;
   }
 
@@ -138,7 +146,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     final showLoadingScreen = _loading && widget.preview == null;
     // 有 preview 时即便加载失败也保留骨架 + 内联重试，不整屏清掉（工作单 B3）。
     final showErrorScreen =
-        _error != null && _data == null && widget.preview == null;
+        _error != null && _product == null && widget.preview == null;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: showLoadingScreen
@@ -164,7 +172,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             ),
           ),
         // 加载失败但有 preview：内联重试条，保留下方骨架
-        if (_error != null && _data == null)
+        if (_error != null && _product == null)
           SliverToBoxAdapter(child: _inlineRetry()),
         SliverToBoxAdapter(child: _body()),
       ],
@@ -300,14 +308,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
               const Spacer(),
               Text(
-                _loading && _data == null
+                _loading && _product == null
                     ? '库存查询中'
                     : _stock > 0
                         ? '库存 $_stock $_unit'
                         : '暂时缺货',
                 style: TextStyle(
                   fontSize: 13,
-                  color: _loading && _data == null
+                  color: _loading && _product == null
                       ? AppColors.outline
                       : _stock > 0
                           ? AppColors.outline
@@ -458,7 +466,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               onPressed: _canBuy ? _pickQuantity : null,
               icon: const Icon(Icons.add_shopping_cart, size: 18),
               // 仅在数据已加载且确为 0 库存才说缺货；preview/加载/失败态不误报
-              label: Text(_data != null && _stock == 0 ? '暂时缺货' : '加入合计'),
+              label: Text(_product != null && _stock == 0 ? '暂时缺货' : '加入合计'),
               style: ElevatedButton.styleFrom(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 28, vertical: 14),

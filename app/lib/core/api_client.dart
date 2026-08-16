@@ -25,6 +25,10 @@ class SseEvent {
   const SseEvent({required this.type, this.data});
 }
 
+/// API v2 版本前缀（116f-D）：与后端 `config.apiPrefixV2` 一致。
+/// 仅由 `ApiClient.v2` 使用；v1 前缀仍为 `constants.dart` 的 `kApiPrefix`，不全局改前缀。
+const String kV2Prefix = '/api/v2';
+
 /// 统一 HTTP 客户端，对接服务端 `{ code, msg, data }` 响应格式。
 class ApiClient {
   static String baseUrl = kBaseUrl;
@@ -54,6 +58,10 @@ class ApiClient {
   static void setToken(String? t) => _token = t;
   static String? get token => _token;
 
+  /// API v2 只读命名空间（116f-D）：共用同一 token / 自动刷新 / 统一信封
+  /// 解析与测试客户端注入，仅请求前缀为 `/api/v2`（后端 v2 当前只有只读端点）。
+  static final ApiClientV2 v2 = ApiClientV2._();
+
   static void setAutomaticRefreshEnabled(bool enabled) {
     _automaticRefreshEnabled = enabled;
   }
@@ -67,9 +75,13 @@ class ApiClient {
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
-  static Uri _uri(String path, [Map<String, dynamic>? query]) {
+  static Uri _uri(String path, [Map<String, dynamic>? query]) =>
+      _uriWithPrefix('$kApiPrefix$path', query);
+
+  /// 以完整前缀路径拼装 URI（v1 与 v2 共用；前缀由调用方传入）。
+  static Uri _uriWithPrefix(String fullPath, [Map<String, dynamic>? query]) {
     final q = query?.map((k, v) => MapEntry(k, '$v'));
-    return Uri.parse('$baseUrl$kApiPrefix$path').replace(queryParameters: q);
+    return Uri.parse('$baseUrl$fullPath').replace(queryParameters: q);
   }
 
   static String resolveImageUrl(String value) {
@@ -80,11 +92,16 @@ class ApiClient {
     return Uri.parse(baseUrl).resolve(source).toString();
   }
 
-  static Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
+  static Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
+      _getPath('$kApiPrefix$path', query: query);
+
+  /// GET 共用实现：v1 与 v2 复用同一条认证/刷新/信封解析链路（116f-D）。
+  static Future<dynamic> _getPath(String fullPath,
+      {Map<String, dynamic>? query}) async {
     final client = _clientForTesting;
     final res = await _sendAuthenticated(
       (headers) {
-        final uri = _uri(path, query);
+        final uri = _uriWithPrefix(fullPath, query);
         final future = client != null
             ? client.get(uri, headers: headers)
             : http.get(uri, headers: headers);
@@ -361,4 +378,16 @@ class ApiClient {
       if (identical(_expiryInFlight, future)) _expiryInFlight = null;
     }
   }
+}
+
+/// API v2 只读命名空间（116f-D）。
+///
+/// 经 `ApiClient.v2` 使用；路径为 mount-relative（不含前缀），
+/// 外部完整路径 = `/api/v2` + path。后端 v2 在 116f 内只开放只读端点，
+/// 故本命名空间仅提供 `get`；写方法待领域批次上线后按需补充。
+class ApiClientV2 {
+  ApiClientV2._();
+
+  Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
+      ApiClient._getPath('$kV2Prefix$path', query: query);
 }

@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-08-15 · 116f-D 实施并全部验收通过（Flutter typed DTO 样板）
+
+**分支/工作树**：`codex/refactor-farmlink`。116f-D 已完成实施与验证，具体提交状态和 hash 以 git history 为准。GitHub 网络恢复后按工作单 D8 处置推送。
+
+**做了什么（116f-D 交付，纯 Flutter 批次，后端/注册表/数据库零改动）**：
+- **外部路径（mount-relative）**：样板页 `HttpRepository.fetchDetail` → `ApiClient.v2.get('/market/products/:id')` → 外部 `GET /api/v2/market/products/:id`（与 v1 `GET /market/product/:id` 同 controller 同数据；`api_client.dart` 新增 `kV2Prefix` 常量与 `ApiClientV2` 只读命名空间，只提供 get；不全局改前缀）。
+- **新增 4 个 lib 文件**：`app/lib/core/dto/market_product.dart`（MarketProduct + ProductSeller，解析容错与旧页面深解析逐项一致：title/unit/price 缺失保持 null 走 preview 回退、category 缺省「农产品」、images `'$e'` 过滤空串、regionCode/traceCode 空白归一、price/seller 类型错误同口径抛 TypeError）、`app/lib/core/dto/dashboard_stats.dart`（DashboardStats 全聚合 typed model，容错镜像 `data_dashboard_page.dart` 的 `_int/_double/_text/_map/_list` 助手语义）、`app/lib/core/repository/product_repository.dart`（ProductRepository 接口，可注入 fake）、`app/lib/core/repository/http_repository.dart`（HttpRepository implements ProductRepository，零 HTTP/认证逻辑，只调 ApiClient.v2.get + fromJson）。
+- **编辑 2 个 lib 文件**：`api_client.dart`（`_uriWithPrefix`/`_getPath` 抽取，v1 行为不变；新增 `ApiClient.v2`）；`pages/market/product_detail_page.dart`（`_data:Map` → `_product:MarketProduct?`，getter 回退链逐项等价，新增可选 `repository` 注入参数，ProductPreview/其余 UI 零改动）。
+- **新增 4 个测试文件（21 项，`app/test/dto_*.dart`）**：market_product 7 + dashboard_stats 4 + repository 5（含 ApiClient.v2 路径/Bearer 头实证与 data null/非对象语义）+ product_detail_page 5（正向字段来自仓储响应且与 preview 兜底不同——证明命中仓储、stock=0 禁用、错误屏+重试、productId null、preview 回退链）。
+- **验收**：Flutter **34/34**（13+21，B14/B15/B16 不回归）；Backend 182/182；C2b 19/19；C2c 34/34；Admin 28/28+build；`scripts/verify-all.ps1` **15/15**（退出码 0）；口径不变 v1 242/242、v2 5/5、capabilities 247；village.db 指纹不变（FAEECC...E96 / 1155072B / 2026-08-07T08:34:59.2995944Z）；`backend/prisma/.test-*` 残留 0；全仓库额外 DB 文件 0；Prisma schema/migrations 零改动。
+- **视觉验收**：迁移前构建（08-11 build/web，页面直连 v1）与迁移后构建（116f-D，页面走 v2+DTO）Edge headless 412×732、临时库副本后端、商品 id=64，截图**逐像素一致（0 差异像素/301,584）**（CDP 登录态注入 + 深链；截图存 `.runtime/116fd-product-before.png` 与 `116fd-product-after.png`，临时库副本用完即删）。
+
+**⚠️ 下个会话注意**：① 116f-D 本批变更为 8 个新增、5 个修改：app/lib 源码 4 个新增 + 2 个修改，app/test 4 个新增，docs 3 个修改；已实施并全部验收通过，提交状态以 git history 为准；② 116f-E（管理台目录生成化 + aiDetectRecord 去重，B19/B20 契约更新正式开始）未开始：须待 116f-D 提交核对通过并收到用户另行指令后方可启动，本批未授权自动进入；③ `data_dashboard_page.dart` 尚未迁移（116f-D 只要求 1 个样板页，选了商品页；DashboardStats DTO 已备）；④ 边界 id（非数字）在 v1/v2 都返回 50001，是既有行为、等价契约已锁定，不算缺陷；⑤ 116f 完成前仍要把覆盖缺口升级为全环境硬门禁；⑥ 推送状态以 git history 为准，GitHub 网络恢复后按工作单 D8 先 fetch 复核无分叉再 push，分叉则停止报告。
+
+---
+
 ## 2026-08-15 · 116f-C 实施并全部验收通过（market product 只读 v2 样板；未 commit、未 push）
 
 **分支/工作树**：`codex/refactor-farmlink`，HEAD=`1d6f3341` 不变。116f-C 全部验收通过，**未 commit**。GitHub 网络未重试（本地仍 ahead 3）。
