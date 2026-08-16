@@ -42,6 +42,8 @@ export const RESOURCE_GROUPS = {
   ai: {
     title: 'AI 能力',
     group: 'AI 管理',
-    resources: ['aiQaRecord', 'aiDetectRecord'],
+    resources: ['aiQaRecord'],
+    // 116f-E（D2）：aiDetectRecord 唯一 primaryGroup=agri，此处仅以 tag 表达次级归属，不重复登记。
+    tags: ['aiDetectRecord'],
   },
 }

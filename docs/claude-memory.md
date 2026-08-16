@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-08-16 · 116f-E 实施并全部验收通过（管理台目录生成化 + 资源组去重）
+
+**分支/工作树**：`codex/refactor-farmlink`。116f-E 已完成实施与验证，具体提交状态和 hash 以 git history 为准。GitHub 网络恢复后按工作单 D8 处置推送。
+
+**做了什么（116f-E 交付，纯静态/生成化，后端业务代码、Flutter、注册表本体、数据库零改动）**：
+- **新增** `backend/scripts/gen-admin-api-catalog.mjs`：唯一事实源 = `backend/src/contracts/capabilities.js`；`--write`/`--check`；输出确定。全部 242 条注册表 v1 API 按 section 生成 11 组目录条目（key=apiId、method/path/auth/roles 同源；auth 映射 required→true / optional→false）；26 条既有 v1 调试预设以 `DEBUG_PRESETS` overlay 装饰保留（name/description/bodyNote/body/示例 query 路径；§1.2 旧口径「24 条」实际 26 条，全部保留；`/admin/*` 端点挂载于 /api/v1 下、本就在注册表内）；每个预设 method+规范化 path 必须恰好命中 1 条注册表条目，否则生成失败（fail-fast）。
+- **生成** `backend/admin/src/apiCatalog.js`：11 组 242 条，`flatApiCatalog()` 保持不变；ApiDebugPage 预设下拉/总览表自动获得全量目录。
+- **去重** `backend/admin/src/resourceGroups.js` 与 `backend/src/modules/platform/resource.config.js`：ai 组 `resources:['aiQaRecord']` + `tags:['aiDetectRecord']`（D2：agri 唯一 primaryGroup，ai 以 tag 表达）；9 组 35 资源、重复=0。`/admin/resource/*` 全部 requireAuth+requireRole('ADMIN')，分组仅为菜单/目录用途，无 per-resource 角色矩阵——权限语义不变；`RESOURCE_CONFIGS` 与业务 controller 零改动。
+- **测试** `backend/admin/test/apiCatalog-resourceGroups.test.js`（当前 B19 13 项 + B20 10 项，替换 HEAD 的 B19 7 项 + B20 5 项；Admin 总数 28 − 12 + 23 = 39）：B19——覆盖完整（242=注册表 v1）、key 唯一、method+规范化 path 重复=0、`buildCatalog()` 与提交产物 deepEqual（可确定性重建）、逐字段与注册表一致、26 预设名称逐条在场 + dashboard/market-products/farm-record-create/ai-qa-thread/switch-list 代表项强断言；B20——admin/backend 各自重复=0、aiDetectRecord 唯一 primaryGroup=agri、ai 组 tags 表达、35 资源精确、双镜像逐组一致、代表性归属不变。
+- **验收**：Admin **39/39**（28 + 11）+ build 绿（bundle 1,259→1,296 kB，仍为既有 >500k 警告）；Backend 182/182；C2b 19/19；C2c 34/34；Flutter 34/34；`scripts/verify-all.ps1` **15/15**（退出码 0；node --check 106→107 文件）；三个 drift 门禁全过（inventory --check、gen-capabilities --check、gen-admin-api-catalog --check）；口径不变 v1 242/242、v2 5/5、capabilities 247；village.db 指纹不变（FAEECC...E96 / 1155072B / 2026-08-07T08:34:59.2995944Z）；`backend/prisma/.test-*` 残留 0；全仓库额外 DB 文件 0；Prisma schema/migrations 零改动。
+- **未实施**：116f-F（assistant ROUTE_CATALOG/ROUTE_FEATURES 派生、Flutter feature_catalog 生成、drift 入 verify-all、registry-derive.test.js）及后续批次。verify-all.ps1 未改（drift 入 verify-all 属 116f-F ③）。
+
+**⚠️ 下个会话注意**：① 116f-E 变更清单：新增 `backend/scripts/gen-admin-api-catalog.mjs`，生成 `backend/admin/src/apiCatalog.js`，修改 `backend/admin/src/resourceGroups.js`、`backend/src/modules/platform/resource.config.js`、`backend/admin/test/apiCatalog-resourceGroups.test.js` 及三份 docs；提交状态以 git history 为准；② 116f-F（注册表驱动搜索/助手/功能墙）未开始：须待 116f-E 提交核对通过并收到用户另行指令后方可启动，本批未授权自动进入；③ 注册表 migrationNotes 的 `aiDetectRecordResourceGroups.status` 仍为 `planned-not-implemented`（116f-E 文件边界不含注册表本体，历史记录未改）；④ 边界 id（非数字）在 v1/v2 都返回 50001，是既有行为；⑤ 116f 完成前仍要把覆盖缺口升级为全环境硬门禁；⑥ 推送状态以 git history 为准，GitHub 网络恢复后按工作单 D8 先 fetch 复核无分叉再 push。
+
+---
+
 ## 2026-08-15 · 116f-D 实施并全部验收通过（Flutter typed DTO 样板）
 
 **分支/工作树**：`codex/refactor-farmlink`。116f-D 已完成实施与验证，具体提交状态和 hash 以 git history 为准。GitHub 网络恢复后按工作单 D8 处置推送。
