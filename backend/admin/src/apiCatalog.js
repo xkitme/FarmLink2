@@ -2,7 +2,7 @@
 // 重新生成：cd backend && node scripts/gen-admin-api-catalog.mjs --write
 // 漂移检查：cd backend && node scripts/gen-admin-api-catalog.mjs --check
 //
-// 116f-E 管理台 API 目录（单一事实源 = backend/src/contracts/capabilities.js）：
+// 116f-E 管理台 API 目录（数据源 = backend/src/contracts/capabilities.js，gen-capabilities.mjs 的生成产物；
 // - v1 条目全部由注册表生成：key=apiId，method/path/auth/roles 与注册表一致；
 // - v1 调试预设（调试样例装饰：name/description/bodyNote/body/示例 path）叠加到对应条目上。
 export const API_CATALOG =

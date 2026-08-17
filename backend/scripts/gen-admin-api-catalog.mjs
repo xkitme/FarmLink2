@@ -1,7 +1,9 @@
 /**
  * 116f-E 管理台 API 目录生成器（静态、可重复执行、输出确定）。
  *
- * 单一事实源：backend/src/contracts/capabilities.js（能力注册表）。
+ * 数据源：backend/src/contracts/capabilities.js（能力注册表，gen-capabilities.mjs 的
+ * 生成产物）。人工可编辑事实源在 gen-capabilities.mjs 的 overlay（盘点扫描 +
+ * V2_CAPABILITIES + FEATURE_CATALOG），改后必须 `--write` 重建 capabilities.js。
  * 本脚本不新增第二份 API 清单：
  * - API_CATALOG 的全部 v1 条目由注册表生成：key=apiId、method/path/auth/roles
  *   与注册表一致（auth 映射：required→true，optional→false，与调试页“可匿名”语义一致）；
@@ -293,7 +295,7 @@ function render(groups) {
     '// 重新生成：cd backend && node scripts/gen-admin-api-catalog.mjs --write',
     '// 漂移检查：cd backend && node scripts/gen-admin-api-catalog.mjs --check',
     '//',
-    '// 116f-E 管理台 API 目录（单一事实源 = backend/src/contracts/capabilities.js）：',
+    '// 116f-E 管理台 API 目录（数据源 = backend/src/contracts/capabilities.js，gen-capabilities.mjs 的生成产物；',
     '// - v1 条目全部由注册表生成：key=apiId，method/path/auth/roles 与注册表一致；',
     '// - v1 调试预设（调试样例装饰：name/description/bodyNote/body/示例 path）叠加到对应条目上。',
     'export const API_CATALOG =',
@@ -310,6 +312,12 @@ function countItems(groups) {
   return groups.reduce((sum, group) => sum + group.items.length, 0)
 }
 
+/** 漂移检查（只读）：返回 { ok, rendered }，绝不改写文件。 */
+export function checkAdminCatalog(fileContent) {
+  const rendered = render(buildCatalog())
+  return { ok: fileContent === rendered, rendered }
+}
+
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 const mode = process.argv[2]
 
@@ -318,10 +326,9 @@ if (isMain && mode === '--write') {
   fs.writeFileSync(OUT_FILE, render(groups), 'utf8')
   console.log(`✓ 已生成 ${path.relative(BACKEND_ROOT, OUT_FILE)}：${groups.length} 组 / ${countItems(groups)} 条（v1=${registryV1Apis().length}）`)
 } else if (isMain && mode === '--check') {
+  const result = checkAdminCatalog(fs.readFileSync(OUT_FILE, 'utf8'))
   const groups = buildCatalog()
-  const rendered = render(groups)
-  const current = fs.readFileSync(OUT_FILE, 'utf8')
-  if (current !== rendered) {
+  if (!result.ok) {
     console.error(`✗ ${path.relative(BACKEND_ROOT, OUT_FILE)} 与注册表漂移。请运行：node scripts/gen-admin-api-catalog.mjs --write`)
     process.exit(1)
   }

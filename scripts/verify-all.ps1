@@ -149,6 +149,27 @@ Invoke-Step -Name '116f inventory/registry drift' -Note 'inventory-routes --chec
   Pop-Location
 }
 
+# 116f-F generated catalog drift gate: admin apiCatalog / assistant routes / Flutter feature_catalog
+# must match the registry byte-for-byte. All three sub-gates run sequentially; a nonzero exit
+# from any propagates as this step's ExitCode (never swallowed, never searched as success text).
+Invoke-Step -Name '116f generated catalog drift' -Note 'gen-admin-api-catalog + gen-assistant-routes + gen-feature-catalog --check (all executed)' -Action {
+  Push-Location $BackendDir
+  $genGate = @(
+    'scripts/gen-admin-api-catalog.mjs',
+    'scripts/gen-assistant-routes.mjs',
+    'scripts/gen-feature-catalog.mjs'
+  )
+  foreach ($script in $genGate) {
+    node $script --check
+    if ($LASTEXITCODE -ne 0) {
+      Pop-Location
+      Write-Host "ERROR: $script --check failed (drift from registry; run: node $script --write)" -ForegroundColor Red
+      return
+    }
+  }
+  Pop-Location
+}
+
 # Admin build (skippable via -SkipAdminBuild)
 if (Test-Path -LiteralPath $AdminDir) {
   if (-not $SkipAdminBuild) {

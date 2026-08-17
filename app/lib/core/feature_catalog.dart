@@ -1,3 +1,9 @@
+// 本文件由 backend/scripts/gen-feature-catalog.mjs 自动生成，请勿手工编辑。
+// 重新生成：cd backend && node scripts/gen-feature-catalog.mjs --write
+// 漂移检查：cd backend && node scripts/gen-feature-catalog.mjs --check
+//
+// 116f-F Flutter 功能墙（数据源 = backend/src/contracts/capabilities.js featureCatalog，gen-capabilities.mjs 生成产物；
+// 驱动全局搜索（search_page）、全部服务（all_features_page）与首页计数（home_page）。
 import 'package:flutter/material.dart';
 
 class FeatureItem {

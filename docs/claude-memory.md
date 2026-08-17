@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-08-16 · 116f-F 实施并全部验收通过（注册表驱动搜索/助手/功能墙）
+
+**分支/工作树**：`codex/refactor-farmlink`。116f-F 已完成实施与验证，具体提交状态和 hash 以 git history 为准。GitHub 网络恢复后按工作单 D8 处置推送。
+
+**做了什么（116f-F 交付，assistant/Flutter 手工镜像消灭，能力数 247 不变，数据库零改动）**：
+- **事实源分层（生成产物 ≠ 人工维护源）**：人工可编辑事实源 = `gen-capabilities.mjs` 的 `FEATURE_CATALOG` overlay（sections 8 / routes 34 页 key/label/path / routeFeatures 16 页别名 / features 70 功能点 + `validateFeatureCatalog` fail-fast 校验）；`backend/src/contracts/capabilities.js` 是其 `--write` 生成产物（下游规范注册表快照，新增顶层 `featureCatalog` 区块）。**capabilities 数组不变 → 247 不变**。
+- **assistant 派生**：新增 `scripts/gen-assistant-routes.mjs` → 生成 `src/modules/ai/services/assistant-catalog.generated.js`；`assistant.service.js` 删除手工 ROUTE_CATALOG/ROUTE_FEATURES，改 import 生成产物；ALLOWED_ROUTE_KEYS 仍由 ROUTE_CATALOG 派生、ALLOWED_COMMANDS 未动、`sanitizeAssistantOutput` 纯函数零改动（B9 15/15 不回归，白名单 34 键不变）。
+- **Flutter 派生**：新增 `scripts/gen-feature-catalog.mjs` → 生成 `app/lib/core/feature_catalog.dart`（FeatureItem 类 + kFeatureSections 8 + kFeatureCatalog 70；icon 存 Material 常量名渲染 `Icons.xxx`；Dart 字符串转义确定；离线安全、可 flutter analyze/test/build 直接消费）。
+- **drift 入 verify-all**：新增「116f generated catalog drift」步骤（gen-admin-api-catalog + gen-assistant-routes + gen-feature-catalog 三个 `--check`，失败传播非零）；drift 子门禁 2→5；verify-all 15→**16 步**。
+- **测试**：新增 `backend/test/registry-derive.test.js`（**33 项**，C5 + HEAD 基线冻结）：派生逐字段一致、双向覆盖、key 唯一、method+规范化 path 唯一、auth/roles/version 精确、代表性 v1/v2/公开/认证/ADMIN/参数化路径、重复=0、stale/空产物门禁失败、`--check` 只读不改写（内容+mtime）、正向与空目录明显不同、**防共同漂移的 HEAD 旧行为基线冻结**（三枚规范化 SHA256 硬编码自 HEAD 基线 + 代表项字段断言 + 正/负对照）。已接入 backend `npm test`。
+- **验收**：Backend 182 → **215/215**（182+33）；C2b 19/19；C2c 34/34；Flutter 34/34（B14/B15/B16 不回归）；Admin 39/39+build；`scripts/verify-all.ps1` **16/16** 全绿（退出码 0；node --check 111 文件）；五个 drift 门禁全过；口径不变 v1 242/242、v2 5/5、capabilities 247；village.db 指纹不变（FAEECC...E96 / 1155072B / 2026-08-07T08:34:59.2995944Z）；`backend/prisma/.test-*` 残留 0；全仓库额外 DB 文件 0；Prisma schema/migrations 零改动；`HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 未翻转。
+- **旧行为等价性核查（同日，程序化规范化比较）**：`HEAD:assistant.service.js`、`HEAD:feature_catalog.dart` 与当前派生值逐字段 0 差异（ROUTE_CATALOG 34↔34、ROUTE_FEATURES 16 页 128 别名↔16 页 128 别名、Flutter 8 sections/70 features↔8/70、排序与 route 集合一致）——与 HEAD 完全等价、无行为变化、无需回退。旧口径溯源：git 历史中 feature_catalog 从未有 71 条（45d 实施 68 → #19 补 2 = 70；「71」为 45d 计划口径误差；「32」为盘点计数误差，HEAD 实际 34 与前端 `_routePaths` 34 键一致）。
+- **口径修正（以实际文件为准）**：§1.3 旧口径「feature_catalog 71 项 / ROUTE_CATALOG 32 条」实测为 **70 项 / 34 条**（与前端 `_routePaths` 34 键一致）；同 116f-E「24→26」先例全部保留实际内容，docs 正式口径 70/34。
+- **未实施**：116f 之后阶段（OpenAPI 工具链、v1 删除等）；D6 硬门禁升级（`HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 保持 false，是 116f 标记完成前的待办收口项）；本批提交状态与 hash 以 git history 为准。
+
+**⚠️ 下个会话注意**：① 116f-F 变更清单：编辑 `backend/scripts/gen-capabilities.mjs`（FEATURE_CATALOG overlay + validateFeatureCatalog）、`backend/scripts/gen-admin-api-catalog.mjs`（导出 checkAdminCatalog 纯函数 + 事实源措辞）、`backend/src/modules/ai/services/assistant.service.js`（删手工表改 import）、`backend/package.json`（test 接入 registry-derive）、`scripts/verify-all.ps1`（新增 drift 步骤）；新增 `backend/scripts/gen-assistant-routes.mjs`、`backend/scripts/gen-feature-catalog.mjs`、`backend/test/registry-derive.test.js`（33 项含 HEAD 基线冻结）；生成 `backend/src/contracts/capabilities.js`（featureCatalog 区块）、`backend/src/modules/ai/services/assistant-catalog.generated.js`、`app/lib/core/feature_catalog.dart`、`backend/admin/src/apiCatalog.js`（注释措辞重建）；docs 3 份。提交状态以 git history 为准；② 事实源分层：**人工可编辑点 = gen-capabilities.mjs 的 FEATURE_CATALOG overlay**；capabilities.js 与三个端侧产物（apiCatalog.js、assistant-catalog.generated.js、feature_catalog.dart）都是生成产物，手工改会触发 `--check` 失败——改 overlay/生成器后必须 `--write` 重建；③ `voice_assistant_layer._routePaths`（前端 34 键映射）与 overlay routes 的 key/path 保持人工一致（validateFeatureCatalog 校验 feature.route 与页面 path）；④ 116f 标记完成前待办：D6 硬门禁升级（registry.js 常量置 true + 加测试）与 §16.7 commit 确认，均不属 116f-F 已授权范围；⑤ 推送状态以 git history 为准，GitHub 网络恢复后按工作单 D8 先 fetch 复核无分叉再 push。
+
+---
+
 ## 2026-08-16 · 116f-E 实施并全部验收通过（管理台目录生成化 + 资源组去重）
 
 **分支/工作树**：`codex/refactor-farmlink`。116f-E 已完成实施与验证，具体提交状态和 hash 以 git history 为准。GitHub 网络恢复后按工作单 D8 处置推送。
@@ -17,7 +36,7 @@
 - **验收**：Admin **39/39**（28 + 11）+ build 绿（bundle 1,259→1,296 kB，仍为既有 >500k 警告）；Backend 182/182；C2b 19/19；C2c 34/34；Flutter 34/34；`scripts/verify-all.ps1` **15/15**（退出码 0；node --check 106→107 文件）；三个 drift 门禁全过（inventory --check、gen-capabilities --check、gen-admin-api-catalog --check）；口径不变 v1 242/242、v2 5/5、capabilities 247；village.db 指纹不变（FAEECC...E96 / 1155072B / 2026-08-07T08:34:59.2995944Z）；`backend/prisma/.test-*` 残留 0；全仓库额外 DB 文件 0；Prisma schema/migrations 零改动。
 - **未实施**：116f-F（assistant ROUTE_CATALOG/ROUTE_FEATURES 派生、Flutter feature_catalog 生成、drift 入 verify-all、registry-derive.test.js）及后续批次。verify-all.ps1 未改（drift 入 verify-all 属 116f-F ③）。
 
-**⚠️ 下个会话注意**：① 116f-E 变更清单：新增 `backend/scripts/gen-admin-api-catalog.mjs`，生成 `backend/admin/src/apiCatalog.js`，修改 `backend/admin/src/resourceGroups.js`、`backend/src/modules/platform/resource.config.js`、`backend/admin/test/apiCatalog-resourceGroups.test.js` 及三份 docs；提交状态以 git history 为准；② 116f-F（注册表驱动搜索/助手/功能墙）未开始：须待 116f-E 提交核对通过并收到用户另行指令后方可启动，本批未授权自动进入；③ 注册表 migrationNotes 的 `aiDetectRecordResourceGroups.status` 仍为 `planned-not-implemented`（116f-E 文件边界不含注册表本体，历史记录未改）；④ 边界 id（非数字）在 v1/v2 都返回 50001，是既有行为；⑤ 116f 完成前仍要把覆盖缺口升级为全环境硬门禁；⑥ 推送状态以 git history 为准，GitHub 网络恢复后按工作单 D8 先 fetch 复核无分叉再 push。
+**⚠️ 下个会话注意**：① 116f-E 变更清单：新增 `backend/scripts/gen-admin-api-catalog.mjs`，生成 `backend/admin/src/apiCatalog.js`，修改 `backend/admin/src/resourceGroups.js`、`backend/src/modules/platform/resource.config.js`、`backend/admin/test/apiCatalog-resourceGroups.test.js` 及三份 docs；提交状态以 git history 为准；② 116f-F（注册表驱动搜索/助手/功能墙）当时未开始（须待 116f-E 提交核对通过并收到用户另行指令后方可启动）——**已于 2026-08-16 完成，见本文件最上方 116f-F 段**；③ 注册表 migrationNotes 的 `aiDetectRecordResourceGroups.status` 仍为 `planned-not-implemented`（116f-E 文件边界不含注册表本体，历史记录未改）；④ 边界 id（非数字）在 v1/v2 都返回 50001，是既有行为；⑤ 116f 完成前仍要把覆盖缺口升级为全环境硬门禁；⑥ 推送状态以 git history 为准，GitHub 网络恢复后按工作单 D8 先 fetch 复核无分叉再 push。
 
 ---
 
@@ -37,9 +56,9 @@
 
 ---
 
-## 2026-08-15 · 116f-C 实施并全部验收通过（market product 只读 v2 样板；未 commit、未 push）
+## 2026-08-15 · 116f-C 实施并全部验收通过（market product 只读 v2 样板；未 push）
 
-**分支/工作树**：`codex/refactor-farmlink`，HEAD=`1d6f3341` 不变。116f-C 全部验收通过，**未 commit**。GitHub 网络未重试（本地仍 ahead 3）。
+**分支/工作树**：`codex/refactor-farmlink`，HEAD=`1d6f3341` 不变。116f-C 全部验收通过，后随提交入库。GitHub 网络未重试（按 D8 处置）。
 
 **做了什么（116f-C 交付）**：
 - **外部路径**：`GET /api/v2/market/products`、`GET /api/v2/market/products/:id`（mount-relative；与工作单建议一致，无别名冲突）。
@@ -49,13 +68,13 @@
 - **测试**：新增 `backend/test/contract-v2-market.test.js`（21 项，独立临时 SQLite，接入 npm test 普通 node --test）：list/detail v1/v2 完整 payload 等价（code/msg/data deepEqual + timestamp/traceId 结构性）；status=1、createdAt 降序、分页五字段、category/keyword、images 数组、seller 投影、404 与边界 id（abc/-1/0）一致；POST/PUT/DELETE 两个 v2 路径均 404 且无写库副作用；ratePlan/switchKey 纯函数直接断言 + X-RateLimit-Policy=global 头实证；GET 不产生操作日志。**聚焦整改新增 4 项**：① 七类认证输入（无凭据/合法 FARMER Bearer/合法 Cookie/格式错误 Authorization/空 Bearer/过期 Bearer/无效 Cookie）v1/v2 状态+code+msg+data 全等价——`optional` 的真实语义是 optionalAuth「尽力解析凭据，非法/过期忽略不阻断」，v1 与 v2 同链（market.routes.js 与 market.v2.routes.js 均显式挂 optionalAuth）；② `resolveV2ApiPolicy(method,path)` 纯函数命中证据（matched=true + capabilityId 直接断言，覆盖 mount-relative/完整 /api/v2 前缀/query/参数路径/尾斜杠五种形态；生产 v2RateBucket/v2SwitchKeyFor 走同一实现）；③ 未知 v2 路由 matched=false → 明确 fallback（global/null），不假装已登记；④ v1 ratePlan/switchKey 硬编码 characterization 表（41 行含 admin-read/write 分桶、method 不误命中、参数路径），锁定重构前既有行为（非从 RULES 动态生成）。**Backend 182/182**（161+21）；C2b 19/19；C2c 34/34；Admin 28/28+build；Flutter 13/13；verify-all 15/15（node --check 106 文件）。
 - **数据库/安全**：village.db 指纹不变（FAEECC...E96 / 1155072B / 2026-08-07T08:34:59Z）；Prisma schema/migrations 零改动；`.test-*` 残留 0；116d/116e 状态未动；`HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 未翻转；B19/B20 与 aiDetectRecord 未动。
 
-**⚠️ 下个会话注意**：① 116f-C 改动未 commit（11 个 M + 2 个 ??：market.v2.routes.js、contract-v2-market.test.js），等人工审查；② 下一步 116f-D（Flutter typed DTO 样板：core/dto + repository + ApiClient.v2 + 样板页迁移），需人工确认后再开；③ 边界 id（非数字）在 v1/v2 都返回 50001（Prisma validation error），是既有行为、等价契约已锁定，不算缺陷；④ 116f 完成前仍要把覆盖缺口升级为全环境硬门禁；⑤ 推送缺口未关（ahead 3）。
+**⚠️ 下个会话注意**：① 116f-C 改动（新增 market.v2.routes.js、contract-v2-market.test.js 等）已随提交入库；② 下一步 116f-D（Flutter typed DTO 样板：core/dto + repository + ApiClient.v2 + 样板页迁移），需人工确认后再开；③ 边界 id（非数字）在 v1/v2 都返回 50001（Prisma validation error），是既有行为、等价契约已锁定，不算缺陷；④ 116f 完成前仍要把覆盖缺口升级为全环境硬门禁；⑤ 推送缺口按 D8 处置。
 
 ---
 
-## 2026-08-15 · 116f-B 实施并全部验收通过 + 集中审查整改（未 commit、未 push）
+## 2026-08-15 · 116f-B 实施并全部验收通过 + 集中审查整改（未 push）
 
-**分支/工作树**：`codex/refactor-farmlink`，HEAD=`fe79c6a2` 不变。116f-B 全部验收通过并经集中审查整改，**未 commit**。GitHub 网络未重试（本地仍 ahead 2）。
+**分支/工作树**：`codex/refactor-farmlink`，HEAD=`fe79c6a2` 不变。116f-B 全部验收通过并经集中审查整改，后随提交入库。GitHub 网络未重试（按 D8 处置）。
 
 **统一数量口径（代码注释/测试/docs 三处一致）**：v1 实际路由 **242**、注册表 v1 登记 **242/242**；v2 实际路由 **3**（GET /ping、/capabilities、/api-catalog）、注册表 v2 登记 **3/3**；注册表 capability 总数 **245 = 242(v1)+3(v2)**。禁止再用「242/242」含糊描述总注册表。
 
@@ -74,7 +93,7 @@
 - `verify-all.ps1` 被 Windows PowerShell 5.1 按 ANSI 读取：**该文件保持纯 ASCII**（新增说明用英文），中文只出现在 docs/业务文件。
 - Flutter 工具链 `flutter --version` 会自动 `git fetch --tags`（flutter 官方仓库），离线打 stderr 但 exit 0——不是 FarmLink 仓库操作，无需处理。
 
-**下个会话注意**：① 116f-B 改动未 commit（git status 清单：9 M + 9 个新增文件 + 2 个新目录），等人工审查决定；② 下一步 116f-C（market product v2 只读样板 + 薄适配器复用 v1 controller），需人工确认后再开；③ 116f 完成前把 `HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 翻 true；④ B19/B20 与 aiDetectRecord 去重仍未动（D2 延后到实施批次）；⑤ 推送缺口未关（ahead 2）。
+**下个会话注意**：① 116f-B 改动（9 M + 9 个新增文件 + 2 个新目录）已随提交入库；② 下一步 116f-C（market product v2 只读样板 + 薄适配器复用 v1 controller），需人工确认后再开；③ 116f 完成前把 `HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 翻 true；④ B19/B20 与 aiDetectRecord 去重仍未动（D2 延后到实施批次）；⑤ 推送缺口按 D8 处置。
 
 ---
 
@@ -96,11 +115,11 @@
 
 ---
 
-## 2026-08-11 · 116f 只读盘点与工作单建立（未实施、未提交；116d 推送缺口未关闭）
+## 2026-08-11 · 116f 只读盘点与工作单建立（未实施代码；116d 推送缺口未关闭）
 
-**分支/工作树**：`codex/refactor-farmlink` 干净，HEAD=`679a87d8`（116d 收口），跟踪分支 `origin/codex/refactor-farmlink`=`6dd9f0b3`，本地 ahead 1。**GitHub 443 连接失败（fetch/ls-remote 两次重试均超时重置），推送未执行，未声称成功**。网络恢复后先 fetch 复核无分叉再 push；分叉则停手报告。
+**分支/工作树**：`codex/refactor-farmlink` 干净，HEAD=`679a87d8`（116d 收口），跟踪分支 `origin/codex/refactor-farmlink`=`6dd9f0b3`，本地领先远端 1 个提交。**GitHub 443 连接失败（fetch/ls-remote 两次重试均超时重置），推送未执行，未声称成功**。网络恢复后先 fetch 复核无分叉再 push；分叉则停手报告。
 
-**本轮产出（全部未 commit，待人工审查）**：
+**本轮产出（盘点与工作单，后随 116f-A 冻结入库）**：
 - 新增 `docs/116f-APIv2与能力注册表.md`：正式工作单，含真实基线/9 项缺口与源码证据/注册表 schema 草案/映射矩阵/116f-A~F 分阶段/决策 D1~D8。
 - 更新 `docs/进度总览.md`：加 116f 行 + 当前状态/下一步。
 
