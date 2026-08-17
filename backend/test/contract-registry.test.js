@@ -7,7 +7,8 @@
  * - 注册表合法样例通过校验；
  * - 重复 capability id / apiId / 同版本 method+path；
  * - 非法 auth/role 元数据；
- * - 不同环境下覆盖缺口行为（dev/test fail-fast；demo/release 告警；硬门禁开关可升级）；
+ * - D6 全环境硬门禁：覆盖缺口在任何环境（dev/test/demo/release，含 NODE_ENV=production
+ *   与未设置 NODE_ENV）一律 fail-fast（2026-08-17 常量置 true，无 fail-open 路径）；
  * - v2 路由未登记即挂载 → 所有环境 fail-fast。
  */
 
@@ -21,7 +22,9 @@ import { CAPABILITY_REGISTRY } from '../src/contracts/capabilities.js'
 import {
   validateRegistry,
   resolveCoverageMode,
+  HARD_COVERAGE_GATE_ALL_ENVIRONMENTS,
 } from '../src/contracts/registry.js'
+import { resolveRuntimeEnvironment } from '../src/config/index.js'
 import {
   scanRouteFiles,
   buildInventoryReport,
@@ -347,12 +350,11 @@ test('116f-B 注册表与盘点契约（纯单元）', async (t) => {
     }
   })
 
-  await t.test('resolveCoverageMode：dev/test fail；demo/release warn；硬门禁后全 fail', () => {
-    assert.equal(resolveCoverageMode('dev'), 'fail')
-    assert.equal(resolveCoverageMode('test'), 'fail')
-    assert.equal(resolveCoverageMode('demo'), 'warn')
-    assert.equal(resolveCoverageMode('release'), 'warn')
-    // 硬门禁开关升级后的行为（116f 完成前必须升级为全环境硬门禁）
+  await t.test('resolveCoverageMode：D6 后全环境恒 fail（无分层、无 fail-open）', () => {
+    for (const environment of ['dev', 'test', 'demo', 'release']) {
+      assert.equal(resolveCoverageMode(environment), 'fail', `${environment} 必须恒为 fail`)
+    }
+    // 显式 hardGate=true 与默认路径行为一致（覆盖缺口依然硬失败）
     const demoWithHardGate = () => validateRegistry({
       environment: 'demo',
       hardGate: true,
@@ -476,20 +478,24 @@ test('116f-B 注册表与盘点契约（纯单元）', async (t) => {
     )
   })
 
-  await t.test('覆盖缺口 demo/release：不阻断、告警回调收到明细', () => {
+  await t.test('覆盖缺口 demo/release：D6 后同样硬失败（throw 含定位，onWarn 不被调用）', () => {
     for (const environment of ['demo', 'release']) {
       const warnings = []
-      const result = validateRegistry({
-        registry: registryMinusOne,
-        scannedRoutes: realRoutes,
-        environment,
-        onWarn: (msg) => warnings.push(msg),
-      })
-      assert.equal(result.unregistered.length, 1)
-      assert.equal(result.unregistered[0].path, '/ping')
-      assert.equal(result.registeredCount, 241)
-      assert.equal(warnings.length, 1)
-      assert.match(warnings[0], /覆盖缺口.*GET \/ping/s)
+      assert.throws(
+        () => validateRegistry({
+          registry: registryMinusOne,
+          scannedRoutes: realRoutes,
+          environment,
+          onWarn: (msg) => warnings.push(msg),
+        }),
+        (err) => {
+          assert.ok(err instanceof Error, `${environment} 必须抛出 Error 实例`)
+          assert.match(err.message, /覆盖缺口.*GET \/ping/s, `${environment} 错误信息必须含覆盖缺口与缺失 path`)
+          return true
+        },
+        `${environment} 覆盖缺口必须硬失败`,
+      )
+      assert.equal(warnings.length, 0, `${environment} 不得走告警路径（onWarn 不被调用）`)
     }
   })
 
@@ -511,5 +517,110 @@ test('116f-B 注册表与盘点契约（纯单元）', async (t) => {
         /v2 路由未登记即挂载/,
       )
     }
+  })
+})
+
+// ── D6：全环境硬门禁（2026-08-17 常量置 true 后的行为，116f 收口） ──
+test('D6 全环境硬门禁：覆盖缺口在任何环境都硬失败，无 fail-open', async (t) => {
+  const envBefore = process.env.NODE_ENV
+  const envFixtures = [
+    { name: 'NODE_ENV=test', env: { NODE_ENV: 'test' } },
+    { name: 'NODE_ENV=development', env: { NODE_ENV: 'development' } },
+    { name: 'NODE_ENV=production', env: { NODE_ENV: 'production' } },
+    { name: 'NODE_ENV 未设置', env: {} },
+  ]
+  // 人为缺失一个明确 capability：过滤掉承载 GET /ping 的 capability（其余 246 个保留）
+  const missingPing = {
+    ...CAPABILITY_REGISTRY,
+    capabilities: CAPABILITY_REGISTRY.capabilities.filter(
+      (cap) => !cap.apis.some((api) => api.version === 'v1' && api.method === 'GET' && api.path === '/ping'),
+    ),
+  }
+  const realRoutes = scanRouteFiles().routes
+
+  await t.test('常量精确为 true（=== 与 boolean 类型双重断言，非 truthy）', () => {
+    assert.equal(HARD_COVERAGE_GATE_ALL_ENVIRONMENTS, true)
+    assert.strictEqual(typeof HARD_COVERAGE_GATE_ALL_ENVIRONMENTS, 'boolean')
+  })
+
+  await t.test('环境解析映射：test/development/未设置 → dev；production → release（注入 env 对象，不碰 process.env）', () => {
+    assert.equal(resolveRuntimeEnvironment({ NODE_ENV: 'test' }), 'dev')
+    assert.equal(resolveRuntimeEnvironment({ NODE_ENV: 'development' }), 'dev')
+    assert.equal(resolveRuntimeEnvironment({}), 'dev')
+    assert.equal(resolveRuntimeEnvironment({ NODE_ENV: 'production' }), 'release')
+  })
+
+  await t.test('正向：完整注册表在四种环境全部通过（经真实环境解析链路，v1 242/242 无警告）', () => {
+    for (const fixture of envFixtures) {
+      const environment = resolveRuntimeEnvironment(fixture.env)
+      const audit = validateRegistry({ environment, v2Routes: V2_ROUTE_DEFS })
+      assert.equal(audit.v1TotalRoutes, 242, `${fixture.name} 实际路由数`)
+      assert.equal(audit.v1RegisteredCount, 242, `${fixture.name}（→${environment}）必须 242/242`)
+      assert.deepEqual(audit.unregistered, [], `${fixture.name} 不得有未登记路由`)
+      assert.deepEqual(audit.warnings, [], `${fixture.name} 不得有告警`)
+    }
+  })
+
+  await t.test('负向：缺失一个 capability（GET /ping）时四种环境全部硬失败，错误含缺失 method/path 定位', () => {
+    for (const fixture of envFixtures) {
+      const environment = resolveRuntimeEnvironment(fixture.env)
+      assert.throws(
+        () => validateRegistry({ registry: missingPing, scannedRoutes: realRoutes, environment }),
+        (err) => {
+          assert.ok(err instanceof Error, `${fixture.name} 必须抛出 Error 实例`)
+          assert.match(err.message, /注册表覆盖缺口/, `${fixture.name} 错误信息必须含「注册表覆盖缺口」`)
+          assert.match(err.message, /GET \/ping@/, `${fixture.name} 错误信息必须含缺失 method/path 定位`)
+          return true
+        },
+        `${fixture.name}（→${environment}）覆盖缺口必须硬失败`,
+      )
+    }
+  })
+
+  await t.test('不是 warning 后继续、也不是返回空值：硬失败时 onWarn 不被调用且无返回值', () => {
+    let warned = 0
+    let returned = 'sentinel'
+    try {
+      returned = validateRegistry({
+        registry: missingPing,
+        scannedRoutes: realRoutes,
+        environment: 'release',
+        onWarn: () => { warned += 1 },
+      })
+    } catch (err) {
+      assert.ok(err instanceof Error, '必须抛出 Error 实例')
+    }
+    assert.equal(warned, 0, '硬失败路径不得调用 onWarn（不是告警后继续）')
+    assert.equal(returned, 'sentinel', '硬失败路径不得返回结果对象')
+  })
+
+  await t.test('不存在 fail-open 组合：resolveCoverageMode 恒 fail；hardGate=false 显式传入仍硬失败', () => {
+    for (const environment of ['dev', 'test', 'demo', 'release', 'unknown-env']) {
+      assert.equal(resolveCoverageMode(environment), 'fail', `${environment} 必须恒为 fail`)
+    }
+    assert.throws(
+      () => validateRegistry({
+        registry: missingPing,
+        scannedRoutes: realRoutes,
+        environment: 'release',
+        hardGate: false,
+      }),
+      /注册表覆盖缺口/,
+      'hardGate=false 也不得 fail-open',
+    )
+  })
+
+  await t.test('正/负对照明显不同：完整注册表返回 242/242 无警告，缺失注册表同一环境 throw', () => {
+    const good = validateRegistry({ environment: 'release', v2Routes: V2_ROUTE_DEFS })
+    assert.equal(good.registeredCount, 242)
+    assert.deepEqual(good.warnings, [])
+    assert.throws(
+      () => validateRegistry({ registry: missingPing, scannedRoutes: realRoutes, environment: 'release' }),
+      /注册表覆盖缺口/,
+    )
+  })
+
+  await t.test('环境独立性：全程注入 env 对象，process.env.NODE_ENV 前后不变（失败也无全局状态需恢复）', () => {
+    assert.equal(process.env.NODE_ENV, envBefore)
   })
 })

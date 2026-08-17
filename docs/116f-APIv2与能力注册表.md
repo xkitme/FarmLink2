@@ -1,6 +1,6 @@
 # 116f — API v2 与单一能力注册表（M2 工作单）
 
-> 状态：116f-A ✅；116f-B ✅；116f-C ✅；116f-D ✅；116f-E ✅；**116f-F ✅ 已完成（2026-08-16 实施并全部验收通过；同日完成旧行为等价性核查——与 HEAD 原实现逐字段 0 差异）**——assistant ROUTE_CATALOG/ROUTE_FEATURES 与 Flutter feature_catalog 均由注册表 featureCatalog 区块生成（人工可编辑事实源=gen-capabilities.mjs overlay，capabilities.js 为生成产物），drift 检查全部入 verify-all。口径：v1=242、登记 242/242；v2=5、登记 5/5；capabilities 总数 247（116f-F 不新增能力）；Backend 215/215、C2b 19/19、C2c 34/34、Flutter 34/34、Admin 39/39+build、verify-all 16/16；**116f 总体仍为进行中**（缺口：D6 要求「116f 标记完成前覆盖完整性升级为全环境硬门禁」尚未实施——`HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 保持未翻转；§16.7 逐批 commit 确认收口待办）；116f-F 的提交状态与 hash 以 git history 为准，本批未 push
+> 状态：**116f ✅ 已完成（2026-08-17 D6 全环境硬门禁收口）**——116f-A 盘点/工作单/决策冻结 ✅、116f-B 注册表与 v2 骨架 ✅、116f-C market product 只读样板 ✅、116f-D Flutter typed DTO 样板 ✅、116f-E 管理台目录生成化 + 资源组去重 ✅、116f-F 注册表驱动搜索/助手/功能墙 ✅、**D6 覆盖完整性全环境硬门禁 ✅（`HARD_COVERAGE_GATE_ALL_ENVIRONMENTS = true`，覆盖缺口在任何环境一律 fail-fast，D6 强化测试 9 项全绿，无 fail-open 路径）**。口径：v1=242、登记 242/242；v2=5、登记 5/5；capabilities 总数 247；Backend 224/224（215+9）、C2b 19/19、C2c 34/34、Flutter 34/34、Admin 39/39+build、verify-all 16/16；五个 inventory/generator drift 门禁 5/5；正式 village.db 指纹不变。116f 各批提交状态与 hash 以 git history 为准，推送状态以远端分支为准；116f 之后阶段（OpenAPI 工具链、v1 删除等，§10 不属 116f）须用户另行授权
 > 上位计划：[116-大重构总计划.md](116-大重构总计划.md) M2（第 5 章 5.3、第 9 章 M2）
 > 决策来源：[116a-大重构决策记录.md](116a-大重构决策记录.md) ADR-009、[116b-大重构三档方案对比.md](116b-大重构三档方案对比.md)
 > 风险依据：[116c-大重构风险报告.md](116c-大重构风险报告.md) R1-05（API v1/v2 漂移）、G3 架构闸门
@@ -324,11 +324,11 @@ Get-ChildItem backend/src,backend/test -Recurse -Filter *.js | ForEach-Object { 
 
 1. ✅（116f-B 达成）`GET /v2/ping`（公开、最小健康信息）与 `GET /v2/capabilities`、`GET /v2/api-catalog`（第一阶段 requireAuth + ADMIN，D9）可用；注册表初版覆盖现有全部 v1 路由的元数据登记（242/242）；盘点脚本六项契约门禁通过。
 2. ✅（116f-C 达成）至少一条 v2 只读样板（market product list/detail）上线，与 v1 逐字段契约测试通过（`backend/test/contract-v2-market.test.js` 21 项）。
-3. Flutter 样板页经 typed DTO + Repository 读取，页面行为与视觉无变化（截图验收）。
-4. Admin apiCatalog 由注册表生成；`aiDetectRecord` 去重完成（agri 唯一 primaryGroup、ai 转 tag/secondaryGroup，B19/B20 更新版通过）。
-5. 搜索/助手/功能墙由注册表派生（116f-F），三端不再维护手工镜像。
-6. `verify-all.ps1` 全绿（含新增 drift 检查）；Backend 111/111（或更多）、Flutter、Admin 测试全绿；village.db 指纹不变。
-7. 每批独立 commit，工作单回填实施备注；未经确认不 push。
+3. ✅（116f-D 达成）Flutter 样板页经 typed DTO + Repository 读取，页面行为与视觉无变化（412×732 逐像素截图验收）。
+4. ✅（116f-E 达成）Admin apiCatalog 由注册表生成；`aiDetectRecord` 去重完成（agri 唯一 primaryGroup、ai 转 tag/secondaryGroup，B19/B20 更新版通过）。
+5. ✅（116f-F 达成）搜索/助手/功能墙由注册表派生（116f-F），三端不再维护手工镜像。
+6. ✅（116f 全程保持，2026-08-17 D6 收口复验）`verify-all.ps1` 16/16 全绿（含 5 个 drift 检查）；Backend 224/224、Flutter 34/34、Admin 39/39+build 全绿；village.db 指纹不变。
+7. ✅ 每批独立 commit（116f-A~F 各批 commit 以 git history 为准），工作单回填实施备注；未经确认不 push；D6 批次的提交状态与 hash 以 git history 为准。
 
 ## 17. 实施备注
 
@@ -374,3 +374,9 @@ Get-ChildItem backend/src,backend/test -Recurse -Filter *.js | ForEach-Object { 
   - **安全语义保持**：assistant 派生不扩大可调用能力——ALLOWED_ROUTE_KEYS 34 键与迁移前手工表一致、ALLOWED_COMMANDS 10 命令未动、`sanitizeAssistantOutput` 纯函数零改动（B9 15/15 不回归）；`routes/v2` 显式投影不变，featureCatalog 不进入外部响应（`buildCapabilitiesPayload`/`buildApiCatalogPayload` 仅投影 capabilities 字段）；数据库零接触。
   - **116f 总体状态**：**进行中**。§16.5 已达成（搜索/助手/功能墙注册表派生、三端无手工镜像）；未满足项：D6「116f 标记完成前覆盖完整性升级为全环境硬门禁」尚未实施（`HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 保持 false，属后续收口动作）；§16.7 逐批 commit 确认收口待办；本批未 push。116f-F 的提交状态与 hash 以 git history 为准。
   - **2026-08-16 旧行为等价性核查与必要整改（后续指令）**：① 对 `HEAD:assistant.service.js`、`HEAD:feature_catalog.dart` 与当前派生值做程序化规范化语义比较（非文本/总数/代表项）：ROUTE_CATALOG 34↔34（新增/删除/重命名/字段变化=0、顺序一致）；ROUTE_FEATURES 16 页 128 别名↔16 页 128 别名（逐页 0 差异）；Flutter catalog 8 sections/70 features↔8/70（key 新增/删除=0、字段差异=0、排序一致、distinct route 集合 15↔15）——**与 HEAD 旧行为完全等价，无任何行为变化，无需回退**；② 旧口径溯源：git 历史中 feature_catalog 从未存在过 71 条（45d 实施提交 68 条 → #19 补 2 条 = 70 条；「71」为 45d 计划口径误差；「32」为盘点计数误差，HEAD 实际 34 与前端 `_routePaths` 34 键一致）——当前 34/70 即 HEAD 真实行为；③ 防共同漂移门禁增强：`registry-derive.test.js` 新增「HEAD 旧行为基线冻结」组（三枚规范化 SHA256 硬编码自 HEAD 基线 + 代表项字段断言 + 正/负对照），任何未授权新增/删除/重命名/迁移都会失败；测试 27 → **33 项**，Backend 口径 209 → **215/215**（209 + 6）；④ 事实源表述整改：生成器/产物注释与三份 docs 统一为「人工可编辑事实源 = gen-capabilities.mjs overlay；capabilities.js = 生成产物」。
+- 2026-08-17（D6 实施并验收，116f 总体验收收口）：
+  - **范围（严格按 §11 D6 / §6.1）**：`backend/src/contracts/registry.js` 的 `HARD_COVERAGE_GATE_ALL_ENVIRONMENTS` 置 **true**；`resolveCoverageMode` 从「dev/test fail、demo/release warn」迁移期分层升级为**所有环境恒 'fail'**（environment 参数保留签名兼容）；覆盖缺口段注释与防御性兜底分支同步更新（兜底分支永不静默放行：即使被触发也追加错误并 throw）。**未实施**：116f 之后任何阶段（OpenAPI 工具链、v1 删除等，§10 不属 116f）。
+  - **修改文件（精确 2 个代码 + 3 份 docs）**：`backend/src/contracts/registry.js`、`backend/test/contract-registry.test.js`；docs 三份（本文件/进度总览/claude-memory）。
+  - **D6 强化测试（新增 9 项，`contract-registry.test.js` 33 → 42 项）**：① 常量 `=== true` 与 boolean 类型双重断言（非 truthy）；② 环境解析映射（NODE_ENV=test/development/未设置 → dev；production → release；注入 env 对象不碰 process.env）；③ 正向：完整注册表在四种环境（经真实环境解析链路）全部通过 242/242 无警告；④ 负向：缺失 GET /ping capability 时四种环境全部 throw，错误含「注册表覆盖缺口」与 `GET /ping@` method/path 定位；⑤ 不是 warning 后继续/不返回空值（onWarn 不被调用、无返回值）；⑥ 不存在 fail-open 组合（resolveCoverageMode 对 dev/test/demo/release/unknown-env 恒 fail；显式 hardGate=false 仍 throw）；⑦ 正/负对照明显不同；⑧ 环境独立性（全程注入 env 对象，process.env.NODE_ENV 前后不变）；⑨ 既有「覆盖缺口 demo/release」测试改造为 D6 后硬失败断言（throw + onWarn 零调用）。
+  - **验证**：D6 聚焦 42/42；Backend **224/224**（215 + 9）；C2b 19/19、C2c 34/34、Flutter 34/34、Admin 39/39+build；`scripts/verify-all.ps1` **16/16** 全绿（步骤数不变，node --check 111 文件）；五个 inventory/generator drift 门禁 5/5；v1 242/242、v2 5/5、capabilities 247 不变；正式 village.db 指纹不变（SHA256 `FAEECC...E96` / 1155072B / 2026-08-07T08:34:59.2995944Z）；`backend/prisma/.test-*` 残留 0；全仓库额外 DB 文件 0；Prisma schema/migrations 零改动；D1–D9 语义未违反（仅落地 D6 已冻结的升级语义）；错误发生阶段（启动期 `validateRegistry`）与启动顺序不变；错误信息保留缺失 method/path@file:line 定位。
+  - **116f 总体状态**：**✅ 完成**。§16 完成标准 1–7 全部达成；D6 全环境硬门禁真实生效；`HARD_COVERAGE_GATE_ALL_ENVIRONMENTS = true`。D6 批次的提交状态与 hash 以 git history 为准，推送状态以远端分支为准；116f 之后阶段须用户另行授权。

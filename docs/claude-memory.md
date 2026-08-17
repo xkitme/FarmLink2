@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-08-17 · D6 全环境硬门禁实施并验收——116f 正式收口完成
+
+**分支/工作树**：`codex/refactor-farmlink`。D6 已完成实施与验证，116f 已正式标记完成；D6 批次的提交状态与 hash 以 git history 为准，推送状态以远端分支为准。
+
+**做了什么（D6 收口，仅改 `backend/src/contracts/registry.js` + `backend/test/contract-registry.test.js` + docs 3 份；数据库/Prisma/路由/生成产物零改动）**：
+- **常量置 true**：`HARD_COVERAGE_GATE_ALL_ENVIRONMENTS = true`（原 false）。`resolveCoverageMode` 从「dev/test fail、demo/release warn」迁移期分层升级为**所有环境恒 'fail'**（environment 参数保留签名兼容，错误信息仍标注实际环境）；覆盖缺口段防御性兜底分支改为「即使被触发也不得静默放行（追加错误并 throw）」。不存在 CI、NODE_ENV、APP_ENV 或 hardGate 开关组合导致的 fail-open。
+- **D6 强化测试 +9 项**（`contract-registry.test.js` 33 → **42 项**）：常量 `===true` + boolean 类型双重断言；环境解析映射（NODE_ENV=test/development/未设置 → dev、production → release，注入 env 对象不碰 process.env）；正向四环境完整注册表 242/242 全过；负向缺失 GET /ping capability 四环境全部 throw 且错误含 method/path 定位；onWarn 不被调用且无返回值（不是 warning 后继续）；resolveCoverageMode 对 dev/test/demo/release/unknown-env 恒 fail + 显式 hardGate=false 仍 throw；正/负对照明显不同；环境独立性（process.env.NODE_ENV 前后不变，失败也无全局状态需恢复）。既有「覆盖缺口 demo/release」测试同步改造为 D6 后硬失败断言。
+- **验收**：D6 聚焦 42/42；Backend 215 → **224/224**；C2b 19/19；C2c 34/34；Flutter 34/34；Admin 39/39+build；`scripts/verify-all.ps1` **16/16** 全绿（步骤数不变，node --check 111 文件）；五个 inventory/generator drift 门禁 5/5；v1 242/242、v2 5/5、capabilities 247 不变；正式 village.db 指纹不变（FAEECC...E96 / 1155072B / 2026-08-07T08:34:59.2995944Z）；`backend/prisma/.test-*` 残留 0；全仓库额外 DB 文件 0；Prisma schema/migrations 零改动；D1–D9 语义未违反（仅落地 D6 已冻结的升级语义）；错误发生阶段（启动期 validateRegistry）与启动顺序不变。
+- **116f 状态**：**✅ 正式完成**（§16 完成标准 1–7 全部达成）。116f 之后阶段（OpenAPI 工具链、v1 删除等，§10 不属 116f）未启动，须用户另行授权。
+
+**⚠️ 下个会话注意**：① D6 变更清单：`backend/src/contracts/registry.js`（常量 true + resolveCoverageMode 恒 fail + 注释）、`backend/test/contract-registry.test.js`（33→42 项）；提交状态与 hash 以 git history 为准，推送状态以远端分支为准；② **人工可编辑事实源仍是 `gen-capabilities.mjs` 的 FEATURE_CATALOG overlay**，改后必须 `--write` 重建并跑五个 `--check`；③ 新增/删除任何 v1 路由后启动即全环境 fail-fast（覆盖缺口硬门禁），必须同步登记注册表；④ 116f 之后阶段（OpenAPI 工具链、v1 删除等）须用户另行授权，不自动启动；⑤ 多人协作前先 fetch 并复核无分叉，分叉时停止并协调。
+
+---
+
 ## 2026-08-16 · 116f-F 实施并全部验收通过（注册表驱动搜索/助手/功能墙）
 
 **分支/工作树**：`codex/refactor-farmlink`。116f-F 已完成实施与验证，具体提交状态和 hash 以 git history 为准。GitHub 网络恢复后按工作单 D8 处置推送。
@@ -760,4 +774,3 @@ Flutter web 注入 token：SP 字符串值是 **JSON 编码**，`flutter.token`=
 - 给方向时通常已有结论,别问太多三选一,直接干
 - 审美在线:讨厌大圆角胶囊、generic 渐变、半透明白浮层、脉冲光
 - 闲聊/歌词能力要在线("dont break my heart 再次温柔"是歌词不是指令)
-

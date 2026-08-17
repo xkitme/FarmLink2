@@ -12,11 +12,9 @@
  *    - 源码盘点发现重复 method+path 或非法路由定义；
  *    - v2 已挂载路由未在注册表登记。
  *
- * ② 覆盖缺口（已有路由尚未登记）—— 迁移期：
- *    - dev/test：fail-fast（throw）；
- *    - demo/release：告警（onWarn），不阻断；
- *    - HARD_COVERAGE_GATE_ALL_ENVIRONMENTS 置 true 后（116f 标记完成前必须完成该升级），
- *      覆盖缺口在所有环境升级为硬门禁。
+ * ② 覆盖缺口（已有路由尚未登记）—— D6 已完成（2026-08-17）：
+ *    - 覆盖缺口在所有环境执行同一硬门禁（fail-fast，throw），不再分层；
+ *    - HARD_COVERAGE_GATE_ALL_ENVIRONMENTS 已置 true，任何环境/开关组合都不得 fail-open。
  *
  * 校验器只读：不连接数据库、不执行任何路由业务代码。
  *
@@ -31,18 +29,21 @@ import { scanRouteFiles, AUTH_MODES } from './route-scanner.js'
 import { resolveRuntimeEnvironment } from '../config/index.js'
 
 /**
- * 116f 标记完成前，覆盖完整性必须升级为所有环境硬门禁。
- * 实施批次收尾时把本常量改为 true 并加测试。
+ * D6 硬门禁（2026-08-17 置 true）：116f 覆盖完整性已升级为所有环境硬门禁。
+ * 覆盖缺口在任何环境（dev/test/demo/release，含 NODE_ENV=production 与未设置 NODE_ENV）
+ * 都执行同一硬失败（throw），不存在按环境或开关组合 fail-open 的路径。
  */
-export const HARD_COVERAGE_GATE_ALL_ENVIRONMENTS = false
+export const HARD_COVERAGE_GATE_ALL_ENVIRONMENTS = true
 
 const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'ALL', 'HEAD', 'OPTIONS'])
 
-/** 迁移期覆盖缺口模式：dev/test → fail-fast；demo/release → 告警。 */
+/**
+ * 覆盖缺口模式（D6 已完成，2026-08-17）：所有环境一律 'fail'，不再分层。
+ * environment 参数保留签名兼容（校验错误信息仍标注实际环境）。
+ */
 export function resolveCoverageMode(environment) {
-  if (HARD_COVERAGE_GATE_ALL_ENVIRONMENTS) return 'fail'
-  if (environment === 'dev' || environment === 'test') return 'fail'
-  return 'warn'
+  void environment
+  return 'fail'
 }
 
 function pushError(errors, message) {
@@ -55,7 +56,7 @@ function pushError(errors, message) {
  * @param {string} [options.environment] dev|test|demo|release（默认按 APP_ENV 解析）
  * @param {object[]} [options.v2Routes] 已挂载的 v2 路由定义 [{method,path}]（默认 []）
  * @param {object[]|null} [options.scannedRoutes] 注入盘点结果；null 时执行真实源码盘点
- * @param {boolean} [options.hardGate] 覆盖缺口硬门禁开关（默认 HARD_COVERAGE_GATE_ALL_ENVIRONMENTS）
+ * @param {boolean} [options.hardGate] 兼容保留参数（D6 后无论取值均为硬失败；默认 HARD_COVERAGE_GATE_ALL_ENVIRONMENTS）
  * @param {(msg:string)=>void} [options.onWarn] 告警回调
  * @returns {{totalRoutes:number, registeredCount:number, unregistered:object[], warnings:string[]}}
  */
@@ -228,15 +229,17 @@ export function validateRegistry(options = {}) {
     pushError(errors, `注册表存在孤儿登记（源码已无对应路由）：${orphans.join('、')}`)
   }
 
-  // ── ② 覆盖缺口：迁移期分层，硬门禁开关可升级 ────────────────────
+  // ── ② 覆盖缺口：D6 全环境硬门禁（任何环境/开关组合一律 fail，无 fail-open 路径） ──
   const coverageMode = hardGate ? 'fail' : resolveCoverageMode(environment)
   if (unregistered.length > 0) {
     const message = `注册表覆盖缺口：${unregistered.length} 条 v1 路由尚未登记（${unregistered.map((u) => `${u.method} ${u.path}@${u.file}:${u.line}`).join('；')}）`
     if (coverageMode === 'fail') {
       pushError(errors, message)
     } else {
-      warnings.push(`${message}（${environment} 迁移期告警模式，116f 完成前必须清零并升级为全环境硬门禁）`)
+      // 防御性兜底分支：D6 后不应到达（resolveCoverageMode 恒 'fail'），保留仅为避免静默放行。
+      warnings.push(`${message}（${environment} 兜底告警分支被触发——覆盖缺口必须硬失败，请勿恢复分层放行）`)
       onWarn(warnings[warnings.length - 1])
+      pushError(errors, `注册表覆盖缺口未按全环境硬门禁处理（${environment}）`)
     }
   }
 
