@@ -481,3 +481,16 @@ body {
     width: 100%;
   }
 }
+
+/* 116g-B：ResourcePage 确定性状态（空态/错误/无权限/功能关闭） */
+.table-state {
+  padding: 40px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
+.table-state .ant-result {
+  padding: 24px 0;
+}

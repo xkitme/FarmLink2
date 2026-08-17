@@ -1,9 +1,17 @@
 import { clearSession, getCsrfToken } from './auth.js'
 import { message } from './feedback.js'
+import {
+  ApiError,
+  classifyRequestError,
+  isSessionExpired,
+  resolveErrorMessage,
+  shouldRetryRequest,
+} from '../policies/requestErrorPolicy.js'
 
 export const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH'])
+const RETRYABLE_METHODS = new Set(['GET', 'HEAD'])
 
 export function buildUrl(path, params) {
   const url = new URL(`${API_BASE}${path}`, window.location.origin)
@@ -15,8 +23,24 @@ export function buildUrl(path, params) {
   return `${url.pathname}${url.search}`
 }
 
+/**
+ * 统一请求底座（116g-B 分类版）。
+ *
+ * 契约：
+ * - 所有请求 credentials:'include'；写请求注入 X-CSRF-Token（口径不变）。
+ * - 错误按 requestErrorPolicy 精确分类；只有「未认证」清理会话并跳转登录；
+ *   403 / CSRF / 429 / 5xx / 断网一律不清会话、不登出。
+ * - 写请求绝不自动重试；GET/HEAD 支持调用方显式 { retries, retryDelayMs } 受控重试
+ *   （默认 0 次；只对瞬时性失败生效）。
+ * - 成功返回 payload.data；失败 reject ApiError（message 与旧 Error 契约兼容）。
+ */
 export async function request(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase()
+  const maxRetries = RETRYABLE_METHODS.has(method)
+    ? Math.max(0, Math.floor(Number(options.retries) || 0))
+    : 0
+  const retryDelayMs = Math.max(0, Number(options.retryDelayMs) || 0)
+
   const headers = {
     ...(options.headers || {}),
   }
@@ -28,29 +52,47 @@ export async function request(path, options = {}) {
     if (csrf) headers['X-CSRF-Token'] = csrf
   }
 
-  const response = await fetch(buildUrl(path, options.params), {
-    ...options,
-    method,
-    headers,
-    credentials: 'include',
-    body: options.body instanceof FormData
-      ? options.body
-      : options.body
-        ? JSON.stringify(options.body)
-        : undefined,
-  })
-  const payload = await response.json().catch(() => null)
-  if (!response.ok || payload?.code !== 200) {
-    const text = payload?.msg || `请求失败：${response.status}`
-    if (payload?.code === 40101) {
+  let attempt = 0
+  for (;;) {
+    let classification = null
+    let payload = null
+    let status = null
+    try {
+      const response = await fetch(buildUrl(path, options.params), {
+        ...options,
+        method,
+        headers,
+        credentials: 'include',
+        body: options.body instanceof FormData
+          ? options.body
+          : options.body
+            ? JSON.stringify(options.body)
+            : undefined,
+      })
+      status = response.status
+      payload = await response.json().catch(() => null)
+      if (response.ok && payload?.code === 200) return payload.data
+      classification = classifyRequestError({ payload, status })
+    } catch (error) {
+      classification = classifyRequestError({ networkError: error })
+    }
+
+    if (shouldRetryRequest({ method, category: classification.category, attempt, maxRetries })) {
+      attempt += 1
+      if (retryDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+      continue
+    }
+
+    const text = resolveErrorMessage(classification.category, payload?.msg)
+    if (isSessionExpired(classification.category)) {
+      // 只有「未认证」才允许清理会话并跳转登录
       clearSession()
       window.location.replace('/admin/login?reason=expired')
-      return Promise.reject(new Error(text))
+      throw new ApiError(classification.category, text, { code: payload?.code ?? null, status })
     }
     message.error(text)
-    return Promise.reject(new Error(text))
+    throw new ApiError(classification.category, text, { code: payload?.code ?? null, status })
   }
-  return payload.data
 }
 
 function normalizeDebugPath(path) {
@@ -115,7 +157,7 @@ export async function rawRequest(path, options = {}) {
 }
 
 export const api = {
-  get: (path, params) => request(path, { method: 'GET', params }),
+  get: (path, params, options) => request(path, { method: 'GET', params, ...(options || {}) }),
   post: (path, body) => request(path, { method: 'POST', body }),
   put: (path, body) => request(path, { method: 'PUT', body }),
   delete: (path) => request(path, { method: 'DELETE' }),
