@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "description": "四轨协作文件所有权配置（Backend / Flutter / Admin / Integration）。由 scripts/collaboration/scope-check.mjs 读取。规则顺序：1) globalForbid 命中即失败；2) 非 integration lane 命中 generatedProducts 即失败；3) forbid 命中即失败；4) exceptions 命中且 --workorder 在 workorders 列表内则放行；5) allow 命中则放行；6) 其余一律越界失败。路径统一为正斜杠，模式支持 **（跨目录）、*（单段内）、?（单字符）。",
+  "globalForbid": [],
+  "generatedProducts": [
+    "backend/src/contracts/capabilities.js",
+    "backend/src/contracts/inventory-report.json",
+    "backend/src/modules/ai/services/assistant-catalog.generated.js",
+    "backend/admin/src/apiCatalog.js",
+    "app/lib/core/feature_catalog.dart"
+  ],
+  "lanes": {
+    "backend": {
+      "description": "Backend 业务 controller/service/routes、测试、后端脚本与种子。生成产物与 DB 永远禁止；Prisma 需唯一工作单授权。",
+      "allow": [
+        "backend/src/**",
+        "backend/test/**",
+        "backend/scripts/**",
+        "backend/seeds/**",
+        "backend/package.json",
+        "backend/package-lock.json",
+        "backend/.gitignore",
+        "backend/README*"
+      ],
+      "forbid": [
+        "backend/data/**"
+      ],
+      "exceptions": [
+        { "path": "backend/prisma/schema.prisma", "workorders": [] },
+        { "path": "backend/prisma/migrations/**", "workorders": [] }
+      ]
+    },
+    "flutter": {
+      "description": "Flutter App 页面/DTO/Repository/测试/资源/构建配置。app/lib/core/feature_catalog.dart 为生成产物，永远禁止手改（由 Integration 重建）。",
+      "allow": [
+        "app/lib/**",
+        "app/test/**",
+        "app/pubspec.yaml",
+        "app/pubspec.lock",
+        "app/analysis_options.yaml",
+        "app/android/**",
+        "app/assets/**",
+        "app/.gitignore",
+        "app/README*"
+      ],
+      "forbid": [],
+      "exceptions": []
+    },
+    "admin": {
+      "description": "Admin 管理台源码/测试/构建配置。backend/admin/src/apiCatalog.js 为生成产物，永远禁止手改（由 Integration 重建）。",
+      "allow": [
+        "backend/admin/src/**",
+        "backend/admin/test/**",
+        "backend/admin/package.json",
+        "backend/admin/package-lock.json",
+        "backend/admin/index.html",
+        "backend/admin/vite.config.*",
+        "backend/admin/.gitignore",
+        "backend/admin/README*"
+      ],
+      "forbid": [],
+      "exceptions": []
+    },
+    "integration": {
+      "description": "集成负责人：docs / scripts / .github CI / 生成器与全部派生产物（经 --write 重建）。业务代码（backend/src/modules/**、app/lib/**、backend/admin/src/** 除生成产物外）与 DB 永远禁止；Prisma 需唯一工作单授权。",
+      "allow": [
+        "docs/**",
+        "scripts/**",
+        ".github/**",
+        "backend/scripts/**",
+        "backend/test/registry-derive.test.js",
+        "backend/src/contracts/**",
+        "backend/src/modules/ai/services/assistant-catalog.generated.js",
+        "backend/admin/src/apiCatalog.js",
+        "app/lib/core/feature_catalog.dart",
+        ".gitignore",
+        "README*",
+        "package.json",
+        "package-lock.json"
+      ],
+      "forbid": [
+        "backend/data/**"
+      ],
+      "exceptions": [
+        { "path": "backend/prisma/schema.prisma", "workorders": [] },
+        { "path": "backend/prisma/migrations/**", "workorders": [] }
+      ]
+    }
+  }
+}

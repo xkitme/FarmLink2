@@ -1,0 +1,156 @@
+name: 四轨协作门禁 CI
+
+# 触发：pull_request（所有 collab/* 与任意分支的 PR）+ 手动触发（workflow_dispatch）
+on:
+  pull_request:
+  workflow_dispatch:
+
+# 最小权限：只读 contents。不配置任何可写 token、不读取 secrets、不上传任何产物。
+permissions:
+  contents: read
+
+# 并发取消：同一 ref 的新触发取消仍在运行的旧任务
+concurrency:
+  group: farmlink-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "26"
+
+jobs:
+  # ── 变更范围门禁：按分支前缀选择 lane，diff base..head 逐文件核对所有权 ──
+  scope-check:
+    name: 变更范围门禁（分支前缀 → lane）
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout（完整历史，检出 PR head 自身 commit）
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+      - name: 语法自检
+        run: node --check scripts/collaboration/scope-check.mjs
+      - name: 解析 lane（分支前缀）
+        id: lane
+        shell: bash
+        run: |
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          LANE=""
+          case "${BRANCH}" in
+            collab/backend*)      LANE="backend" ;;
+            collab/flutter*)      LANE="flutter" ;;
+            collab/admin*)        LANE="admin" ;;
+            collab/integration*)  LANE="integration" ;;
+            *)
+              echo "::error::无法从分支前缀识别 lane: ${BRANCH}（允许前缀：collab/backend、collab/flutter、collab/admin、collab/integration）" >&2
+              exit 1
+              ;;
+          esac
+          echo "lane=${LANE}" >> "${GITHUB_OUTPUT}"
+      - name: 运行 scope checker（越界即失败）
+        shell: bash
+        run: |
+          if [ -n "${GITHUB_BASE_REF}" ]; then
+            BASE_SHA="$(git merge-base "origin/${GITHUB_BASE_REF}" HEAD)"
+          else
+            BASE_SHA="$(git merge-base origin/main HEAD)"
+          fi
+          HEAD_SHA="$(git rev-parse HEAD)"
+          echo "lane=${{ steps.lane.outputs.lane }} base=${BASE_SHA} head=${HEAD_SHA}"
+          node scripts/collaboration/scope-check.mjs \
+            --lane "${{ steps.lane.outputs.lane }}" \
+            --base "${BASE_SHA}" \
+            --head "${HEAD_SHA}" \
+            --json
+
+  # ── Backend：测试 ──
+  backend-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install
+        run: npm ci --prefix backend
+      - name: Backend tests（临时库隔离，正式 village.db 零接触）
+        run: npm test --prefix backend
+
+  # ── 五个 inventory/generator drift 门禁：每个独立步骤显示，失败传播非零 ──
+  backend-drift:
+    name: 注册表/生成产物 drift 门禁（5/5）
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: drift 1/5 — inventory-routes --check
+        working-directory: backend
+        run: node scripts/inventory-routes.mjs --check
+      - name: drift 2/5 — gen-capabilities --check
+        working-directory: backend
+        run: node scripts/gen-capabilities.mjs --check
+      - name: drift 3/5 — gen-admin-api-catalog --check
+        working-directory: backend
+        run: node scripts/gen-admin-api-catalog.mjs --check
+      - name: drift 4/5 — gen-assistant-routes --check
+        working-directory: backend
+        run: node scripts/gen-assistant-routes.mjs --check
+      - name: drift 5/5 — gen-feature-catalog --check
+        working-directory: backend
+        run: node scripts/gen-feature-catalog.mjs --check
+
+  # ── Admin：测试 + 构建 ──
+  admin-test-build:
+    name: Admin test + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/admin/package-lock.json
+      - name: Install
+        run: npm ci --prefix backend/admin
+      - name: Admin tests
+        run: npm test --prefix backend/admin
+      - name: Admin build
+        run: npm run build --prefix backend/admin
+
+  # ── Flutter：analyze + test（子门禁，不等价降级 verify-all） ──
+  flutter-analyze-test:
+    name: Flutter analyze + test
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Flutter setup（固定 commit SHA）
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          cache: true
+      - name: pub get
+        working-directory: app
+        run: flutter pub get
+      - name: analyze
+        working-directory: app
+        run: flutter analyze lib
+      - name: test
+        working-directory: app
+        run: flutter test
