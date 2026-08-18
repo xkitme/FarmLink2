@@ -1,45 +1,38 @@
 /**
- * 116g-B 写操作状态机与删除确认（纯函数）。
+ * 116g-B 写操作协调器与删除确认（ResourcePage 与测试共用同一实现）。
  *
- * 用途：
- * - reduceWriteOp：idle → submitting → succeeded | failed → idle。
- *   submitting 期间再次 start 返回 duplicate=true，调用方据此拦截双击，
- *   保证一次交互只产生一次写请求。
- * - 失败（failed）不携带成功标记：调用方必须保持弹窗与表单值，绝不展示成功提示。
- * - 成功（succeeded）携带 refreshOnce=true：调用方据此做恰好一次的确定性刷新。
+ * createWriteOperation —— 消除「测试一套、页面另一套」的平行模型：
+ * - ResourcePage 的提交/删除真实消费本协调器；
+ * - busy 期间的重复 run 直接返回 duplicate=true，绝不触发第二次写请求；
+ * - 成功只调用一次 onSuccess（组件内 = 关弹窗 + 成功提示一次 + 确定性刷新一次）；
+ * - 失败只调用一次 onFailure（组件内 = 保留弹窗与表单、不弹成功、不刷新）。
  */
-
-export const WRITE_OP_PHASE = Object.freeze({
-  IDLE: 'idle',
-  SUBMITTING: 'submitting',
-  SUCCEEDED: 'succeeded',
-  FAILED: 'failed',
-})
 
 /**
- * @param {{phase?: string}} state 当前状态
- * @param {{type: 'start'|'success'|'failure'|'dismiss', category?: string, message?: string}} event
- * @returns {{phase: string, duplicate: boolean, refreshOnce?: boolean, category?: string|null, message?: string|null}}
+ * @param {object} options
+ * @param {(payload: any) => Promise<any>} options.perform 实际写请求（POST/PUT/DELETE）
+ * @param {(result: any) => void|Promise<void>} options.onSuccess 成功副作用（恰好一次）
+ * @param {(error: Error) => void|Promise<void>} options.onFailure 失败副作用（恰好一次）
  */
-export function reduceWriteOp(state, event) {
-  const phase = state?.phase || WRITE_OP_PHASE.IDLE
-  switch (event?.type) {
-    case 'start':
-      if (phase === WRITE_OP_PHASE.SUBMITTING) return { phase, duplicate: true }
-      return { phase: WRITE_OP_PHASE.SUBMITTING, duplicate: false }
-    case 'success':
-      return { phase: WRITE_OP_PHASE.SUCCEEDED, duplicate: false, refreshOnce: true }
-    case 'failure':
-      return {
-        phase: WRITE_OP_PHASE.FAILED,
-        duplicate: false,
-        category: event.category ?? null,
-        message: event.message ?? null,
-      }
-    case 'dismiss':
-      return { phase: WRITE_OP_PHASE.IDLE, duplicate: false }
-    default:
-      return { phase, duplicate: false }
+export function createWriteOperation({ perform, onSuccess, onFailure } = {}) {
+  let busy = false
+  async function run(payload) {
+    if (busy) return { duplicate: true, ok: false }
+    busy = true
+    try {
+      const result = await perform?.(payload)
+      await onSuccess?.(result)
+      return { duplicate: false, ok: true, result }
+    } catch (error) {
+      await onFailure?.(error)
+      return { duplicate: false, ok: false, error }
+    } finally {
+      busy = false
+    }
+  }
+  return {
+    run,
+    isBusy: () => busy,
   }
 }
 

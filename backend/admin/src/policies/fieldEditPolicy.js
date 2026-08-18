@@ -58,3 +58,22 @@ export function normalizeInitial(record, fields, mode = FORM_MODE.EDIT) {
   }
   return values
 }
+
+/**
+ * 提交体构建（116g-B 整改 #3，ResourcePage 真实使用）：
+ * - 只提交当前模式「可见且可编辑」的字段；
+ * - readonly 任何模式都永不提交（服务端维护字段）；
+ * - createOnly 只在创建模式提交，编辑模式永不提交（表单里根本不渲染）；
+ * - 隐藏字段与上一次弹窗残留值（values 中的多余键）一律不进入请求 body。
+ */
+export function buildSubmitPayload(values, fields, mode = FORM_MODE.EDIT) {
+  const payload = {}
+  const source = values || {}
+  for (const field of fields || []) {
+    if (!field || !isFieldVisible(field, mode)) continue
+    if (!isFieldEditable(field, mode)) continue
+    if (!(field.name in source)) continue
+    payload[field.name] = source[field.name]
+  }
+  return payload
+}

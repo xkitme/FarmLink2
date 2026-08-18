@@ -1,70 +1,158 @@
-// 116g-B 写操作状态机与删除确认（纯函数强测试）
-// 覆盖工作单强测试 6（双击只发一次）、7（失败保留表单语义）、
-// 8（成功只刷新一次/成功消息一次）、10（删除确认含具体标识）。
+// 116g-B 写操作协调器与删除确认（强测试）
+// 整改 #4：createWriteOperation 是 ResourcePage 真实消费的同一实现（替代 reduceWriteOp 平行模型），
+// 强测试覆盖真实调用链：连续提交只发一次写请求、失败不触发成功副作用、成功副作用恰好一次、删除防重。
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  WRITE_OP_PHASE,
   buildDeleteConfirmText,
+  createWriteOperation,
   primaryRecordText,
-  reduceWriteOp,
 } from '../src/policies/operationState.js';
 
-describe('reduceWriteOp — 写操作状态机（强测试 6/7/8）', () => {
-  it('idle --start--> submitting（首次提交被接受）', () => {
-    const next = reduceWriteOp({ phase: WRITE_OP_PHASE.IDLE }, { type: 'start' });
-    assert.equal(next.phase, WRITE_OP_PHASE.SUBMITTING);
-    assert.equal(next.duplicate, false);
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+describe('createWriteOperation — 真实调用链（整改 #4，页面与测试共用同一实现）', () => {
+  it('连续提交（并发两次 run）：perform 只执行一次，第二次返回 duplicate（只发一次 POST/PUT）', async () => {
+    let calls = 0;
+    let release;
+    const gate = new Promise((res) => {
+      release = res;
+    });
+    const op = createWriteOperation({
+      perform: async () => {
+        calls += 1;
+        await gate;
+        return { saved: true };
+      },
+      onSuccess: () => {},
+      onFailure: () => {},
+    });
+
+    const p1 = op.run({ values: { title: 'a' } });
+    const p2 = op.run({ values: { title: 'a' } });
+    release();
+    const [r1, r2] = await Promise.all([p1, p2]);
+
+    assert.equal(calls, 1, 'double submit must produce exactly one write request');
+    assert.equal(r1.duplicate, false);
+    assert.equal(r1.ok, true);
+    assert.deepEqual(r1.result, { saved: true });
+    assert.equal(r2.duplicate, true, 'second run must be rejected as duplicate');
+    assert.equal(r2.ok, false);
   });
 
-  it('submitting --start--> submitting + duplicate=true（双击拦截，不产生第二次请求）', () => {
-    const first = reduceWriteOp({ phase: WRITE_OP_PHASE.IDLE }, { type: 'start' });
-    const second = reduceWriteOp(first, { type: 'start' });
-    assert.equal(second.phase, WRITE_OP_PHASE.SUBMITTING);
-    assert.equal(second.duplicate, true, 'second start must be flagged duplicate');
+  it('失败：perform 抛错 → onFailure 恰好一次、onSuccess 零次（不关弹窗/不清表单/不弹成功/不刷新）', async () => {
+    let success = 0;
+    let failure = 0;
+    let failedWith = null;
+    const op = createWriteOperation({
+      perform: async () => {
+        throw new Error('40301 权限不足');
+      },
+      onSuccess: () => {
+        success += 1;
+      },
+      onFailure: (error) => {
+        failure += 1;
+        failedWith = error;
+      },
+    });
+
+    const r = await op.run({ values: { title: 'a' } });
+    assert.equal(r.ok, false);
+    assert.equal(r.duplicate, false);
+    assert.equal(r.error.message, '40301 权限不足');
+    assert.equal(success, 0, 'failure must never trigger success callback (no close/no toast/no refresh)');
+    assert.equal(failure, 1);
+    assert.equal(failedWith.message, '40301 权限不足');
   });
 
-  it('submitting --success--> succeeded + refreshOnce=true（成功后恰好一次刷新）', () => {
-    const next = reduceWriteOp({ phase: WRITE_OP_PHASE.SUBMITTING }, { type: 'success' });
-    assert.equal(next.phase, WRITE_OP_PHASE.SUCCEEDED);
-    assert.equal(next.refreshOnce, true);
+  it('成功：onSuccess 恰好一次并携带 perform 结果（成功提示/刷新只触发一次）', async () => {
+    let success = 0;
+    let got = null;
+    const op = createWriteOperation({
+      perform: async (payload) => ({ saved: true, payload }),
+      onSuccess: (result) => {
+        success += 1;
+        got = result;
+      },
+      onFailure: () => {},
+    });
+
+    const r = await op.run({ values: { id: 9 } });
+    assert.equal(r.ok, true);
+    assert.equal(success, 1, 'success callback must run exactly once');
+    assert.deepEqual(got, { saved: true, payload: { values: { id: 9 } } });
   });
 
-  it('submitting --failure--> failed（携带分类/文案，无任何成功标记，表单保留）', () => {
-    const next = reduceWriteOp(
-      { phase: WRITE_OP_PHASE.SUBMITTING },
-      { type: 'failure', category: 'validation', message: '参数校验失败' },
-    );
-    assert.equal(next.phase, WRITE_OP_PHASE.FAILED);
-    assert.equal(next.category, 'validation');
-    assert.equal(next.message, '参数校验失败');
-    assert.equal(next.refreshOnce, undefined, 'failure must not carry refresh intent');
-    assert.equal(next.duplicate, false);
+  it('失败后 busy 释放：再次提交可正常执行（不会永久卡死）', async () => {
+    let calls = 0;
+    const op = createWriteOperation({
+      perform: async () => {
+        calls += 1;
+        if (calls === 1) throw new Error('first fails');
+        return 'ok2';
+      },
+      onSuccess: () => {},
+      onFailure: () => {},
+    });
+
+    const r1 = await op.run({});
+    assert.equal(r1.ok, false);
+    const r2 = await op.run({});
+    assert.equal(r2.ok, true);
+    assert.equal(calls, 2);
   });
 
-  it('failed --dismiss--> idle；idle --dismiss--> idle（幂等）', () => {
-    assert.equal(reduceWriteOp({ phase: WRITE_OP_PHASE.FAILED }, { type: 'dismiss' }).phase, WRITE_OP_PHASE.IDLE);
-    assert.equal(reduceWriteOp({ phase: WRITE_OP_PHASE.IDLE }, { type: 'dismiss' }).phase, WRITE_OP_PHASE.IDLE);
+  it('isBusy：进行中 true、结束后 false（供 UI 处理中状态）', async () => {
+    let release;
+    const gate = new Promise((res) => {
+      release = res;
+    });
+    const op = createWriteOperation({
+      perform: () => gate,
+      onSuccess: () => {},
+      onFailure: () => {},
+    });
+    const p = op.run({});
+    assert.equal(op.isBusy(), true);
+    release();
+    await p;
+    assert.equal(op.isBusy(), false);
   });
 
-  it('完整成功链路：idle → submitting → succeeded → idle，refreshOnce 只在 success 出现一次', () => {
-    let state = { phase: WRITE_OP_PHASE.IDLE };
-    const refreshSignals = [];
-    state = reduceWriteOp(state, { type: 'start' });
-    if (state.duplicate) refreshSignals.push('bad');
-    state = reduceWriteOp(state, { type: 'success' });
-    if (state.refreshOnce) refreshSignals.push('refresh');
-    state = reduceWriteOp(state, { type: 'dismiss' });
-    assert.deepEqual(refreshSignals, ['refresh'], 'exactly one refresh signal on success');
-    assert.equal(state.phase, WRITE_OP_PHASE.IDLE);
-  });
+  it('删除链路：连续确认（并发两次 run）只产生一次 DELETE（perform 一次）', async () => {
+    let calls = 0;
+    let release;
+    const gate = new Promise((res) => {
+      release = res;
+    });
+    const op = createWriteOperation({
+      perform: async ({ record }) => {
+        calls += 1;
+        await gate;
+        return { deleted: record.id };
+      },
+      onSuccess: () => {},
+      onFailure: () => {},
+    });
 
-  it('未知事件/空状态：保持原相位且不产生重复或刷新信号（防御）', () => {
-    const next = reduceWriteOp({ phase: WRITE_OP_PHASE.IDLE }, { type: 'nonsense' });
-    assert.equal(next.phase, WRITE_OP_PHASE.IDLE);
-    assert.equal(next.duplicate, false);
-    assert.equal(next.refreshOnce, undefined);
+    const pA = op.run({ record: { id: 5 } });
+    const pB = op.run({ record: { id: 5 } });
+    release();
+    const [a, b] = await Promise.all([pA, pB]);
+    assert.equal(calls, 1, 'double confirm must produce exactly one DELETE');
+    assert.equal(a.duplicate, false);
+    assert.equal(b.duplicate, true);
   });
 });
 

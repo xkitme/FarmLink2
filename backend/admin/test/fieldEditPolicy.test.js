@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 
 import {
   FORM_MODE,
+  buildSubmitPayload,
   editableFormFields,
   isFieldEditable,
   isFieldRequired,
@@ -120,5 +121,63 @@ describe('normalizeInitial — 编辑初始值只取可见字段', () => {
     assert.equal(values.username, 'a');
     assert.equal('role' in values, true);
     assert.equal(values.role, undefined);
+  });
+});
+
+describe('buildSubmitPayload — 提交体只含当前模式可见且可编辑字段（整改 #3）', () => {
+  const fields = [
+    { name: 'username', label: '用户名' },
+    { name: 'password', label: '初始密码', type: 'password', createOnly: true, required: true },
+    { name: 'createdAt', label: '创建时间', type: 'date', readonly: true },
+    { name: 'status', label: '状态', type: 'int' },
+  ];
+
+  it('创建模式：createOnly 提交、readonly 永不提交、普通字段提交（精确 body）', () => {
+    const body = buildSubmitPayload(
+      { username: 'a', password: 'p1', createdAt: '2026-08-17', status: 1, ghost: 'x' },
+      fields,
+      FORM_MODE.CREATE,
+    );
+    assert.deepEqual(body, { username: 'a', password: 'p1', status: 1 });
+  });
+
+  it('编辑模式：createOnly 不提交、readonly 不提交、普通字段提交（精确 body）', () => {
+    const body = buildSubmitPayload(
+      { username: 'a', password: 'stale', createdAt: '2026-08-17', status: 0 },
+      fields,
+      FORM_MODE.EDIT,
+    );
+    assert.deepEqual(body, { username: 'a', status: 0 });
+  });
+
+  it('readonly 在创建与编辑模式都永不进入 body（正负对照）', () => {
+    assert.equal('createdAt' in buildSubmitPayload({ createdAt: 'x' }, fields, FORM_MODE.CREATE), false);
+    assert.equal('createdAt' in buildSubmitPayload({ createdAt: 'x' }, fields, FORM_MODE.EDIT), false);
+  });
+
+  it('createOnly 只在创建模式进入 body，编辑模式永不进入', () => {
+    assert.equal('password' in buildSubmitPayload({ password: 'p1' }, fields, FORM_MODE.CREATE), true);
+    assert.equal('password' in buildSubmitPayload({ password: 'leak' }, fields, FORM_MODE.EDIT), false);
+  });
+
+  it('隐藏字段与上一次弹窗残留值（values 中的多余键）不得进入 body', () => {
+    const body = buildSubmitPayload(
+      { username: 'a', password: 'leak', createdAt: 'leak2', ghost: 'leak3' },
+      fields,
+      FORM_MODE.EDIT,
+    );
+    assert.deepEqual(body, { username: 'a' });
+  });
+
+  it('values 缺省的可见字段不进入 body（不携带 undefined 键）', () => {
+    const body = buildSubmitPayload({ username: 'a' }, fields, FORM_MODE.CREATE);
+    assert.deepEqual(body, { username: 'a' });
+    assert.equal('status' in body, false);
+  });
+
+  it('空 values / 空 fields → 空 body（防御）', () => {
+    assert.deepEqual(buildSubmitPayload({}, fields, FORM_MODE.CREATE), {});
+    assert.deepEqual(buildSubmitPayload(null, [], FORM_MODE.CREATE), {});
+    assert.deepEqual(buildSubmitPayload(null, null, FORM_MODE.CREATE), {});
   });
 });

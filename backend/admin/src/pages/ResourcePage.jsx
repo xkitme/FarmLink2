@@ -34,12 +34,14 @@ import { api } from '../api/request.js'
 import TableStateView from '../components/TableStateView.jsx'
 import {
   FORM_MODE,
+  buildSubmitPayload,
   isFieldEditable,
   isFieldRequired,
   isFieldVisible,
   normalizeInitial,
 } from '../policies/fieldEditPolicy.js'
-import { buildDeleteConfirmText, primaryRecordText } from '../policies/operationState.js'
+import { buildDeleteConfirmText, createWriteOperation, primaryRecordText } from '../policies/operationState.js'
+import { createResourceLoadCoordinator, LOAD_RESULT } from '../policies/resourceLoadCoordinator.js'
 import { isStaleResponse, resolveTableState, TABLE_STATE } from '../policies/resourceTablePolicy.js'
 
 const VALUE_LABELS = {
@@ -358,62 +360,95 @@ function ResourceTable({ resourceKey, title }) {
   const [deleting, setDeleting] = useState(false)
   const [form] = Form.useForm()
 
-  // 竞态守卫：列表/配置共用 listSeq；详情单独 detailSeq。序号不匹配的响应一律丢弃。
-  const listSeqRef = useRef(0)
+  // 详情请求独立序号（与配置/列表序号互不干扰）
   const detailSeqRef = useRef(0)
-  const submittingRef = useRef(false)
-  const deletingRef = useRef(false)
-  const lastQueryRef = useRef({ page: 1, pageSize: 10, keyword: '' })
+  // 供协调器回调读取的实时值（避免过期闭包）
+  const resourceKeyRef = useRef(resourceKey)
+  resourceKeyRef.current = resourceKey
+  const editingRef = useRef(null)
+  editingRef.current = editing
+  const fieldsRef = useRef([])
 
-  async function loadConfig(seq) {
-    setConfigLoading(true)
-    try {
-      const data = await api.get(`/admin/resource/${resourceKey}/config`, null, {
-        retries: 1,
-        retryDelayMs: 300,
+  // 116g-B 整改 #1/#2：配置/列表加载协调器（页面与测试共用同一实现）
+  const coordRef = useRef(null)
+  function getCoord() {
+    if (!coordRef.current) {
+      coordRef.current = createResourceLoadCoordinator({
+        fetchConfig: () =>
+          api.get(`/admin/resource/${resourceKeyRef.current}/config`, null, { retries: 1, retryDelayMs: 300 }),
+        fetchList: (page, pageSize, kw) =>
+          api.get(
+            `/admin/resource/${resourceKeyRef.current}/list`,
+            { pageNum: page, pageSize, keyword: kw },
+            { retries: 1, retryDelayMs: 300 },
+          ),
+        applyConfig: (data) => setConfig(data),
+        applyList: (data) => {
+          setRows(data?.records || [])
+          setPagination({ current: data?.pageNum, pageSize: data?.pageSize, total: data?.total })
+        },
+        applyError: (error) => setTableError({ category: error?.category, message: error?.message }),
+        onLoadingChange: ({ configLoading: cLoading, listLoading: lLoading }) => {
+          setConfigLoading(cLoading)
+          setListLoading(lLoading)
+        },
       })
-      if (isStaleResponse(seq, listSeqRef.current)) return false
-      setConfig(data)
-      return true
-    } catch (error) {
-      if (isStaleResponse(seq, listSeqRef.current)) return false
-      setTableError({ category: error?.category, message: error?.message })
-      return false
-    } finally {
-      if (!isStaleResponse(seq, listSeqRef.current)) setConfigLoading(false)
     }
+    return coordRef.current
   }
 
-  async function loadList(page, pageSize, kw) {
-    const seq = listSeqRef.current + 1
-    listSeqRef.current = seq
-    const keywordValue = kw ?? ''
-    lastQueryRef.current = { page, pageSize, keyword: keywordValue }
-    setTableError(null)
-    setListLoading(true)
-    try {
-      const data = await api.get(
-        `/admin/resource/${resourceKey}/list`,
-        { pageNum: page, pageSize, keyword: keywordValue },
-        { retries: 1, retryDelayMs: 300 },
-      )
-      if (isStaleResponse(seq, listSeqRef.current)) return
-      setRows(data.records || [])
-      setPagination({ current: data.pageNum, pageSize: data.pageSize, total: data.total })
-    } catch (error) {
-      if (isStaleResponse(seq, listSeqRef.current)) return
-      setTableError({ category: error?.category, message: error?.message })
-    } finally {
-      if (!isStaleResponse(seq, listSeqRef.current)) setListLoading(false)
+  // 116g-B 整改 #4：写操作协调器（页面与测试共用同一实现，替代平行状态机模型）
+  const submitOpRef = useRef(null)
+  function getSubmitOp() {
+    if (!submitOpRef.current) {
+      submitOpRef.current = createWriteOperation({
+        perform: async ({ values }) => {
+          const mode = editingRef.current ? FORM_MODE.EDIT : FORM_MODE.CREATE
+          // 整改 #3：只提交当前模式可见且可编辑的字段；readonly 永不提交；createOnly 仅创建模式提交
+          const body = buildSubmitPayload(values, fieldsRef.current, mode)
+          if (editingRef.current) {
+            await api.put(`/admin/resource/${resourceKeyRef.current}/${editingRef.current.id}`, body)
+          } else {
+            await api.post(`/admin/resource/${resourceKeyRef.current}`, body)
+          }
+        },
+        onSuccess: async () => {
+          // 成功路径恰好执行一次：关弹窗 → 成功提示一次 → 确定性刷新一次
+          setModalOpen(false)
+          message.success(editingRef.current ? '记录已更新' : '记录已创建')
+          await getCoord().refreshAfterWrite({ mode: editingRef.current ? FORM_MODE.EDIT : FORM_MODE.CREATE })
+        },
+        onFailure: () => {
+          // 失败路径：弹窗保持打开、表单值保留；错误提示由请求层统一呈现；绝不弹成功、绝不刷新
+        },
+      })
     }
+    return submitOpRef.current
+  }
+
+  const deleteOpRef = useRef(null)
+  function getDeleteOp() {
+    if (!deleteOpRef.current) {
+      deleteOpRef.current = createWriteOperation({
+        perform: async ({ record }) => {
+          await api.delete(`/admin/resource/${resourceKeyRef.current}/${record.id}`)
+        },
+        onSuccess: async () => {
+          // 删除成功：成功提示一次 + 按最新查询参数（协调器意图口径）恰好刷新一次
+          message.success('记录已删除')
+          await getCoord().refreshCurrentQuery()
+        },
+        onFailure: () => {
+          // 删除失败：行保留、不弹成功提示；错误提示由请求层统一呈现
+        },
+      })
+    }
+    return deleteOpRef.current
   }
 
   useEffect(() => {
-    const seq = listSeqRef.current + 1
-    listSeqRef.current = seq
     detailSeqRef.current += 1
     setConfig(null)
-    setConfigLoading(true)
     setRows([])
     setTableError(null)
     setViewing(null)
@@ -421,14 +456,11 @@ function ResourceTable({ resourceKey, title }) {
     setDetailError(null)
     setPagination({ current: 1, pageSize: 10, total: 0 })
     setKeyword('')
-    loadConfig(seq).then((loaded) => {
-      if (!loaded) return
-      if (isStaleResponse(seq, listSeqRef.current)) return
-      loadList(1, 10, '')
-    })
+    getCoord().startResource()
   }, [resourceKey])
 
   const fields = config?.fields || []
+  fieldsRef.current = fields
   const listFields = config?.listFields || []
   const fieldMap = useMemo(() => Object.fromEntries(fields.map((field) => [field.name, field])), [fields])
 
@@ -440,20 +472,17 @@ function ResourceTable({ resourceKey, title }) {
     config,
   })
 
-  /** 错误/空态重试：按最后一次查询参数重放。 */
-  function retryLoad() {
-    if (!config) {
-      const seq = listSeqRef.current + 1
-      listSeqRef.current = seq
-      setTableError(null)
-      loadConfig(seq).then((loaded) => {
-        if (!loaded) return
-        if (isStaleResponse(seq, listSeqRef.current)) return
-        loadList(lastQueryRef.current.page, lastQueryRef.current.pageSize, lastQueryRef.current.keyword)
-      })
-      return
-    }
-    loadList(lastQueryRef.current.page, lastQueryRef.current.pageSize, lastQueryRef.current.keyword)
+  const configBusy = tableState === TABLE_STATE.CONFIG_LOADING
+
+  /** 用户动作入口：先清错误态再交给协调器（无配置时协调器直接忽略）。 */
+  function requestList(page, pageSize, kw) {
+    setTableError(null)
+    return getCoord().loadList(page, pageSize, kw)
+  }
+
+  function handleRetry() {
+    setTableError(null)
+    return getCoord().retry()
   }
 
   async function openDetail(record) {
@@ -463,7 +492,7 @@ function ResourceTable({ resourceKey, title }) {
     setDetailLoading(true)
     setDetailError(null)
     try {
-      const data = await api.get(`/admin/resource/${resourceKey}/${record.id}`)
+      const data = await api.get(`/admin/resource/${resourceKeyRef.current}/${record.id}`)
       if (isStaleResponse(requestId, detailSeqRef.current)) return
       setViewing(data)
     } catch (error) {
@@ -528,50 +557,28 @@ function ResourceTable({ resourceKey, title }) {
   }, [fieldMap, listFields, config, title, deleting, resourceKey])
 
   function openCreate() {
+    // 整改 #1：配置未就绪不得触发无配置操作
+    if (!getCoord().hasConfig()) return
     setEditing(null)
     setModalOpen(true)
   }
 
   const formMode = editing ? FORM_MODE.EDIT : FORM_MODE.CREATE
 
-  /** 写操作防误触：双击/重复提交只产生一次写请求；失败保持弹窗与表单值。 */
   async function submit(values) {
-    if (submittingRef.current) return
-    submittingRef.current = true
     setSubmitting(true)
     try {
-      const body = { ...values }
-      if (editing) {
-        await api.put(`/admin/resource/${resourceKey}/${editing.id}`, body)
-      } else {
-        await api.post(`/admin/resource/${resourceKey}`, body)
-      }
-      // 成功路径：关闭弹窗 → 成功提示恰好一次 → 确定性刷新恰好一次（新建回第 1 页，更新留当前页）
-      setModalOpen(false)
-      message.success(editing ? '记录已更新' : '记录已创建')
-      const refreshPage = editing ? pagination.current : 1
-      await loadList(refreshPage, pagination.pageSize, keyword)
-    } catch {
-      // 失败路径：弹窗保持打开、表单值保留；错误提示由请求层统一呈现，绝不展示成功提示。
+      return await getSubmitOp().run({ values })
     } finally {
-      submittingRef.current = false
       setSubmitting(false)
     }
   }
 
-  /** 删除：精确确认（含资源标题 + id + 首字段值）由 Popconfirm 保证；防重复提交由 ref 保证。 */
   async function removeRecord(record) {
-    if (deletingRef.current) return
-    deletingRef.current = true
     setDeleting(true)
     try {
-      await api.delete(`/admin/resource/${resourceKey}/${record.id}`)
-      message.success('记录已删除')
-      await loadList(pagination.current, pagination.pageSize, keyword)
-    } catch {
-      // 失败路径：行保留、不弹成功提示；错误提示由请求层统一呈现。
+      await getDeleteOp().run({ record })
     } finally {
-      deletingRef.current = false
       setDeleting(false)
     }
   }
@@ -587,12 +594,22 @@ function ResourceTable({ resourceKey, title }) {
             prefix={<SearchOutlined />}
             placeholder="搜索关键词"
             value={keyword}
+            disabled={configBusy}
             onChange={(event) => setKeyword(event.target.value)}
-            onPressEnter={() => loadList(1, pagination.pageSize, keyword)}
+            onPressEnter={() => requestList(1, pagination.pageSize, keyword)}
           />
-          <Button icon={<SearchOutlined />} onClick={() => loadList(1, pagination.pageSize, keyword)}>搜索</Button>
-          <Button icon={<ReloadOutlined />} onClick={() => loadList(pagination.current, pagination.pageSize, keyword)}>刷新</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增</Button>
+          <Button icon={<SearchOutlined />} disabled={configBusy} onClick={() => requestList(1, pagination.pageSize, keyword)}>搜索</Button>
+          <Button
+            icon={<ReloadOutlined />}
+            disabled={configBusy}
+            onClick={() => {
+              const query = getCoord().getLastQuery()
+              requestList(query.page, query.pageSize, query.keyword)
+            }}
+          >
+            刷新
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} disabled={configBusy} onClick={openCreate}>新增</Button>
         </Space>
       }
     >
@@ -615,7 +632,7 @@ function ResourceTable({ resourceKey, title }) {
             total: pagination.total,
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, pageSize) => loadList(page, pageSize, keyword),
+            onChange: (page, pageSize) => requestList(page, pageSize, keyword),
           }}
         />
       )}
@@ -627,7 +644,7 @@ function ResourceTable({ resourceKey, title }) {
         <TableStateView
           state={tableState}
           message={tableError?.message}
-          onRetry={retryLoad}
+          onRetry={handleRetry}
         />
       )}
 
