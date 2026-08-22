@@ -42,7 +42,7 @@ import {
 } from '../policies/fieldEditPolicy.js'
 import { buildDeleteConfirmText, createWriteOperation, primaryRecordText } from '../policies/operationState.js'
 import { createResourceLoadCoordinator, LOAD_RESULT } from '../policies/resourceLoadCoordinator.js'
-import { isStaleResponse, resolveTableState, TABLE_STATE } from '../policies/resourceTablePolicy.js'
+import { isConfigUnavailable, isStaleResponse, resolveTableState, TABLE_STATE } from '../policies/resourceTablePolicy.js'
 
 const VALUE_LABELS = {
   FARMER: '农户',
@@ -472,12 +472,16 @@ function ResourceTable({ resourceKey, title }) {
     config,
   })
 
-  const configBusy = tableState === TABLE_STATE.CONFIG_LOADING
+  // PR #5 审查整改：config 未就绪（含加载中/加载失败/尚无配置）一律禁用搜索/刷新/新增，
+  // 仅在配置加载成功后才放开（isConfigUnavailable 纯函数，页面与测试同口径）。
+  const configUnavailable = isConfigUnavailable(config)
 
-  /** 用户动作入口：先清错误态再交给协调器（无配置时协调器直接忽略）。 */
+  /** 用户动作入口：配置未就绪直接忽略且**不清错误态**；就绪后先清错误态再交给协调器。 */
   function requestList(page, pageSize, kw) {
+    const coord = getCoord()
+    if (!coord.hasConfig()) return LOAD_RESULT.IGNORED_NO_CONFIG
     setTableError(null)
-    return getCoord().loadList(page, pageSize, kw)
+    return coord.loadList(page, pageSize, kw)
   }
 
   function handleRetry() {
@@ -594,14 +598,14 @@ function ResourceTable({ resourceKey, title }) {
             prefix={<SearchOutlined />}
             placeholder="搜索关键词"
             value={keyword}
-            disabled={configBusy}
+            disabled={configUnavailable}
             onChange={(event) => setKeyword(event.target.value)}
             onPressEnter={() => requestList(1, pagination.pageSize, keyword)}
           />
-          <Button icon={<SearchOutlined />} disabled={configBusy} onClick={() => requestList(1, pagination.pageSize, keyword)}>搜索</Button>
+          <Button icon={<SearchOutlined />} disabled={configUnavailable} onClick={() => requestList(1, pagination.pageSize, keyword)}>搜索</Button>
           <Button
             icon={<ReloadOutlined />}
-            disabled={configBusy}
+            disabled={configUnavailable}
             onClick={() => {
               const query = getCoord().getLastQuery()
               requestList(query.page, query.pageSize, query.keyword)
@@ -609,7 +613,7 @@ function ResourceTable({ resourceKey, title }) {
           >
             刷新
           </Button>
-          <Button type="primary" icon={<PlusOutlined />} disabled={configBusy} onClick={openCreate}>新增</Button>
+          <Button type="primary" icon={<PlusOutlined />} disabled={configUnavailable} onClick={openCreate}>新增</Button>
         </Space>
       }
     >

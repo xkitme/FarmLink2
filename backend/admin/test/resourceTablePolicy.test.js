@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 
 import {
   TABLE_STATE,
+  isConfigUnavailable,
   isStaleResponse,
   resolveTableState,
 } from '../src/policies/resourceTablePolicy.js';
@@ -123,5 +124,42 @@ describe('isStaleResponse — 旧响应不得覆盖新状态（强测试 5）', 
     for (const fired of [8, 9, 10]) {
       assert.equal(isStaleResponse(fired, latest), fired !== latest, `seq ${fired} vs latest ${latest}`);
     }
+  });
+});
+
+describe('isConfigUnavailable — 配置未就绪禁用搜索/刷新/新增（PR #5 审查整改）', () => {
+  it('config 为 null（加载中/加载失败/尚无配置三形态）→ true（控件禁用）', () => {
+    assert.equal(isConfigUnavailable(null), true);
+    assert.equal(isConfigUnavailable(undefined), true);
+  });
+
+  it('config 已就绪（空对象）→ false（控件可用，正向对照）', () => {
+    assert.equal(isConfigUnavailable({}), false);
+  });
+
+  it('正负对照：失败态（null）与就绪态（对象）明显不同', () => {
+    assert.notEqual(isConfigUnavailable(null), isConfigUnavailable({}));
+  });
+
+  it('三形态（加载中/失败/尚无配置）对齐：只要 config 未就绪，无论呈现何种状态控件都禁用', () => {
+    const cases = [
+      // [describe, resolveTableState 输入, 期望状态, 期望禁用]
+      ['配置加载中', { configLoading: true, listLoading: false, error: null, rows: [], config: null }, TABLE_STATE.CONFIG_LOADING, true],
+      ['配置失败(403)', { configLoading: false, listLoading: false, error: { category: 'forbidden' }, rows: [], config: null }, TABLE_STATE.UNAUTHORIZED, true],
+      ['配置失败(网络)', { configLoading: false, listLoading: false, error: { category: 'network' }, rows: [], config: null }, TABLE_STATE.ERROR, true],
+      ['尚无配置(防御)', { configLoading: false, listLoading: false, error: null, rows: [], config: null }, TABLE_STATE.ERROR, true],
+      ['配置就绪(空列表)', { configLoading: false, listLoading: false, error: null, rows: [], config: {} }, TABLE_STATE.EMPTY, false],
+      ['配置就绪(有数据)', { configLoading: false, listLoading: false, error: null, rows: [{ id: 1 }], config: {} }, TABLE_STATE.READY, false],
+    ];
+    for (const [label, input, expectedState, expectedUnavailable] of cases) {
+      assert.equal(resolveTableState(input), expectedState, `${label} 状态不符`);
+      assert.equal(isConfigUnavailable(input.config), expectedUnavailable, `${label} 禁用口径不符`);
+    }
+  });
+
+  it('与 resolveTableState 的语义对齐：config=null 且 configLoading=false（配置失败）→ 错误态同时控件禁用', () => {
+    const state = resolveTableState({ configLoading: false, listLoading: false, error: { category: 'forbidden' }, rows: [], config: null });
+    assert.equal(state, TABLE_STATE.UNAUTHORIZED);
+    assert.equal(isConfigUnavailable(null), true, 'error state with no config must keep controls disabled');
   });
 });

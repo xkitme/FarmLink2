@@ -259,19 +259,24 @@ describe('createResourceLoadCoordinator — 删除/写后刷新参数（整改 #
     assert.deepEqual(listCalls[listCalls.length - 1], { page: 3, pageSize: 15, keyword: '水稻' }, 'retry must replay the exact failed query');
   });
 
-  it('配置失败：hasConfig=false、列表被忽略、retry 确定性重发配置', async () => {
+  it('配置失败：hasConfig=false、列表被忽略且零副作用（不清错误态）、retry 确定性重发配置', async () => {
     let configCalls = 0;
+    let listCalls = 0;
     let failConfig = true;
     const errors = [];
+    const applied = [];
     const coord = createResourceLoadCoordinator({
       fetchConfig: async () => {
         configCalls += 1;
         if (failConfig) throw new Error('40301 权限不足');
         return { fields: [] };
       },
-      fetchList: () => Promise.resolve(okList()),
+      fetchList: async () => {
+        listCalls += 1;
+        return okList();
+      },
       applyConfig: () => {},
-      applyList: () => {},
+      applyList: (data) => applied.push(data),
       applyError: (error) => errors.push(error),
       onLoadingChange: () => {},
     });
@@ -279,8 +284,15 @@ describe('createResourceLoadCoordinator — 删除/写后刷新参数（整改 #
     const first = await coord.startResource();
     assert.equal(first, LOAD_RESULT.FAILED);
     assert.equal(errors.length, 1);
-    assert.equal(coord.hasConfig(), false);
+    assert.equal(coord.hasConfig(), false, 'config failure must leave hasConfig=false');
+
+    // 配置失败后的搜索/刷新/新增：列表请求被忽略且零副作用——不发出请求、
+    // 不落地数据、不追加/清除错误（错误态保持，供重试入口呈现）
     assert.equal(await coord.loadList(1, 10, ''), LOAD_RESULT.IGNORED_NO_CONFIG);
+    assert.equal(await coord.loadList(2, 20, '玉米'), LOAD_RESULT.IGNORED_NO_CONFIG);
+    assert.equal(listCalls, 0, 'no list request may be issued without config');
+    assert.equal(applied.length, 0, 'no list data may be applied without config');
+    assert.equal(errors.length, 1, 'ignored request must not clear or replace the existing error');
 
     failConfig = false;
     const retried = await coord.retry();

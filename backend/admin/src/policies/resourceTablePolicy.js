@@ -5,6 +5,8 @@
  *   保证 loading / empty / error / unauthorized / api-disabled 互不混淆。
  * - isStaleResponse：请求序号守卫——响应回来时序号已落后于最新序号即为陈旧，
  *   必须丢弃，防止切换资源/搜索/翻页/详情之间的旧响应覆盖新状态。
+ * - isConfigUnavailable：配置未就绪判定（含加载中/加载失败/尚无配置），
+ *   此时搜索输入、搜索/刷新/新增按钮必须禁用，不得触发无配置操作。
  */
 
 export const TABLE_STATE = Object.freeze({
@@ -47,4 +49,14 @@ export function resolveTableState({ configLoading = false, listLoading = false, 
 /** 旧响应判定：请求序号不等于最新序号即为陈旧，结果必须丢弃。 */
 export function isStaleResponse(requestSeq, latestSeq) {
   return requestSeq !== latestSeq
+}
+
+/**
+ * 配置未就绪判定（PR #5 审查整改）：与 resolveTableState 的 `!config` 同口径——
+ * config 仅在加载成功后才非 null；null/undefined 均视为未就绪，
+ * 覆盖「加载中 / 加载失败 / 尚无配置」三种形态。
+ * 此时搜索输入、搜索按钮、刷新按钮、新增按钮必须禁用。
+ */
+export function isConfigUnavailable(config) {
+  return !config
 }
