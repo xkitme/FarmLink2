@@ -6,7 +6,6 @@ import 'package:farmlink/core/auth_state.dart';
 import 'package:farmlink/core/constants.dart';
 import 'package:farmlink/pages/market/orders_page.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
@@ -37,7 +36,7 @@ void main() {
   GoRouter? router;
   final filteredImageErrors = <String>[];
 
-  const _allowedImageUris = <String>{
+  const allowedImageUris = <String>{
     'http://farmlink.test/uploads/site/smart-farming.jpg',
     'http://farmlink.test/uploads/site/farm-market.jpg',
     'http://farmlink.test/uploads/site/machinery-sharing.jpg',
@@ -155,7 +154,7 @@ void main() {
       final ex = details.exception;
       if (ex is NetworkImageLoadException &&
           ex.statusCode == 400 &&
-          _allowedImageUris.contains(ex.uri.toString())) {
+          allowedImageUris.contains(ex.uri.toString())) {
         filteredImageErrors.add(ex.uri.toString());
         return;
       }
