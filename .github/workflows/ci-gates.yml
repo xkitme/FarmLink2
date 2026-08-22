@@ -15,12 +15,13 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "26"
+  # 项目基线 Node 版本（固定，不用浮动 latest）
+  NODE_VERSION: "24.16.0"
 
 jobs:
-  # ── 变更范围门禁：按分支前缀选择 lane，diff base..head 逐文件核对所有权 ──
+  # ── 变更范围门禁：按真实分支经 branchMap 解析 lane + workorder 精确白名单 ──
   scope-check:
-    name: 变更范围门禁（分支前缀 → lane）
+    name: 变更范围门禁（分支 → lane + workorder 白名单）
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -31,35 +32,19 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
       - name: 语法自检
         run: node --check scripts/collaboration/scope-check.mjs
-      - name: 解析 lane（分支前缀）
-        id: lane
+      - name: 运行 scope checker（branchMap 解析 lane+workorder；未知/模糊分支非零失败）
         shell: bash
         run: |
           BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
-          LANE=""
-          case "${BRANCH}" in
-            collab/backend*)      LANE="backend" ;;
-            collab/flutter*)      LANE="flutter" ;;
-            collab/admin*)        LANE="admin" ;;
-            collab/integration*)  LANE="integration" ;;
-            *)
-              echo "::error::无法从分支前缀识别 lane: ${BRANCH}（允许前缀：collab/backend、collab/flutter、collab/admin、collab/integration）" >&2
-              exit 1
-              ;;
-          esac
-          echo "lane=${LANE}" >> "${GITHUB_OUTPUT}"
-      - name: 运行 scope checker（越界即失败）
-        shell: bash
-        run: |
           if [ -n "${GITHUB_BASE_REF}" ]; then
             BASE_SHA="$(git merge-base "origin/${GITHUB_BASE_REF}" HEAD)"
           else
             BASE_SHA="$(git merge-base origin/main HEAD)"
           fi
           HEAD_SHA="$(git rev-parse HEAD)"
-          echo "lane=${{ steps.lane.outputs.lane }} base=${BASE_SHA} head=${HEAD_SHA}"
+          echo "branch=${BRANCH} base=${BASE_SHA} head=${HEAD_SHA}"
           node scripts/collaboration/scope-check.mjs \
-            --lane "${{ steps.lane.outputs.lane }}" \
+            --branch "${BRANCH}" \
             --base "${BASE_SHA}" \
             --head "${HEAD_SHA}" \
             --json
@@ -72,13 +57,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Setup Node
+      - name: Setup Node（基线 24.16.0）
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - name: Install
+      - name: Install（锁定依赖）
         run: npm ci --prefix backend
       - name: Backend tests（临时库隔离，正式 village.db 零接触）
         run: npm test --prefix backend
@@ -87,14 +72,18 @@ jobs:
   backend-drift:
     name: 注册表/生成产物 drift 门禁（5/5）
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Setup Node
+      - name: Setup Node（基线 24.16.0）
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install（生成器依赖锁定依赖）
+        run: npm ci --prefix backend
       - name: drift 1/5 — inventory-routes --check
         working-directory: backend
         run: node scripts/inventory-routes.mjs --check
@@ -119,7 +108,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Setup Node
+      - name: Setup Node（基线 24.16.0）
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -132,7 +121,7 @@ jobs:
       - name: Admin build
         run: npm run build --prefix backend/admin
 
-  # ── Flutter：analyze + test（子门禁，不等价降级 verify-all） ──
+  # ── Flutter：analyze（全量，含 test 目录）+ test（子门禁，不等价降级 verify-all） ──
   flutter-analyze-test:
     name: Flutter analyze + test
     runs-on: ubuntu-latest
@@ -140,17 +129,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Flutter setup（固定 commit SHA）
+      - name: Flutter setup（固定 action commit SHA + 固定 SDK 3.32.1）
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
+          flutter-version: '3.32.1'
           cache: true
       - name: pub get
         working-directory: app
         run: flutter pub get
-      - name: analyze
+      - name: analyze（全量：lib + test，不得只 analyze lib）
         working-directory: app
-        run: flutter analyze lib
+        run: flutter analyze
       - name: test
         working-directory: app
         run: flutter test
