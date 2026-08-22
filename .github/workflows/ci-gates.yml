@@ -30,8 +30,14 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
+      - name: Setup Node（基线 24.16.0，与其余 job 一致）
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - name: 语法自检
         run: node --check scripts/collaboration/scope-check.mjs
+      - name: scope checker 测试（45 用例进入远端 CI）
+        run: npm test --prefix scripts/test
       - name: 运行 scope checker（branchMap 解析 lane+workorder；未知/模糊分支非零失败）
         shell: bash
         run: |
