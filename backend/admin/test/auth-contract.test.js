@@ -1,4 +1,5 @@
 // B17 & B18 — Admin auth.js & request.js characterization tests
+// 116g-B 强化：fetchUser 仅 401 清缓存（断网/5xx/403 保留）；新增 bootstrapSession 三态契约。
 // Node built-in test runner; mocks browser globals before dynamic import.
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -95,7 +96,7 @@ describe('B17: auth.js — fetchUser / isLoggedIn / getCsrfToken', () => {
     assert.deepEqual(getCurrentUser(), {});
   });
 
-  it('fetchUser returns null on network error (catch path)', async () => {
+  it('fetchUser returns null on network error (catch path) — 116g-B：保留会话缓存（会话状态未知，不得误清）', async () => {
     const { fetchUser, getCurrentUser, setCurrentUser } = await loadAuth();
     setCurrentUser({ id: 99 });
 
@@ -105,8 +106,38 @@ describe('B17: auth.js — fetchUser / isLoggedIn / getCsrfToken', () => {
 
     const result = await fetchUser();
     assert.equal(result, null);
-    // source: getCurrentUser() returns _cachedUser || {} → {} when null
-    assert.deepEqual(getCurrentUser(), {});
+    // 116g-B 契约强化：断网 ≠ 会话失效，缓存必须保留（旧行为是清空，已修正）
+    assert.deepEqual(getCurrentUser(), { id: 99 });
+  });
+
+  it('fetchUser on 5xx keeps cached user (服务端错误 ≠ 会话失效)', async () => {
+    const { fetchUser, getCurrentUser, setCurrentUser } = await loadAuth();
+    setCurrentUser({ id: 99 });
+
+    fetchResponse = () =>
+      new Response(JSON.stringify({ code: 50001, msg: '服务器内部错误' }), {
+        status: 500,
+        headers: { 'content-type': 'application/json' },
+      });
+
+    const result = await fetchUser();
+    assert.equal(result, null);
+    assert.deepEqual(getCurrentUser(), { id: 99 });
+  });
+
+  it('fetchUser on 40301 keeps cached user (无权限 ≠ 会话失效)', async () => {
+    const { fetchUser, getCurrentUser, setCurrentUser } = await loadAuth();
+    setCurrentUser({ id: 99 });
+
+    fetchResponse = () =>
+      new Response(JSON.stringify({ code: 40301, msg: '权限不足' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      });
+
+    const result = await fetchUser();
+    assert.equal(result, null);
+    assert.deepEqual(getCurrentUser(), { id: 99 });
   });
 
   it('isLoggedIn returns Boolean(await fetchUser()) — true when user exists', async () => {
@@ -131,6 +162,66 @@ describe('B17: auth.js — fetchUser / isLoggedIn / getCsrfToken', () => {
 
     const result = await isLoggedIn();
     assert.equal(result, false);
+  });
+
+  it('bootstrapSession：/auth/me 成功 → decision=ok 且 user 返回', async () => {
+    const { bootstrapSession } = await loadAuth();
+    const userData = { id: 1, username: 'admin', role: 'ADMIN' };
+    fetchResponse = () =>
+      new Response(JSON.stringify({ code: 200, data: userData }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+
+    const result = await bootstrapSession();
+    assert.equal(result.decision, 'ok');
+    assert.deepEqual(result.user, userData);
+    assert.equal(result.category, null);
+  });
+
+  it('bootstrapSession：40101 → decision=expired 且清缓存（只有未认证可跳登录）', async () => {
+    const { bootstrapSession, getCurrentUser, setCurrentUser } = await loadAuth();
+    setCurrentUser({ id: 99 });
+
+    fetchResponse = () =>
+      new Response(JSON.stringify({ code: 40101, msg: '会话已失效' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      });
+
+    const result = await bootstrapSession();
+    assert.equal(result.decision, 'expired');
+    assert.deepEqual(getCurrentUser(), {}, 'unauthenticated must clear session cache');
+  });
+
+  it('bootstrapSession：断网/5xx/403 → decision=unavailable 且保留缓存（不误登出）', async () => {
+    const { bootstrapSession, getCurrentUser, setCurrentUser } = await loadAuth();
+    setCurrentUser({ id: 99 });
+
+    const cases = [
+      () => {
+        throw new Error('network error');
+      },
+      () =>
+        new Response(JSON.stringify({ code: 50001, msg: '服务器内部错误' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        }),
+      () =>
+        new Response(JSON.stringify({ code: 40301, msg: '权限不足' }), {
+          status: 403,
+          headers: { 'content-type': 'application/json' },
+        }),
+    ];
+
+    for (const behavior of cases) {
+      setCurrentUser({ id: 99 });
+      fetchResponse = behavior;
+      const result = await bootstrapSession();
+      assert.equal(result.decision, 'unavailable');
+      assert.equal(result.user, null);
+      assert.deepEqual(getCurrentUser(), { id: 99 }, 'session cache must be retained');
+    }
   });
 
   it('getCsrfToken parses csrf_token from document.cookie', async () => {
