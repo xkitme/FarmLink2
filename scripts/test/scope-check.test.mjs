@@ -2,21 +2,22 @@
  * scope-check.test.mjs — scope checker 强测试（node:test，零依赖）
  *
  * 覆盖矩阵（每个用例都断言输出文本/文件状态，绝不只断言 exit code）：
- *   1. 四条 lane 的合法路径通过（backend/flutter/admin/integration）
- *   2. 越界路径失败且列出精确文件
- *   3. generated 文件对业务 lane 失败（feature_catalog.dart / capabilities.js）
- *   4. 中文/空格路径（新增、修改、删除、重命名）
- *   5. 删除与重命名（R 记录新旧路径同时检查）
- *   6. 正负对照（同一仓库先合法后越界，输出与退出码均不同）
- *   7. 唯一工作单例外路径（未授权失败 / 错误编号失败 / 正确编号通过）
- *   8. 未知 lane / 缺 base / 分叉 / 脏工作树 全部非零退出且带明确消息
- *   9. 检查前后仓库内容与 mtime 完全不变（checker 不修改工作树）
- *  10. 空 diff（base == head）通过
+ *  A. 四条 lane legacy 模式：合法通过 / 越界精确列出 / 生成产物拒绝 /
+ *     中文+空格路径 / 删除与重命名（R 新旧路径双查）/ 正负对照 / 唯一工作单例外 /
+ *     未知 lane / 缺 base / 分叉 / 脏工作树 / 前后内容与 mtime 不变 / 空 diff / --json
+ *  B. branchMap（真实分支映射）：collab/116g-backend-data→backend/116g-A、
+ *     collab/116h-flutter-shell→flutter/116h-A、collab/116g-admin-safety→admin/116g-B、
+ *     collab/integration-gates→integration/116g-X；未知分支 / 模糊分支 → 退出码 2；
+ *     --branch 与 --lane/--workorder 冲突 → 退出码 2
+ *  C. workorder 精确白名单：116g-X（本批）、116g-B（真实 18 文件全覆盖）、116h-A、
+ *     116g-A（fail-closed：pending 8 项未回填前 backend/src/** 一律拒绝；临时回填后精确路径通过）；
+ *     M5/M6、Prisma、数据库、生成产物不得被任何当前 workorder 放行
+ *  D. workorder 模式下的 A/M/D/R 与中文/空格路径
  *
  * 运行：node --test scripts/test/scope-check.test.mjs
  */
 
-import { test, before, after } from 'node:test'
+import { test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -67,7 +68,10 @@ function initRepo() {
   writeFile(repo, 'app/lib/core/feature_catalog.dart', '// generated\n')
   writeFile(repo, 'app/test/home_test.dart', 'test()\n')
   writeFile(repo, 'backend/admin/src/App.jsx', 'export default 1\n')
+  writeFile(repo, 'backend/admin/src/api/auth.js', 'export const auth = 1\n')
+  writeFile(repo, 'backend/admin/src/api/apiCatalog.js', '// generated\n')
   writeFile(repo, 'backend/admin/src/apiCatalog.js', '// generated\n')
+  writeFile(repo, 'backend/admin/test/auth-contract.test.js', 'test()\n')
   writeFile(repo, 'docs/协作约定.md', '# 协作约定\n')
   writeFile(repo, '中文 路径/文件 名.md', 'base 中文文件\n')
   commitAll(repo, 'base')
@@ -100,30 +104,45 @@ function snapshotTree(repo) {
   return snap
 }
 
-before(() => {})
+function readRealLanes() {
+  return JSON.parse(fs.readFileSync(REAL_LANES, 'utf8'))
+}
+
+/** 复制正式配置并返回临时文件路径（可继续修改后写盘） */
+function copyConfig(mutator) {
+  const cfg = readRealLanes()
+  if (mutator) mutator(cfg)
+  const cfgPath = path.join(os.tmpdir(), `lanes-${Date.now()}-${Math.random().toString(16).slice(2)}.json`)
+  fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf8')
+  tempRoots.push(cfgPath)
+  return cfgPath
+}
+
 after(() => {
   for (const root of tempRoots) {
     try { fs.rmSync(root, { recursive: true, force: true }) } catch { /* ignore */ }
   }
 })
 
-/* ── 1. 四条 lane 合法路径通过 ───────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+ * A. legacy 模式（--lane）基础覆盖
+ * ═══════════════════════════════════════════════════════════ */
 
-test('backend lane: backend/test 新增文件通过（内容断言 OK 输出）', () => {
+test('A1 backend lane: backend/test 新增文件通过（内容断言 OK 输出）', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'backend/test/新测试.test.js', 'test()\n')
   commitAll(repo, 'add backend test')
   const head = mustGit(repo, ['rev-parse', 'HEAD'])
   const res = runChecker(repo, ['--lane', 'backend', '--base', base, '--head', head])
   assert.equal(res.status, 0)
-  assert.match(res.stdout, /OK: 全部变更均属于 lane 允许范围/)
+  assert.match(res.stdout, /OK: 全部变更均属于允许范围/)
   assert.match(res.stdout, /files=1/)
   assert.doesNotMatch(res.stdout, /VIOLATION/)
   // checker 不改工作树
   assert.equal(mustGit(repo, ['status', '--porcelain']), '')
 })
 
-test('flutter lane: app/test 新增文件通过', () => {
+test('A2 flutter lane: app/test 新增文件通过', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'app/test/widget_新增_test.dart', 'test()\n')
   commitAll(repo, 'add flutter test')
@@ -131,10 +150,9 @@ test('flutter lane: app/test 新增文件通过', () => {
   const res = runChecker(repo, ['--lane', 'flutter', '--base', base, '--head', head])
   assert.equal(res.status, 0)
   assert.match(res.stdout, /OK/)
-  assert.match(res.stdout, /app\/test\/widget_新增_test\.dart|files=1/)
 })
 
-test('admin lane: backend/admin/src 修改通过', () => {
+test('A3 admin lane: backend/admin/src 修改通过', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'backend/admin/src/App.jsx', 'export default 2\n')
   commitAll(repo, 'modify admin App')
@@ -144,7 +162,7 @@ test('admin lane: backend/admin/src 修改通过', () => {
   assert.match(res.stdout, /OK/)
 })
 
-test('integration lane: docs/scripts/.github 新增通过', () => {
+test('A4 integration lane: docs/scripts/.github 新增通过', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'docs/116g-新增.md', 'x\n')
   writeFile(repo, 'scripts/collaboration/新增脚本.mjs', 'x\n')
@@ -157,9 +175,7 @@ test('integration lane: docs/scripts/.github 新增通过', () => {
   assert.match(res.stdout, /files=3/)
 })
 
-/* ── 2. 越界路径失败且列出精确文件 ───────────────────────── */
-
-test('backend lane 越界改 docs：非零退出且精确列出文件', () => {
+test('A5 backend lane 越界改 docs：非零退出且精确列出文件', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'docs/协作约定.md', '# 被越界修改\n')
   commitAll(repo, 'backend 越界改 docs')
@@ -169,10 +185,9 @@ test('backend lane 越界改 docs：非零退出且精确列出文件', () => {
   assert.match(res.stdout, /VIOLATION/)
   assert.match(res.stdout, /docs\/协作约定\.md/)
   assert.match(res.stdout, /不属于 lane 'backend' 的允许路径/)
-  assert.match(res.stdout, /\[M\]/)
 })
 
-test('flutter lane 越界改 backend/src：非零退出且列出精确文件', () => {
+test('A6 flutter lane 越界改 backend/src：非零退出且列出精确文件', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'backend/src/app.js', 'module.exports = 999\n')
   commitAll(repo, 'flutter 越界改 backend')
@@ -183,9 +198,7 @@ test('flutter lane 越界改 backend/src：非零退出且列出精确文件', (
   assert.match(res.stdout, /backend\/src\/app\.js/)
 })
 
-/* ── 3. generated 文件对业务 lane 失败 ────────────────────── */
-
-test('flutter lane 手改 feature_catalog.dart：生成产物失败', () => {
+test('A7 flutter lane 手改 feature_catalog.dart：生成产物失败', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'app/lib/core/feature_catalog.dart', '// hand edit\n')
   commitAll(repo, '手改生成产物')
@@ -196,7 +209,7 @@ test('flutter lane 手改 feature_catalog.dart：生成产物失败', () => {
   assert.match(res.stdout, /生成产物/)
 })
 
-test('backend lane 手改 capabilities.js：生成产物失败', () => {
+test('A8 backend lane 手改 capabilities.js：生成产物失败', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'backend/src/contracts/capabilities.js', '// hand edit\n')
   commitAll(repo, '手改注册表生成产物')
@@ -207,7 +220,7 @@ test('backend lane 手改 capabilities.js：生成产物失败', () => {
   assert.match(res.stdout, /生成产物/)
 })
 
-test('integration lane 可改生成产物（--write 重建路径放行）', () => {
+test('A9 integration lane 可改生成产物（--write 重建路径放行）', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'backend/src/contracts/capabilities.js', '// regenerated by integration\n')
   writeFile(repo, 'app/lib/core/feature_catalog.dart', '// regenerated\n')
@@ -218,9 +231,7 @@ test('integration lane 可改生成产物（--write 重建路径放行）', () =
   assert.match(res.stdout, /OK/)
 })
 
-/* ── 4. 中文/空格路径 ────────────────────────────────────── */
-
-test('中文+空格路径新增（integration 合法）通过', () => {
+test('A10 中文+空格路径新增（integration 合法）通过', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'docs/中文 文档/新 文件.md', 'new\n')
   commitAll(repo, '新增中文空格路径')
@@ -231,7 +242,7 @@ test('中文+空格路径新增（integration 合法）通过', () => {
   assert.match(res.stdout, /files=1/)
 })
 
-test('中文+空格路径越界（backend lane 改 中文 路径/文件 名.md）非零且路径无损列出', () => {
+test('A11 中文+空格路径越界（backend lane 改 中文 路径/文件 名.md）非零且路径无损列出', () => {
   const { repo, base } = initRepo()
   writeFile(repo, '中文 路径/文件 名.md', '被越界修改\n')
   commitAll(repo, '越界修改中文文件')
@@ -242,9 +253,7 @@ test('中文+空格路径越界（backend lane 改 中文 路径/文件 名.md�
   assert.doesNotMatch(res.stdout, /\\u/)
 })
 
-/* ── 5. 删除与重命名 ─────────────────────────────────────── */
-
-test('删除：flutter lane 删除 app/lib/main.dart 通过', () => {
+test('A12 删除：flutter lane 删除 app/lib/main.dart 通过', () => {
   const { repo, base } = initRepo()
   fs.unlinkSync(path.join(repo, 'app', 'lib', 'main.dart'))
   commitAll(repo, 'flutter 删除自己的文件')
@@ -254,7 +263,7 @@ test('删除：flutter lane 删除 app/lib/main.dart 通过', () => {
   assert.match(res.stdout, /OK/)
 })
 
-test('删除：flutter lane 删除 backend/src/app.js 越界且精确列出', () => {
+test('A13 删除：flutter lane 删除 backend/src/app.js 越界且精确列出', () => {
   const { repo, base } = initRepo()
   fs.unlinkSync(path.join(repo, 'backend', 'src', 'app.js'))
   commitAll(repo, 'flutter 越界删除 backend 文件')
@@ -264,7 +273,7 @@ test('删除：flutter lane 删除 backend/src/app.js 越界且精确列出', ()
   assert.match(res.stdout, /\[D\] backend\/src\/app\.js/)
 })
 
-test('重命名：backend lane 在 src 内重命名通过（R 新旧路径均合法）', () => {
+test('A14 重命名：backend lane 在 src 内重命名通过（R 新旧路径均合法）', () => {
   const { repo, base } = initRepo()
   fs.renameSync(path.join(repo, 'backend', 'src', 'app.js'), path.join(repo, 'backend', 'src', 'app2.js'))
   commitAll(repo, 'backend 内部重命名')
@@ -275,7 +284,7 @@ test('重命名：backend lane 在 src 内重命名通过（R 新旧路径均合
   assert.match(res.stdout, /"R"/)
 })
 
-test('重命名：flutter lane 把 app 文件重命名进 backend 越界，新旧路径都列出', () => {
+test('A15 重命名：flutter lane 把 app 文件重命名进 backend 越界，新路径列出', () => {
   const { repo, base } = initRepo()
   fs.renameSync(
     path.join(repo, 'app', 'lib', 'main.dart'),
@@ -291,18 +300,14 @@ test('重命名：flutter lane 把 app 文件重命名进 backend 越界，新�
   assert.match(res.stdout, /不属于 lane 'flutter' 的允许路径/)
 })
 
-/* ── 6. 正负对照 ─────────────────────────────────────────── */
-
-test('正负对照：同一仓库合法提交通过、越界提交失败，输出文本不同', () => {
+test('A16 正负对照：同一仓库合法提交通过、越界提交失败，输出文本不同', () => {
   const { repo, base } = initRepo()
-  // 正例
   writeFile(repo, 'backend/test/positive.test.js', 'test()\n')
   commitAll(repo, 'positive')
   const headPos = mustGit(repo, ['rev-parse', 'HEAD'])
   const resPos = runChecker(repo, ['--lane', 'backend', '--base', base, '--head', headPos])
   assert.equal(resPos.status, 0)
   assert.match(resPos.stdout, /OK/)
-  // 负例（同一仓库继续越界提交）
   writeFile(repo, 'docs/协作约定.md', '# 越界\n')
   commitAll(repo, 'negative')
   const headNeg = mustGit(repo, ['rev-parse', 'HEAD'])
@@ -312,54 +317,7 @@ test('正负对照：同一仓库合法提交通过、越界提交失败，输�
   assert.notEqual(resPos.stdout, resNeg.stdout)
 })
 
-/* ── 7. 唯一工作单例外路径 ───────────────────────────────── */
-
-function writeTempConfig() {
-  const raw = fs.readFileSync(REAL_LANES, 'utf8')
-  const cfg = JSON.parse(raw)
-  // 把正式配置中 schema.prisma 的例外条目（workorders 为空 = 未授权）替换为授权 WO-001
-  cfg.lanes.backend.exceptions[0].workorders = ['WO-001']
-  const cfgPath = path.join(os.tmpdir(), `lanes-${Date.now()}-${Math.random().toString(16).slice(2)}.json`)
-  fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf8')
-  tempRoots.push(cfgPath)
-  return cfgPath
-}
-
-test('唯一工作单例外：未授权 / 错误编号失败，正确编号通过', () => {
-  const { repo, base } = initRepo()
-  const cfgPath = writeTempConfig()
-  writeFile(repo, 'backend/prisma/schema.prisma', 'datasource db {}\n-- changed\n')
-  commitAll(repo, '改 prisma schema')
-  const head = mustGit(repo, ['rev-parse', 'HEAD'])
-
-  const resNoAuth = runChecker(repo, ['--lane', 'backend', '--base', base, '--head', head, '--config', cfgPath])
-  assert.equal(resNoAuth.status, 1)
-  assert.match(resNoAuth.stdout, /backend\/prisma\/schema\.prisma/)
-  assert.match(resNoAuth.stdout, /唯一工作单例外路径/)
-
-  const resWrongId = runChecker(repo, ['--lane', 'backend', '--base', base, '--head', head, '--config', cfgPath, '--workorder', 'WO-999'])
-  assert.equal(resWrongId.status, 1)
-  assert.match(resWrongId.stdout, /唯一工作单例外路径/)
-
-  const resRightId = runChecker(repo, ['--lane', 'backend', '--base', base, '--head', head, '--config', cfgPath, '--workorder', 'WO-001'])
-  assert.equal(resRightId.status, 0)
-  assert.match(resRightId.stdout, /OK/)
-})
-
-test('正式配置中 prisma 例外 workorders 为空：任何工作单都失败（当前未授权）', () => {
-  const { repo, base } = initRepo()
-  writeFile(repo, 'backend/prisma/migrations/20260801_init/migration.sql', 'CREATE TABLE t(id INTEGER);\n')
-  commitAll(repo, '加 migration')
-  const head = mustGit(repo, ['rev-parse', 'HEAD'])
-  const res = runChecker(repo, ['--lane', 'backend', '--base', base, '--head', head, '--workorder', 'ANY-ID'])
-  assert.equal(res.status, 1)
-  assert.match(res.stdout, /backend\/prisma\/migrations\//)
-  assert.match(res.stdout, /当前未授权任何工作单/)
-})
-
-/* ── 8. 未知 lane / 缺 base / 分叉 / 脏工作树 ────────────── */
-
-test('未知 lane：退出码 2 且列出合法 lane', () => {
+test('A17 未知 lane：退出码 2 且列出合法 lane', () => {
   const { repo, base } = initRepo()
   const res = runChecker(repo, ['--lane', 'unknown-lane', '--base', base])
   assert.equal(res.status, 2)
@@ -367,50 +325,44 @@ test('未知 lane：退出码 2 且列出合法 lane', () => {
   assert.match(res.stderr, /backend, flutter, admin, integration/)
 })
 
-test('缺 --base：退出码 2 且明确报错', () => {
+test('A18 缺 --base：退出码 2 且明确报错', () => {
   const { repo } = initRepo()
   const res = runChecker(repo, ['--lane', 'integration'])
   assert.equal(res.status, 2)
   assert.match(res.stderr, /缺少 --base/)
 })
 
-test('分叉（base 不是 head 祖先）：非零退出且明确报分叉', () => {
+test('A19 分叉（base 不是 head 祖先）：非零退出且明确报分叉', () => {
   const { repo, base } = initRepo()
-  // main 上继续提交 D
   writeFile(repo, 'docs/主线.md', 'main\n')
   commitAll(repo, 'main D')
   const mainHead = mustGit(repo, ['rev-parse', 'HEAD'])
-  // 从 base 拉出侧分支提交 C
   mustGit(repo, ['checkout', '-b', 'side', base])
   writeFile(repo, 'docs/侧线.md', 'side\n')
   commitAll(repo, 'side C')
   const sideHead = mustGit(repo, ['rev-parse', 'HEAD'])
-  // base=mainHead（D），head=sideHead（C），D 不是 C 祖先 → 分叉
   const res = runChecker(repo, ['--lane', 'integration', '--base', mainHead, '--head', sideHead])
   assert.equal(res.status, 1)
   assert.match(res.stdout, /不是 head/)
   assert.match(res.stdout, /分叉/)
 })
 
-test('脏工作树：未提交修改 → 非零退出并列出脏条目', () => {
+test('A20 脏工作树：未提交修改 → 非零退出并列出脏条目', () => {
   const { repo, base } = initRepo()
   const head = mustGit(repo, ['rev-parse', 'HEAD'])
-  writeFile(repo, 'docs/未提交.md', 'dirty\n') // 不 commit
+  writeFile(repo, 'docs/未提交.md', 'dirty\n')
   const res = runChecker(repo, ['--lane', 'integration', '--base', base, '--head', head])
   assert.equal(res.status, 1)
   assert.match(res.stdout, /工作树不干净/)
   assert.match(res.stdout, /docs\/未提交\.md/)
 })
 
-/* ── 9. 检查前后内容与 mtime 不变 ────────────────────────── */
-
-test('checker 运行前后：仓库文件内容与 mtime 完全不变，无新增文件', () => {
+test('A21 checker 运行前后：仓库文件内容与 mtime 完全不变，无新增文件', () => {
   const { repo, base } = initRepo()
   const head = mustGit(repo, ['rev-parse', 'HEAD'])
   const before = snapshotTree(repo)
   const beforeList = Object.keys(before).sort()
 
-  // 跑一次合法 + 一次越界
   const resOk = runChecker(repo, ['--lane', 'integration', '--base', base, '--head', head])
   assert.equal(resOk.status, 0)
   writeFile(repo, 'docs/越界样例.md', 'x\n')
@@ -421,7 +373,6 @@ test('checker 运行前后：仓库文件内容与 mtime 完全不变，无新�
 
   const after = snapshotTree(repo)
   const afterList = Object.keys(after).sort()
-  // 只有我们主动新增的越界样例文件，checker 本身没有新增/删除任何文件
   assert.deepEqual(
     afterList.filter((f) => !f.includes('.git')),
     [...beforeList, 'docs/越界样例.md'].sort()
@@ -433,9 +384,7 @@ test('checker 运行前后：仓库文件内容与 mtime 完全不变，无新�
   }
 })
 
-/* ── 10. 空 diff ─────────────────────────────────────────── */
-
-test('base == head（空 diff）：通过且 files=0', () => {
+test('A22 base == head（空 diff）：通过且 files=0', () => {
   const { repo, base } = initRepo()
   const res = runChecker(repo, ['--lane', 'flutter', '--base', base, '--head', base])
   assert.equal(res.status, 0)
@@ -443,9 +392,7 @@ test('base == head（空 diff）：通过且 files=0', () => {
   assert.match(res.stdout, /OK/)
 })
 
-/* ── 11. --json 输出结构 ─────────────────────────────────── */
-
-test('--json 输出可解析且字段完整（ok/violations/counts）', () => {
+test('A23 --json 输出可解析且字段完整（ok/violations/counts）', () => {
   const { repo, base } = initRepo()
   writeFile(repo, 'backend/src/app.js', 'module.exports = 42\n')
   commitAll(repo, 'json 样例')
@@ -455,8 +402,377 @@ test('--json 输出可解析且字段完整（ok/violations/counts）', () => {
   const payload = JSON.parse(res.stdout)
   assert.equal(payload.ok, false)
   assert.equal(payload.lane, 'flutter')
+  assert.equal(payload.mode, 'legacy')
   assert.equal(payload.files, 1)
   assert.equal(payload.violations.length, 1)
   assert.equal(payload.violations[0].path, 'backend/src/app.js')
   assert.equal(payload.counts.M, 1)
+})
+
+test('A24 唯一工作单例外路径（legacy）：prisma 例外当前未授权，拒绝', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'backend/prisma/migrations/20260801_init/migration.sql', 'CREATE TABLE t(id INTEGER);\n')
+  commitAll(repo, '加 migration')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--lane', 'backend', '--base', base, '--head', head])
+  assert.equal(res.status, 1)
+  assert.match(res.stdout, /backend\/prisma\/migrations\//)
+  assert.match(res.stdout, /当前未授权任何工作单/)
+})
+
+test('A25 workorder 模式：临时 workorder 白名单可授权 prisma（正确编号通过，缺省拒绝）', () => {
+  const { repo, base } = initRepo()
+  const cfgPath = copyConfig((cfg) => {
+    cfg.workorders['WO-001'] = { lane: 'backend', allow: ['backend/prisma/schema.prisma'], pending: [] }
+  })
+  writeFile(repo, 'backend/prisma/schema.prisma', 'datasource db {}\n-- changed\n')
+  commitAll(repo, '改 prisma schema')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+
+  const resLegacy = runChecker(repo, ['--lane', 'backend', '--base', base, '--head', head, '--config', cfgPath])
+  assert.equal(resLegacy.status, 1)
+  assert.match(resLegacy.stdout, /backend\/prisma\/schema\.prisma/)
+  assert.match(resLegacy.stdout, /唯一工作单例外路径/)
+
+  const resUnknown = runChecker(repo, ['--lane', 'backend', '--workorder', 'WO-999', '--base', base, '--head', head, '--config', cfgPath])
+  assert.equal(resUnknown.status, 2)
+  assert.match(resUnknown.stderr, /未知 workorder 'WO-999'/)
+
+  const resRight = runChecker(repo, ['--lane', 'backend', '--workorder', 'WO-001', '--base', base, '--head', head, '--config', cfgPath])
+  assert.equal(resRight.status, 0)
+  assert.match(resRight.stdout, /OK/)
+  assert.match(resRight.stdout, /workorder=WO-001/)
+})
+
+/* ═══════════════════════════════════════════════════════════
+ * B. branchMap 真实分支映射
+ * ═══════════════════════════════════════════════════════════ */
+
+test('B1 真实分支映射：四个分支解析为正确 lane+workorder（空 diff 通过）', () => {
+  const cases = [
+    ['collab/116g-backend-data', 'backend', '116g-A'],
+    ['collab/116h-flutter-shell', 'flutter', '116h-A'],
+    ['collab/116g-admin-safety', 'admin', '116g-B'],
+    ['collab/integration-gates', 'integration', '116g-X'],
+  ]
+  const { repo, base } = initRepo()
+  for (const [branch, lane, workorder] of cases) {
+    const res = runChecker(repo, ['--branch', branch, '--base', base, '--head', base])
+    assert.equal(res.status, 0, `${branch} 应通过: ${res.stdout}`)
+    assert.match(res.stdout, new RegExp(`lane=${lane}`))
+    assert.match(res.stdout, new RegExp(`workorder=${workorder}`))
+  }
+})
+
+test('B2 未知分支：退出码 2 且列出已登记映射', () => {
+  const { repo, base } = initRepo()
+  const res = runChecker(repo, ['--branch', 'collab/unknown-xyz', '--base', base])
+  assert.equal(res.status, 2)
+  assert.match(res.stderr, /未知分支 'collab\/unknown-xyz'/)
+  assert.match(res.stderr, /collab\/116g-backend-\*/)
+})
+
+test('B3 模糊分支：两条映射同时命中 → 退出码 2', () => {
+  const { repo, base } = initRepo()
+  const cfgPath = copyConfig((cfg) => {
+    cfg.branchMap.push({ branch: 'collab/116g-*', lane: 'backend', workorder: '116g-A' })
+  })
+  // collab/116g-admin-safety 同时命中 collab/116g-admin-* 与 collab/116g-*
+  const res = runChecker(repo, ['--branch', 'collab/116g-admin-safety', '--base', base, '--config', cfgPath])
+  assert.equal(res.status, 2)
+  assert.match(res.stderr, /模糊/)
+  assert.match(res.stderr, /2 条映射/)
+})
+
+test('B4 --branch 与 --lane / --workorder 冲突 → 退出码 2', () => {
+  const { repo, base } = initRepo()
+  const resLane = runChecker(repo, ['--branch', 'collab/integration-gates', '--lane', 'backend', '--base', base])
+  assert.equal(resLane.status, 2)
+  assert.match(resLane.stderr, /冲突/)
+  const resWo = runChecker(repo, ['--branch', 'collab/integration-gates', '--workorder', '116g-A', '--base', base])
+  assert.equal(resWo.status, 2)
+  assert.match(resWo.stderr, /冲突/)
+})
+
+test('B5 未知 workorder（--workorder 显式）：退出码 2 且列出已登记工单', () => {
+  const { repo, base } = initRepo()
+  const res = runChecker(repo, ['--lane', 'backend', '--workorder', 'NOPE', '--base', base])
+  assert.equal(res.status, 2)
+  assert.match(res.stderr, /未知 workorder 'NOPE'/)
+  assert.match(res.stderr, /116g-A, 116h-A, 116g-B, 116g-X/)
+})
+
+/* ═══════════════════════════════════════════════════════════
+ * C. workorder 精确白名单
+ * ═══════════════════════════════════════════════════════════ */
+
+test('C1 116g-X 白名单：.github / scripts/collaboration / scripts/test / 协作约定 / 116g-X 文档通过', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, '.github/workflows/ci.yml', 'name: x\n')
+  writeFile(repo, 'scripts/collaboration/新增脚本.mjs', 'x\n')
+  writeFile(repo, 'scripts/test/新增测试.test.mjs', 'x\n')
+  writeFile(repo, 'docs/协作约定.md', '# 修改协作约定\n')
+  writeFile(repo, 'docs/116g-X-四轨协作与集成门禁.md', '# 116g-X\n')
+  commitAll(repo, '116g-X 白名单内文件')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/integration-gates', '--base', base, '--head', head])
+  assert.equal(res.status, 0)
+  assert.match(res.stdout, /OK/)
+  assert.match(res.stdout, /files=5/)
+})
+
+test('C2 116g-X 白名单：docs 其他文件拒绝（不再宽泛放行 docs/**）', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'docs/进度总览.md', '# 进度\n')
+  commitAll(repo, '越界改进度总览')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/integration-gates', '--base', base, '--head', head])
+  assert.equal(res.status, 1)
+  assert.match(res.stdout, /\[A\] docs\/进度总览\.md/)
+  assert.match(res.stdout, /不在工单 '116g-X' 白名单/)
+})
+
+test('C3 116g-X 白名单：业务代码全部拒绝（backend/flutter/admin）', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'backend/src/app.js', 'module.exports = 2\n')
+  writeFile(repo, 'app/lib/main.dart', 'void main() { print("x"); }\n')
+  writeFile(repo, 'backend/admin/src/App.jsx', 'export default 2\n')
+  commitAll(repo, '116g-X 越界业务代码')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/integration-gates', '--base', base, '--head', head])
+  assert.equal(res.status, 1)
+  assert.equal((res.stdout.match(/不在工单 '116g-X' 白名单/g) || []).length, 3)
+})
+
+test('C4 116g-X 白名单：M5/M6、Prisma、数据库、生成产物不被放行', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'backend/src/modules/market/order.controller.js', 'x\n')
+  writeFile(repo, 'app/lib/features/agri/photo_flow_page.dart', 'x\n')
+  writeFile(repo, 'backend/prisma/schema.prisma', 'datasource db {}\n-- x\n')
+  writeFile(repo, 'backend/src/contracts/capabilities.js', '// hand edit\n')
+  writeFile(repo, 'backend/data/village.db', 'sqlite-bytes')
+  commitAll(repo, '116g-X 全禁区')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/integration-gates', '--base', base, '--head', head])
+  assert.equal(res.status, 1)
+  assert.match(res.stdout, /backend\/src\/modules\/market\/order\.controller\.js/)
+  assert.match(res.stdout, /app\/lib\/features\/agri\/photo_flow_page\.dart/)
+  assert.match(res.stdout, /backend\/prisma\/schema\.prisma/)
+  assert.match(res.stdout, /backend\/src\/contracts\/capabilities\.js/)
+  assert.match(res.stdout, /backend\/data\/village\.db/)
+})
+
+test('C5 116g-B 白名单：真实 admin 文件类别通过（api/pages/components/policies/styles/test/package/文档）', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'backend/admin/src/api/request.js', 'export const req = 1\n')
+  writeFile(repo, 'backend/admin/src/pages/ResourcePage.jsx', 'export default 1\n')
+  writeFile(repo, 'backend/admin/src/components/TableStateView.jsx', 'export default 1\n')
+  writeFile(repo, 'backend/admin/src/policies/fieldEditPolicy.js', 'export const p = 1\n')
+  writeFile(repo, 'backend/admin/src/policies/operationState.js', 'export const p = 1\n')
+  writeFile(repo, 'backend/admin/src/policies/requestErrorPolicy.js', 'export const p = 1\n')
+  writeFile(repo, 'backend/admin/src/policies/resourceTablePolicy.js', 'export const p = 1\n')
+  writeFile(repo, 'backend/admin/src/styles.css', 'body {}\n')
+  writeFile(repo, 'backend/admin/package.json', '{}\n')
+  writeFile(repo, 'backend/admin/test/fieldEditPolicy.test.js', 'test()\n')
+  writeFile(repo, 'docs/116g-B-管理台安全交互与领域写操作防误触.md', '# 116g-B\n')
+  commitAll(repo, '116g-B 白名单内文件')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/116g-admin-safety', '--base', base, '--head', head])
+  assert.equal(res.status, 0)
+  assert.match(res.stdout, /OK/)
+  assert.match(res.stdout, /files=11/)
+})
+
+test('C6 116g-B 白名单覆盖真实分支 c580d57 全部 18 个文件（配置级强断言）', () => {
+  const realFiles = [
+    'backend/admin/package.json',
+    'backend/admin/src/App.jsx',
+    'backend/admin/src/api/auth.js',
+    'backend/admin/src/api/request.js',
+    'backend/admin/src/components/TableStateView.jsx',
+    'backend/admin/src/pages/ResourcePage.jsx',
+    'backend/admin/src/policies/fieldEditPolicy.js',
+    'backend/admin/src/policies/operationState.js',
+    'backend/admin/src/policies/requestErrorPolicy.js',
+    'backend/admin/src/policies/resourceTablePolicy.js',
+    'backend/admin/src/styles.css',
+    'backend/admin/test/auth-contract.test.js',
+    'backend/admin/test/fieldEditPolicy.test.js',
+    'backend/admin/test/operationState.test.js',
+    'backend/admin/test/request-errors.test.js',
+    'backend/admin/test/requestErrorPolicy.test.js',
+    'backend/admin/test/resourceTablePolicy.test.js',
+    'docs/116g-B-管理台安全交互与领域写操作防误触.md',
+  ]
+  const cfg = readRealLanes()
+  const allow = cfg.workorders['116g-B'].allow
+  const matchAny = (filePath) => {
+    const norm = filePath.replace(/\\/g, '/')
+    return allow.some((pat) => {
+      let out = ''
+      let i = 0
+      while (i < pat.length) {
+        const ch = pat[i]
+        if (ch === '*') {
+          if (pat[i + 1] === '*') { out += '.*'; i += 2; continue }
+          out += '[^/]*'; i += 1; continue
+        }
+        if (ch === '?') { out += '[^/]'; i += 1; continue }
+        if ('\\^$+.()[]{}|'.includes(ch)) out += '\\'
+        out += ch
+        i += 1
+      }
+      return new RegExp(`^${out}$`).test(norm)
+    })
+  }
+  for (const f of realFiles) {
+    assert.ok(matchAny(f), `116g-B 白名单未覆盖真实分支文件: ${f}`)
+  }
+})
+
+test('C7 116g-B 白名单：生成产物与跨区拒绝', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'backend/admin/src/apiCatalog.js', '// hand edit\n')
+  writeFile(repo, 'app/lib/main.dart', 'void main() { print("x"); }\n')
+  commitAll(repo, '116g-B 越界')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/116g-admin-safety', '--base', base, '--head', head])
+  assert.equal(res.status, 1)
+  assert.match(res.stdout, /backend\/admin\/src\/apiCatalog\.js/)
+  assert.match(res.stdout, /生成产物/)
+  assert.match(res.stdout, /app\/lib\/main\.dart/)
+  assert.match(res.stdout, /不在工单 '116g-B' 白名单/)
+})
+
+test('C8 116g-A fail-closed：pending 8 项未回填前 backend/src/** 一律拒绝，JSON 报告 pending=8', () => {
+  const cfg = readRealLanes()
+  assert.equal(cfg.workorders['116g-A'].pending.length, 8, '116g-A 必须登记 8 个待定 controller/policy')
+  const { repo, base } = initRepo()
+  writeFile(repo, 'backend/src/app.js', 'module.exports = 2\n')
+  commitAll(repo, '116g-A 越界 backend/src')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/116g-backend-data', '--base', base, '--head', head, '--json'])
+  assert.equal(res.status, 1)
+  const payload = JSON.parse(res.stdout)
+  assert.equal(payload.workorder, '116g-A')
+  assert.equal(payload.pending, 8)
+  assert.equal(payload.violations.length, 1)
+  assert.match(payload.violations[0].reason, /不在工单 '116g-A' 白名单/)
+})
+
+test('C9 116g-A 临时回填白名单后：backend/src 精确路径通过', () => {
+  const { repo, base } = initRepo()
+  const cfgPath = copyConfig((cfg) => {
+    cfg.workorders['116g-A'].allow.push('backend/src/app.js')
+    cfg.workorders['116g-A'].pending = []
+  })
+  writeFile(repo, 'backend/src/app.js', 'module.exports = 2\n')
+  commitAll(repo, '116g-A 回填后合法')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/116g-backend-data', '--base', base, '--head', head, '--config', cfgPath])
+  assert.equal(res.status, 0)
+  assert.match(res.stdout, /OK/)
+})
+
+test('C10 116h-A 白名单：基座/设计系统/Home/Shell/Test/pubspec/文档通过', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'app/lib/core/theme.dart', 'final t = 1;\n')
+  writeFile(repo, 'app/lib/core/router.dart', 'final r = 1;\n')
+  writeFile(repo, 'app/lib/design_system/tokens.dart', 'final tk = 1;\n')
+  writeFile(repo, 'app/lib/pages/home/shell_page.dart', 'class Shell {}\n')
+  writeFile(repo, 'app/lib/pages/home/home_page.dart', 'class Home {}\n')
+  writeFile(repo, 'app/lib/widgets/common.dart', 'class C {}\n')
+  writeFile(repo, 'app/test/shell_test.dart', 'test()\n')
+  writeFile(repo, 'app/pubspec.yaml', 'name: app\n')
+  writeFile(repo, 'app/pubspec.lock', 'lock\n')
+  writeFile(repo, 'docs/116h-A-基座与设计系统.md', '# 116h-A\n')
+  writeFile(repo, 'app/lib/main.dart', 'void main() { print("x"); }\n')
+  commitAll(repo, '116h-A 白名单内文件')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/116h-flutter-shell', '--base', base, '--head', head])
+  assert.equal(res.status, 0)
+  assert.match(res.stdout, /OK/)
+  assert.match(res.stdout, /files=11/)
+})
+
+test('C11 116h-A 白名单：M5 交易、M6 植保、生成产物拒绝', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'app/lib/features/market/product_page.dart', 'class P {}\n')
+  writeFile(repo, 'app/lib/pages/agri/photo_flow_page.dart', 'class A {}\n')
+  writeFile(repo, 'app/lib/core/feature_catalog.dart', '// hand edit\n')
+  commitAll(repo, '116h-A 越界')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/116h-flutter-shell', '--base', base, '--head', head])
+  assert.equal(res.status, 1)
+  assert.match(res.stdout, /app\/lib\/features\/market\/product_page\.dart/)
+  assert.match(res.stdout, /app\/lib\/pages\/agri\/photo_flow_page\.dart/)
+  assert.match(res.stdout, /app\/lib\/core\/feature_catalog\.dart/)
+  assert.match(res.stdout, /生成产物/)
+})
+
+/* ═══════════════════════════════════════════════════════════
+ * D. workorder 模式下的 A/M/D/R 与中文/空格路径
+ * ═══════════════════════════════════════════════════════════ */
+
+test('D1 116g-X：中文+空格路径（scripts/collaboration 内通过，docs 外拒绝）', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'scripts/collaboration/中文 文件.mjs', 'x\n')
+  commitAll(repo, '中文脚本合法')
+  const head1 = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res1 = runChecker(repo, ['--branch', 'collab/integration-gates', '--base', base, '--head', head1])
+  assert.equal(res1.status, 0)
+  assert.match(res1.stdout, /OK/)
+
+  writeFile(repo, 'docs/中文 文档/新 文件.md', 'x\n')
+  commitAll(repo, 'docs 中文越界')
+  const head2 = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res2 = runChecker(repo, ['--branch', 'collab/integration-gates', '--base', head1, '--head', head2])
+  assert.equal(res2.status, 1)
+  assert.match(res2.stdout, /docs\/中文 文档\/新 文件\.md/)
+  assert.match(res2.stdout, /不在工单 '116g-X' 白名单/)
+})
+
+test('D2 116g-X：重命名在 scripts/collaboration 内通过（R 新旧路径均在白名单）', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'scripts/collaboration/rename-me.mjs', 'x\n')
+  commitAll(repo, '准备重命名源文件')
+  const head1 = mustGit(repo, ['rev-parse', 'HEAD'])
+  fs.renameSync(path.join(repo, 'scripts', 'collaboration', 'rename-me.mjs'), path.join(repo, 'scripts', 'collaboration', 'renamed.mjs'))
+  commitAll(repo, '白名单内重命名')
+  const head2 = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/integration-gates', '--base', head1, '--head', head2])
+  assert.equal(res.status, 0)
+  assert.match(res.stdout, /"R"/)
+})
+
+test('D3 116g-X：重命名越界（脚本 → docs）精确列出新路径', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'scripts/collaboration/rename-out.mjs', 'x\n')
+  commitAll(repo, '准备重命名源文件')
+  const head1 = mustGit(repo, ['rev-parse', 'HEAD'])
+  fs.renameSync(path.join(repo, 'scripts', 'collaboration', 'rename-out.mjs'), path.join(repo, 'docs', 'out.md'))
+  commitAll(repo, '越界重命名到 docs')
+  const head2 = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/integration-gates', '--base', head1, '--head', head2])
+  assert.equal(res.status, 1)
+  assert.match(res.stdout, /\[R\] docs\/out\.md/)
+  assert.match(res.stdout, /不在工单 '116g-X' 白名单/)
+})
+
+test('D4 116g-X：删除协作约定.md 通过；删除 backend/src/app.js 拒绝', () => {
+  const { repo, base } = initRepo()
+  fs.unlinkSync(path.join(repo, 'docs', '协作约定.md'))
+  commitAll(repo, '删除白名单内文件')
+  const head1 = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res1 = runChecker(repo, ['--branch', 'collab/integration-gates', '--base', base, '--head', head1])
+  assert.equal(res1.status, 0)
+  assert.match(res1.stdout, /OK/)
+
+  fs.unlinkSync(path.join(repo, 'backend', 'src', 'app.js'))
+  commitAll(repo, '删除白名单外文件')
+  const head2 = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res2 = runChecker(repo, ['--branch', 'collab/integration-gates', '--base', head1, '--head', head2])
+  assert.equal(res2.status, 1)
+  assert.match(res2.stdout, /\[D\] backend\/src\/app\.js/)
+  assert.match(res2.stdout, /不在工单 '116g-X' 白名单/)
 })

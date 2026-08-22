@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "description": "四轨协作文件所有权配置（Backend / Flutter / Admin / Integration）。由 scripts/collaboration/scope-check.mjs 读取。规则顺序：1) globalForbid 命中即失败；2) 非 integration lane 命中 generatedProducts 即失败；3) forbid 命中即失败；4) exceptions 命中且 --workorder 在 workorders 列表内则放行；5) allow 命中则放行；6) 其余一律越界失败。路径统一为正斜杠，模式支持 **（跨目录）、*（单段内）、?（单字符）。",
+  "schemaVersion": 2,
+  "description": "四轨协作文件所有权与工单白名单配置（Backend / Flutter / Admin / Integration）。由 scripts/collaboration/scope-check.mjs 读取。两种检查模式：① workorder 模式（CI 默认，经 --branch 或 --workorder 解析）：判定顺序 = globalForbid → 生成产物（非 integration lane）→ lane.forbid → 工单白名单（workorders[<id>].allow 精确放行，pending 待定项永不放行）→ 越界；② legacy 模式（仅 --lane）：判定顺序 = globalForbid → 生成产物 → lane.forbid → lane.exceptions（唯一工作单例外，当前一律未授权）→ lane.allow → 越界。路径统一为正斜杠，模式支持 **（跨目录）、*（单段内）、?（单字符）。",
   "globalForbid": [],
   "generatedProducts": [
     "backend/src/contracts/capabilities.js",
@@ -9,9 +9,85 @@
     "backend/admin/src/apiCatalog.js",
     "app/lib/core/feature_catalog.dart"
   ],
+  "branchMap": [
+    { "branch": "collab/116g-backend-*", "lane": "backend",     "workorder": "116g-A" },
+    { "branch": "collab/116h-flutter-*", "lane": "flutter",     "workorder": "116h-A" },
+    { "branch": "collab/116g-admin-*",   "lane": "admin",       "workorder": "116g-B" },
+    { "branch": "collab/integration-*",  "lane": "integration", "workorder": "116g-X" }
+  ],
+  "workorders": {
+    "116g-A": {
+      "lane": "backend",
+      "note": "Backend data 工单（collab/116g-backend-data）。8 个 controller/policy 的精确路径由该工单文档定稿，分支推送后由 Integration 回填 allow；未回填前 backend/src/** 一律拒绝（fail-closed）。",
+      "allow": [
+        "backend/test/**",
+        "backend/package.json",
+        "backend/package-lock.json",
+        "docs/116g-A-*.md"
+      ],
+      "pending": [
+        "<116g-A 工作单待定 controller/policy #1 —— 待回填精确路径>",
+        "<116g-A 工作单待定 controller/policy #2 —— 待回填精确路径>",
+        "<116g-A 工作单待定 controller/policy #3 —— 待回填精确路径>",
+        "<116g-A 工作单待定 controller/policy #4 —— 待回填精确路径>",
+        "<116g-A 工作单待定 controller/policy #5 —— 待回填精确路径>",
+        "<116g-A 工作单待定 controller/policy #6 —— 待回填精确路径>",
+        "<116g-A 工作单待定 controller/policy #7 —— 待回填精确路径>",
+        "<116g-A 工作单待定 controller/policy #8 —— 待回填精确路径>"
+      ]
+    },
+    "116h-A": {
+      "lane": "flutter",
+      "note": "Flutter 基座/设计系统/Home/Shell 工单（collab/116h-flutter-shell）。授权路径取自 116-大重构总计划 M4 重点文件 + 设计系统目录；feature_catalog.dart 仍由 generatedProducts 硬拒。",
+      "allow": [
+        "app/lib/main.dart",
+        "app/lib/core/theme.dart",
+        "app/lib/core/router.dart",
+        "app/lib/design_system/**",
+        "app/lib/pages/home/shell_page.dart",
+        "app/lib/pages/home/home_page.dart",
+        "app/lib/widgets/common.dart",
+        "app/test/**",
+        "app/pubspec.yaml",
+        "app/pubspec.lock",
+        "docs/116h-A-*.md"
+      ],
+      "pending": []
+    },
+    "116g-B": {
+      "lane": "admin",
+      "note": "Admin 安全交互工单（collab/116g-admin-safety）。白名单覆盖该分支（c580d57，18 文件）的真实类别：api/layout/page/components/policies/styles/test/package + 对应文档。",
+      "allow": [
+        "backend/admin/src/api/**",
+        "backend/admin/src/App.jsx",
+        "backend/admin/src/layouts/**",
+        "backend/admin/src/pages/**",
+        "backend/admin/src/components/**",
+        "backend/admin/src/policies/**",
+        "backend/admin/src/styles.css",
+        "backend/admin/test/**",
+        "backend/admin/package.json",
+        "backend/admin/package-lock.json",
+        "docs/116g-B-*.md"
+      ],
+      "pending": []
+    },
+    "116g-X": {
+      "lane": "integration",
+      "note": "本批四轨协作与集成门禁工单（collab/integration-gates，PR #1）。白名单 = .github + scripts/collaboration + scripts/test + docs/协作约定.md + 本工作单文档。",
+      "allow": [
+        ".github/**",
+        "scripts/collaboration/**",
+        "scripts/test/**",
+        "docs/协作约定.md",
+        "docs/116g-X-四轨协作与集成门禁.md"
+      ],
+      "pending": []
+    }
+  },
   "lanes": {
     "backend": {
-      "description": "Backend 业务 controller/service/routes、测试、后端脚本与种子。生成产物与 DB 永远禁止；Prisma 需唯一工作单授权。",
+      "description": "Backend 业务 controller/service/routes、测试、后端脚本与种子（legacy --lane 模式用；CI 一律走 workorder 白名单）。",
       "allow": [
         "backend/src/**",
         "backend/test/**",
@@ -31,7 +107,7 @@
       ]
     },
     "flutter": {
-      "description": "Flutter App 页面/DTO/Repository/测试/资源/构建配置。app/lib/core/feature_catalog.dart 为生成产物，永远禁止手改（由 Integration 重建）。",
+      "description": "Flutter App 页面/DTO/Repository/测试/资源/构建配置（legacy --lane 模式用；CI 一律走 workorder 白名单）。",
       "allow": [
         "app/lib/**",
         "app/test/**",
@@ -47,7 +123,7 @@
       "exceptions": []
     },
     "admin": {
-      "description": "Admin 管理台源码/测试/构建配置。backend/admin/src/apiCatalog.js 为生成产物，永远禁止手改（由 Integration 重建）。",
+      "description": "Admin 管理台源码/测试/构建配置（legacy --lane 模式用；CI 一律走 workorder 白名单）。",
       "allow": [
         "backend/admin/src/**",
         "backend/admin/test/**",
@@ -62,7 +138,7 @@
       "exceptions": []
     },
     "integration": {
-      "description": "集成负责人：docs / scripts / .github CI / 生成器与全部派生产物（经 --write 重建）。业务代码（backend/src/modules/**、app/lib/**、backend/admin/src/** 除生成产物外）与 DB 永远禁止；Prisma 需唯一工作单授权。",
+      "description": "集成负责人：docs / scripts / .github / 生成器与派生产物（legacy --lane 模式用；CI 一律走 workorder 白名单，docs 不再宽泛放行）。",
       "allow": [
         "docs/**",
         "scripts/**",
