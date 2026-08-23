@@ -1,0 +1,10 @@
+{
+  "name": "farmlink-scope-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "四轨协作 scope checker 测试（零依赖，node --test）",
+  "scripts": {
+    "test": "node --test scope-check.test.mjs"
+  }
+}
