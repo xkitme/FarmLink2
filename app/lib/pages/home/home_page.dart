@@ -7,6 +7,7 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/site_images.dart';
 import '../../core/notification_state.dart';
+import '../../design_system/farm_brand.dart';
 import '../../design_system/farm_tokens.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
@@ -260,24 +261,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           Row(
             children: [
-              const Spacer(),
-              const Text(
-                '发现',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 42),
-              Text(
-                '田园通',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.68),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              const FarmBrand(markSize: 34, labelColor: Colors.white),
               const Spacer(),
               ValueListenableBuilder<int>(
                 valueListenable: NotificationState.unread,

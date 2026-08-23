@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants.dart';
+import '../../core/elder_mode.dart';
 import '../../core/notification_state.dart';
 import '../../design_system/farm_tokens.dart';
 import '../../widgets/voice_assistant_layer.dart';
@@ -65,18 +67,20 @@ class _ShellPageState extends State<ShellPage> {
   Widget build(BuildContext context) {
     // 底栏只在精确等于 5 个一级 tab 的路径显示；二级页（/search /messages /market/…）不展示。
     final idx = _index(widget.location);
+    // 适老模式：底栏放大图标、字号与触控间距（见 _NavItem）。
+    final elder = context.watch<ElderModeState>().enabled;
     // 助手覆盖层包住整个 Scaffold（含底部导航栏），激活时跑马灯边框与底栏才能盖住导航栏。
     return VoiceAssistantLayer(
       location: widget.location,
       enabled: idx >= 0,
       child: Scaffold(
         body: widget.child,
-        bottomNavigationBar: idx >= 0 ? _navBar(idx) : null,
+        bottomNavigationBar: idx >= 0 ? _navBar(idx, elder) : null,
       ),
     );
   }
 
-  Widget _navBar(int idx) {
+  Widget _navBar(int idx, bool elder) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -91,7 +95,7 @@ class _ShellPageState extends State<ShellPage> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 7, 8, 6),
+          padding: EdgeInsets.fromLTRB(8, elder ? 10 : 7, 8, elder ? 8 : 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -101,6 +105,7 @@ class _ShellPageState extends State<ShellPage> {
                   label: kShellTabs[i].label,
                   active: idx == i,
                   prominent: kShellTabs[i].path == '/publish',
+                  elder: elder,
                   onTap: () => context.go(kShellTabs[i].path),
                 ),
             ],
@@ -116,19 +121,25 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool active;
   final bool prominent;
+  final bool elder;
   final VoidCallback onTap;
   const _NavItem({
     required this.icon,
     required this.label,
     required this.active,
     this.prominent = false,
+    this.elder = false,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = active ? AppColors.primary : const Color(0xFFBFC3C2);
+    final labelFont = elder ? 15.0 : 12.0;
     if (prominent) {
+      final size = elder ? 62.0 : 54.0;
+      final height = elder ? 52.0 : 44.0;
+      final iconSize = elder ? 36.0 : 30.0;
       return Expanded(
         child: InkWell(
           onTap: onTap,
@@ -138,11 +149,11 @@ class _NavItem extends StatelessWidget {
             children: [
               AnimatedContainer(
                 duration: FarmMotion.fast,
-                width: 54,
-                height: 44,
+                width: size,
+                height: height,
                 decoration: BoxDecoration(
                   gradient: AppColors.authButtonGradient,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(26),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x4D40916C),
@@ -151,13 +162,13 @@ class _NavItem extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Icon(icon, color: Colors.white, size: 30),
+                child: Icon(icon, color: Colors.white, size: iconSize),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: elder ? 3 : 2),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: labelFont,
                   fontWeight: active ? FontWeight.w800 : FontWeight.w600,
                   color: active ? AppColors.primary : AppColors.outline,
                 ),
@@ -173,19 +184,22 @@ class _NavItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(FarmRadius.md),
         child: AnimatedContainer(
           duration: FarmMotion.fast,
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          padding: EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: elder ? 6 : 4,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
-                width: 34,
-                height: 28,
-                child: Icon(icon, color: color, size: 26),
+                width: elder ? 40 : 34,
+                height: elder ? 34 : 28,
+                child: Icon(icon, color: color, size: elder ? 32 : 26),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: elder ? 3 : 2),
               Text(label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: labelFont,
                     fontWeight: active ? FontWeight.w800 : FontWeight.w600,
                     color: color,
                   )),
