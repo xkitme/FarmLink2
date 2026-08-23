@@ -6,8 +6,8 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/site_images.dart';
-import '../../core/feature_catalog.dart';
 import '../../core/notification_state.dart';
+import '../../design_system/farm_tokens.dart';
 import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 
@@ -231,13 +231,7 @@ class _HomePageState extends State<HomePage> {
                                 .fadeIn(duration: 320.ms)
                                 .slideY(begin: 0.04),
                           ],
-                          SectionTitle(
-                            '核心服务',
-                            trailing: TextButton(
-                              onPressed: () => context.go('/all'),
-                              child: Text('全部 ${kFeatureCatalog.length} 项 →'),
-                            ),
-                          ),
+                          const SectionTitle('核心服务'),
                           _serviceGrid(context),
                           const SizedBox(height: 22),
                           _sectionBanners(),
@@ -285,11 +279,46 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const Spacer(),
-              IconButton(
-                onPressed: () => context.go('/messages'),
-                icon: const Icon(Icons.notifications_none,
-                    color: Colors.white, size: 22),
-                tooltip: '消息通知',
+              ValueListenableBuilder<int>(
+                valueListenable: NotificationState.unread,
+                builder: (context, unread, _) => IconButton(
+                  onPressed: () => context.go('/messages'),
+                  tooltip: '消息通知',
+                  icon: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(Icons.notifications_none,
+                          color: Colors.white, size: 22),
+                      if (unread > 0)
+                        Positioned(
+                          right: -4,
+                          top: -4,
+                          child: Container(
+                            constraints: const BoxConstraints(
+                                minWidth: 16, minHeight: 16),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: FarmColors.error,
+                              borderRadius: BorderRadius.circular(99),
+                              border: Border.all(
+                                  color: Colors.white, width: 1.5),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              unread > 99 ? '99+' : '$unread',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                height: 1,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -721,9 +750,19 @@ class _HomePageState extends State<HomePage> {
   Widget _serviceGrid(BuildContext context) {
     // 首页核心服务宫格：用「智能物联」替换「数据管理」入口
     //（数据看板已移到「我的」页二级菜单，物联网提到首页快捷直达）。
+    // 村级经营按角色可见：仅 VILLAGE / ADMIN 显示（角色可见性）。
+    final role = context.read<AuthState>().user?.role;
     final sections = [
       for (final s in kSections)
         if (s['key'] != 'data') s,
+      if (_roleCanVillage(role)) ...const [
+        {
+          'key': 'village',
+          'label': '村级经营',
+          'icon': Icons.foundation_rounded,
+          'color': Color(0xFF2E6E66),
+        },
+      ],
     ]..insert(6, const {
         'key': 'iot',
         'label': '智能物联',
@@ -1081,10 +1120,16 @@ class _HomePageState extends State<HomePage> {
         context.push('/iot');
       case 'disaster':
         context.push('/disaster');
+      case 'village':
+        context.push('/screen');
       default:
         toast(context, '该服务暂时不可用，请稍后重试');
     }
   }
+
+  /// 角色可见性：村级经营仅对村委干部（VILLAGE）与管理员（ADMIN）开放。
+  static bool _roleCanVillage(String? role) =>
+      role == 'VILLAGE' || role == 'ADMIN';
 
   // ── 数据工具 ─────────────────────────────────────────
   static List<Map<String, dynamic>> _recordsOf(dynamic data) {

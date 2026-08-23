@@ -1,8 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/constants.dart';
 import '../../core/notification_state.dart';
+import '../../design_system/farm_tokens.dart';
 import '../../widgets/voice_assistant_layer.dart';
+
+/// 底部导航 tab 定义。
+typedef ShellTab = ({String path, IconData icon, String label});
+
+/// 116h-A 五项底部导航：首页 / 集市 / 发布 / 小田助手 / 我的。
+///
+/// 消息不再占底栏 tab，改由各一级页顶栏「铃铛」进入（见 home_page / FarmAppBar）。
+const List<ShellTab> kShellTabs = [
+  (path: '/home', icon: Icons.home_rounded, label: '首页'),
+  (path: '/market', icon: Icons.storefront_rounded, label: '集市'),
+  (path: '/publish', icon: Icons.add_circle_rounded, label: '发布'),
+  (path: '/ai', icon: Icons.smart_toy_rounded, label: '小田助手'),
+  (path: '/profile', icon: Icons.person_rounded, label: '我的'),
+];
 
 class ShellPage extends StatefulWidget {
   final Widget child;
@@ -15,14 +31,6 @@ class ShellPage extends StatefulWidget {
 
 class _ShellPageState extends State<ShellPage> {
   String? _lastLocation;
-
-  static const _tabs = [
-    (path: '/home', icon: Icons.home_rounded, label: '首页'),
-    (path: '/ai', icon: Icons.smart_toy_rounded, label: 'AI 农技'),
-    (path: '/publish', icon: Icons.add_circle_rounded, label: '发布'),
-    (path: '/messages', icon: Icons.mail_rounded, label: '消息'),
-    (path: '/profile', icon: Icons.person_rounded, label: '我的'),
-  ];
 
   @override
   void didChangeDependencies() {
@@ -47,15 +55,15 @@ class _ShellPageState extends State<ShellPage> {
   }
 
   int _index(String loc) {
-    for (var i = 0; i < _tabs.length; i++) {
-      if (loc == _tabs[i].path) return i;
+    for (var i = 0; i < kShellTabs.length; i++) {
+      if (loc == kShellTabs[i].path) return i;
     }
     return -1;
   }
 
   @override
   Widget build(BuildContext context) {
-    // 底栏只在精确等于 5 个一级 tab 的路径显示；二级页（/search /all /market…）不展示。
+    // 底栏只在精确等于 5 个一级 tab 的路径显示；二级页（/search /messages /market/…）不展示。
     final idx = _index(widget.location);
     // 助手覆盖层包住整个 Scaffold（含底部导航栏），激活时跑马灯边框与底栏才能盖住导航栏。
     return VoiceAssistantLayer(
@@ -87,17 +95,13 @@ class _ShellPageState extends State<ShellPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              for (var i = 0; i < _tabs.length; i++)
-                ValueListenableBuilder<int>(
-                  valueListenable: NotificationState.unread,
-                  builder: (context, unread, _) => _NavItem(
-                    icon: _tabs[i].icon,
-                    label: _tabs[i].label,
-                    active: idx == i,
-                    prominent: _tabs[i].path == '/publish',
-                    badgeCount: _tabs[i].path == '/messages' ? unread : 0,
-                    onTap: () => context.go(_tabs[i].path),
-                  ),
+              for (var i = 0; i < kShellTabs.length; i++)
+                _NavItem(
+                  icon: kShellTabs[i].icon,
+                  label: kShellTabs[i].label,
+                  active: idx == i,
+                  prominent: kShellTabs[i].path == '/publish',
+                  onTap: () => context.go(kShellTabs[i].path),
                 ),
             ],
           ),
@@ -112,14 +116,12 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool active;
   final bool prominent;
-  final int badgeCount;
   final VoidCallback onTap;
   const _NavItem({
     required this.icon,
     required this.label,
     required this.active,
     this.prominent = false,
-    required this.badgeCount,
     required this.onTap,
   });
 
@@ -130,12 +132,12 @@ class _NavItem extends StatelessWidget {
       return Expanded(
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(R.pill),
+          borderRadius: BorderRadius.circular(FarmRadius.pill),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
+                duration: FarmMotion.fast,
                 width: 54,
                 height: 44,
                 decoration: BoxDecoration(
@@ -168,9 +170,9 @@ class _NavItem extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(FarmRadius.md),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+          duration: FarmMotion.fast,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -178,19 +180,7 @@ class _NavItem extends StatelessWidget {
               SizedBox(
                 width: 34,
                 height: 28,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(icon, color: color, size: 26),
-                    if (badgeCount > 0)
-                      Positioned(
-                        right: -3,
-                        top: -3,
-                        child: _UnreadBadge(count: badgeCount),
-                      ),
-                  ],
-                ),
+                child: Icon(icon, color: color, size: 26),
               ),
               const SizedBox(height: 2),
               Text(label,
@@ -201,35 +191,6 @@ class _NavItem extends StatelessWidget {
                   )),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _UnreadBadge extends StatelessWidget {
-  final int count;
-  const _UnreadBadge({required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = count > 99 ? '99+' : '$count';
-    return Container(
-      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: AppColors.error,
-        border: Border.all(color: AppColors.surface, width: 2),
-        borderRadius: BorderRadius.circular(99),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          height: 1,
-          fontWeight: FontWeight.w800,
         ),
       ),
     );

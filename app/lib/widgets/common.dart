@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 
+// 116h-A：统一五态组件（Loading/Empty/Error/Unauthorized/Offline）在 design_system 定义，
+// 经本文件再导出，让既有页面继续从 `widgets/common.dart` 取到全部状态组件。
+export '../design_system/farm_state_views.dart';
+
 /// 品牌顶栏：白底 h64，左农机图标（或返回箭头）、居中页面标题、右搜索/铃铛
 ///
 /// 一级 tab 页：直接 `FarmAppBar()`，左侧是品牌叶 icon。
