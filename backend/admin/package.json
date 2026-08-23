@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --import ./test/vite-env-register.js --test test/auth-contract.test.js test/apiCatalog-resourceGroups.test.js"
+    "test": "node --import ./test/vite-env-register.js --test test/auth-contract.test.js test/apiCatalog-resourceGroups.test.js test/requestErrorPolicy.test.js test/request-errors.test.js test/fieldEditPolicy.test.js test/operationState.test.js test/resourceTablePolicy.test.js test/resourceLoadCoordinator.test.js"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.1",
