@@ -74,7 +74,7 @@
     },
     "116g-X": {
       "lane": "integration",
-      "note": "本批四轨协作与集成门禁工单（collab/integration-gates，PR #1）。白名单 = .github + scripts/collaboration + scripts/test + docs/协作约定.md + 本工作单文档。",
+      "note": "本批四轨协作与集成门禁工单（collab/integration-gates，PR #3）。白名单 = .github + scripts/collaboration + scripts/test + docs/协作约定.md + 本工作单文档。",
       "allow": [
         ".github/**",
         "scripts/collaboration/**",
