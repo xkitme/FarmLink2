@@ -1,8 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
 import '../../core/constants.dart';
+import '../../core/elder_mode.dart';
 import '../../core/notification_state.dart';
+import '../../design_system/farm_tokens.dart';
 import '../../widgets/voice_assistant_layer.dart';
+
+/// 底部导航 tab 定义。
+typedef ShellTab = ({String path, IconData icon, String label});
+
+/// 116h-A 五项底部导航：首页 / 集市 / 发布 / 小田助手 / 我的。
+///
+/// 消息不再占底栏 tab，改由各一级页顶栏「铃铛」进入（见 home_page / FarmAppBar）。
+const List<ShellTab> kShellTabs = [
+  (path: '/home', icon: Icons.home_rounded, label: '首页'),
+  (path: '/market', icon: Icons.storefront_rounded, label: '集市'),
+  (path: '/publish', icon: Icons.add_circle_rounded, label: '发布'),
+  (path: '/ai', icon: Icons.smart_toy_rounded, label: '小田助手'),
+  (path: '/profile', icon: Icons.person_rounded, label: '我的'),
+];
 
 class ShellPage extends StatefulWidget {
   final Widget child;
@@ -15,14 +33,6 @@ class ShellPage extends StatefulWidget {
 
 class _ShellPageState extends State<ShellPage> {
   String? _lastLocation;
-
-  static const _tabs = [
-    (path: '/home', icon: Icons.home_rounded, label: '首页'),
-    (path: '/ai', icon: Icons.smart_toy_rounded, label: 'AI 农技'),
-    (path: '/publish', icon: Icons.add_circle_rounded, label: '发布'),
-    (path: '/messages', icon: Icons.mail_rounded, label: '消息'),
-    (path: '/profile', icon: Icons.person_rounded, label: '我的'),
-  ];
 
   @override
   void didChangeDependencies() {
@@ -47,28 +57,30 @@ class _ShellPageState extends State<ShellPage> {
   }
 
   int _index(String loc) {
-    for (var i = 0; i < _tabs.length; i++) {
-      if (loc == _tabs[i].path) return i;
+    for (var i = 0; i < kShellTabs.length; i++) {
+      if (loc == kShellTabs[i].path) return i;
     }
     return -1;
   }
 
   @override
   Widget build(BuildContext context) {
-    // 底栏只在精确等于 5 个一级 tab 的路径显示；二级页（/search /all /market…）不展示。
+    // 底栏只在精确等于 5 个一级 tab 的路径显示；二级页（/search /messages /market/…）不展示。
     final idx = _index(widget.location);
+    // 适老模式：底栏放大图标、字号与触控间距（见 _NavItem）。
+    final elder = context.watch<ElderModeState>().enabled;
     // 助手覆盖层包住整个 Scaffold（含底部导航栏），激活时跑马灯边框与底栏才能盖住导航栏。
     return VoiceAssistantLayer(
       location: widget.location,
       enabled: idx >= 0,
       child: Scaffold(
         body: widget.child,
-        bottomNavigationBar: idx >= 0 ? _navBar(idx) : null,
+        bottomNavigationBar: idx >= 0 ? _navBar(idx, elder) : null,
       ),
     );
   }
 
-  Widget _navBar(int idx) {
+  Widget _navBar(int idx, bool elder) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -83,21 +95,18 @@ class _ShellPageState extends State<ShellPage> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 7, 8, 6),
+          padding: EdgeInsets.fromLTRB(8, elder ? 10 : 7, 8, elder ? 8 : 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              for (var i = 0; i < _tabs.length; i++)
-                ValueListenableBuilder<int>(
-                  valueListenable: NotificationState.unread,
-                  builder: (context, unread, _) => _NavItem(
-                    icon: _tabs[i].icon,
-                    label: _tabs[i].label,
-                    active: idx == i,
-                    prominent: _tabs[i].path == '/publish',
-                    badgeCount: _tabs[i].path == '/messages' ? unread : 0,
-                    onTap: () => context.go(_tabs[i].path),
-                  ),
+              for (var i = 0; i < kShellTabs.length; i++)
+                _NavItem(
+                  icon: kShellTabs[i].icon,
+                  label: kShellTabs[i].label,
+                  active: idx == i,
+                  prominent: kShellTabs[i].path == '/publish',
+                  elder: elder,
+                  onTap: () => context.go(kShellTabs[i].path),
                 ),
             ],
           ),
@@ -112,35 +121,39 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool active;
   final bool prominent;
-  final int badgeCount;
+  final bool elder;
   final VoidCallback onTap;
   const _NavItem({
     required this.icon,
     required this.label,
     required this.active,
     this.prominent = false,
-    required this.badgeCount,
+    this.elder = false,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = active ? AppColors.primary : const Color(0xFFBFC3C2);
+    final labelFont = elder ? 15.0 : 12.0;
     if (prominent) {
+      final size = elder ? 62.0 : 54.0;
+      final height = elder ? 52.0 : 44.0;
+      final iconSize = elder ? 36.0 : 30.0;
       return Expanded(
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(R.pill),
+          borderRadius: BorderRadius.circular(FarmRadius.pill),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 54,
-                height: 44,
+                duration: FarmMotion.fast,
+                width: size,
+                height: height,
                 decoration: BoxDecoration(
                   gradient: AppColors.authButtonGradient,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(26),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x4D40916C),
@@ -149,13 +162,13 @@ class _NavItem extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Icon(icon, color: Colors.white, size: 30),
+                child: Icon(icon, color: Colors.white, size: iconSize),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: elder ? 3 : 2),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: labelFont,
                   fontWeight: active ? FontWeight.w800 : FontWeight.w600,
                   color: active ? AppColors.primary : AppColors.outline,
                 ),
@@ -168,68 +181,30 @@ class _NavItem extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(FarmRadius.md),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          duration: FarmMotion.fast,
+          padding: EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: elder ? 6 : 4,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
-                width: 34,
-                height: 28,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(icon, color: color, size: 26),
-                    if (badgeCount > 0)
-                      Positioned(
-                        right: -3,
-                        top: -3,
-                        child: _UnreadBadge(count: badgeCount),
-                      ),
-                  ],
-                ),
+                width: elder ? 40 : 34,
+                height: elder ? 34 : 28,
+                child: Icon(icon, color: color, size: elder ? 32 : 26),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: elder ? 3 : 2),
               Text(label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: labelFont,
                     fontWeight: active ? FontWeight.w800 : FontWeight.w600,
                     color: color,
                   )),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _UnreadBadge extends StatelessWidget {
-  final int count;
-  const _UnreadBadge({required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = count > 99 ? '99+' : '$count';
-    return Container(
-      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: AppColors.error,
-        border: Border.all(color: AppColors.surface, width: 2),
-        borderRadius: BorderRadius.circular(99),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          height: 1,
-          fontWeight: FontWeight.w800,
         ),
       ),
     );

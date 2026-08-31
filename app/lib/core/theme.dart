@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'constants.dart';
+import '../design_system/farm_tokens.dart';
 
 /// 全平台统一的「右进左出」页面切换：新页从右滑入、旧页向左轻微视差移出，
 /// back 自动反向，前进/返回视觉对称。
@@ -35,27 +35,27 @@ class _SlidePageTransitionsBuilder extends PageTransitionsBuilder {
 ThemeData buildAppTheme() {
   const cs = ColorScheme(
     brightness: Brightness.light,
-    primary: AppColors.primary,
+    primary: FarmColors.primary,
     onPrimary: Colors.white,
-    primaryContainer: AppColors.primaryContainer,
-    onPrimaryContainer: AppColors.onPrimaryContainer,
-    secondary: AppColors.secondary,
+    primaryContainer: FarmColors.primaryContainer,
+    onPrimaryContainer: FarmColors.onPrimaryContainer,
+    secondary: FarmColors.secondary,
     onSecondary: Colors.white,
-    tertiary: AppColors.tertiary,
+    tertiary: FarmColors.tertiary,
     onTertiary: Colors.white,
-    error: AppColors.error,
+    error: FarmColors.error,
     onError: Colors.white,
-    surface: AppColors.surface,
-    onSurface: AppColors.onSurface,
-    surfaceContainerHighest: AppColors.surfaceHigh,
-    outline: AppColors.outline,
-    outlineVariant: AppColors.outlineVariant,
+    surface: FarmColors.surface,
+    onSurface: FarmColors.onSurface,
+    surfaceContainerHighest: FarmColors.surfaceHigh,
+    outline: FarmColors.outline,
+    outlineVariant: FarmColors.outlineVariant,
   );
 
   return ThemeData(
     useMaterial3: true,
     colorScheme: cs,
-    scaffoldBackgroundColor: AppColors.background,
+    scaffoldBackgroundColor: FarmColors.background,
     splashFactory: InkRipple.splashFactory,
 
     // 页面切换：全平台统一右进左出（自定义 builder，跨 Flutter 版本稳定），
@@ -73,106 +73,106 @@ ThemeData buildAppTheme() {
 
     // 白底顶栏
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.background,
-      foregroundColor: AppColors.onSurface,
+      backgroundColor: FarmColors.background,
+      foregroundColor: FarmColors.onSurface,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
       titleTextStyle: TextStyle(
-        color: AppColors.onSurface,
+        color: FarmColors.onSurface,
         fontSize: 17,
         fontWeight: FontWeight.w800,
         letterSpacing: 0,
       ),
-      iconTheme: IconThemeData(color: AppColors.onSurfaceVariant),
+      iconTheme: IconThemeData(color: FarmColors.onSurfaceVariant),
     ),
 
     cardTheme: CardThemeData(
-      color: AppColors.surface,
+      color: FarmColors.surface,
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FarmRadius.md)),
     ),
 
-    // 输入框：白底 + 方角描边（R.sm），聚焦转主绿。
+    // 输入框：白底 + 方角描边（FarmRadius.sm），聚焦转主绿。
     // 利落方正，无下划线 / 无灰胶囊（沉淀自 AppSearchField 标准）。
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surface,
-      hintStyle: const TextStyle(color: AppColors.outline),
+      fillColor: FarmColors.surface,
+      hintStyle: const TextStyle(color: FarmColors.outline),
       labelStyle:
-          const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14),
+          const TextStyle(color: FarmColors.onSurfaceVariant, fontSize: 14),
       floatingLabelStyle: const TextStyle(
-          color: AppColors.primary, fontWeight: FontWeight.w600),
+          color: FarmColors.primary, fontWeight: FontWeight.w600),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(R.md),
-        borderSide: const BorderSide(color: AppColors.outlineVariant, width: 1),
+        borderRadius: BorderRadius.circular(FarmRadius.md),
+        borderSide: const BorderSide(color: FarmColors.outlineVariant, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(R.md),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        borderRadius: BorderRadius.circular(FarmRadius.md),
+        borderSide: const BorderSide(color: FarmColors.primary, width: 1.5),
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(R.md),
-        borderSide: const BorderSide(color: AppColors.outlineVariant, width: 1),
+        borderRadius: BorderRadius.circular(FarmRadius.md),
+        borderSide: const BorderSide(color: FarmColors.outlineVariant, width: 1),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(R.md),
-        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+        borderRadius: BorderRadius.circular(FarmRadius.md),
+        borderSide: const BorderSide(color: FarmColors.error, width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(R.md),
-        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+        borderRadius: BorderRadius.circular(FarmRadius.md),
+        borderSide: const BorderSide(color: FarmColors.error, width: 1.5),
       ),
     ),
 
-    // 主按钮：方角实心绿（R.sm），利落方正，无胶囊
+    // 主按钮：方角实心绿（FarmRadius.sm），利落方正，无胶囊
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
+        backgroundColor: FarmColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         minimumSize: const Size(0, 52),
         padding: const EdgeInsets.symmetric(horizontal: 24),
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(FarmRadius.md)),
         textStyle: const TextStyle(
             fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0),
       ),
     ),
 
-    // 次按钮：方角主绿描边（R.sm）
+    // 次按钮：方角主绿描边（FarmRadius.sm）
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primary,
+        foregroundColor: FarmColors.primary,
         minimumSize: const Size(0, 52),
-        side: const BorderSide(color: AppColors.outlineVariant, width: 1.5),
+        side: const BorderSide(color: FarmColors.outlineVariant, width: 1.5),
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(FarmRadius.md)),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     ),
 
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: AppColors.primary,
+        foregroundColor: FarmColors.primary,
         textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     ),
 
     dividerTheme: const DividerThemeData(
-      color: AppColors.outlineVariant,
+      color: FarmColors.outlineVariant,
       thickness: 1,
       space: 1,
     ),
 
     // chip：未选中浅底深字，选中主绿底白字（高对比，去勾更利落）
     chipTheme: ChipThemeData(
-      backgroundColor: AppColors.surfaceContainer,
-      selectedColor: AppColors.primary,
+      backgroundColor: FarmColors.surfaceContainer,
+      selectedColor: FarmColors.primary,
       labelStyle: const TextStyle(
           fontSize: 13,
-          color: AppColors.onSurface,
+          color: FarmColors.onSurface,
           fontWeight: FontWeight.w500),
       secondaryLabelStyle: const TextStyle(
           fontSize: 13, color: Colors.white, fontWeight: FontWeight.w600),
@@ -180,41 +180,41 @@ ThemeData buildAppTheme() {
       showCheckmark: false,
       side: BorderSide.none,
       shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.pill)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(FarmRadius.pill)),
     ),
 
     textTheme: const TextTheme(
       headlineLarge: TextStyle(
-          color: AppColors.onSurface,
+          color: FarmColors.onSurface,
           fontSize: 28,
           fontWeight: FontWeight.w700,
           letterSpacing: 0),
       headlineMedium: TextStyle(
-          color: AppColors.onSurface,
+          color: FarmColors.onSurface,
           fontSize: 24,
           fontWeight: FontWeight.w600,
           letterSpacing: 0),
       headlineSmall: TextStyle(
-          color: AppColors.onSurface,
+          color: FarmColors.onSurface,
           fontSize: 20,
           fontWeight: FontWeight.w600),
       titleMedium: TextStyle(
-          color: AppColors.onSurface,
+          color: FarmColors.onSurface,
           fontSize: 16,
           fontWeight: FontWeight.w600),
       bodyLarge:
-          TextStyle(color: AppColors.onSurface, fontSize: 16, height: 1.45),
+          TextStyle(color: FarmColors.onSurface, fontSize: 16, height: 1.45),
       bodyMedium:
-          TextStyle(color: AppColors.onSurface, fontSize: 14, height: 1.4),
+          TextStyle(color: FarmColors.onSurface, fontSize: 14, height: 1.4),
       bodySmall: TextStyle(
-          color: AppColors.onSurfaceVariant, fontSize: 12, height: 1.35),
+          color: FarmColors.onSurfaceVariant, fontSize: 12, height: 1.35),
       labelLarge: TextStyle(
-          color: AppColors.onSurface,
+          color: FarmColors.onSurface,
           fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.2),
       labelSmall: TextStyle(
-          color: AppColors.onSurfaceVariant,
+          color: FarmColors.onSurfaceVariant,
           fontSize: 12,
           fontWeight: FontWeight.w500,
           letterSpacing: 0.4),
