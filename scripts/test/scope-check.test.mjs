@@ -10,7 +10,7 @@
  *     collab/integration-gates→integration/116g-X；未知分支 / 模糊分支 → 退出码 2；
  *     --branch 与 --lane/--workorder 冲突 → 退出码 2
  *  C. workorder 精确白名单：116g-X（本批）、116g-B（真实 18 文件全覆盖）、116h-A、
- *     116g-A（fail-closed：pending 8 项未回填前 backend/src/** 一律拒绝；临时回填后精确路径通过）；
+ *     116g-A（阶段 0 已回填：8 个精确 controller/policy 放行、其余 backend/src 拒绝、pending=0）；
  *     M5/M6、Prisma、数据库、生成产物不得被任何当前 workorder 放行
  *  D. workorder 模式下的 A/M/D/R 与中文/空格路径
  *
@@ -107,6 +107,18 @@ function snapshotTree(repo) {
 function readRealLanes() {
   return JSON.parse(fs.readFileSync(REAL_LANES, 'utf8'))
 }
+
+/** 116g-A 阶段 0 已回填的 8 个精确 backend/src 路径（与 lanes.json workorders["116g-A"].allow 一致） */
+const BACKEND_116G_A_PATHS = [
+  'backend/src/modules/market/order.policy.js',
+  'backend/src/modules/market/order.controller.js',
+  'backend/src/modules/data/sync.policy.js',
+  'backend/src/modules/data/sync.controller.js',
+  'backend/src/modules/machinery/booking.policy.js',
+  'backend/src/modules/machinery/booking.controller.js',
+  'backend/src/modules/platform/resource.policy.js',
+  'backend/src/modules/platform/resource.controller.js',
+]
 
 /** 复制正式配置并返回临时文件路径（可继续修改后写盘） */
 function copyConfig(mutator) {
@@ -644,34 +656,36 @@ test('C7 116g-B 白名单：生成产物与跨区拒绝', () => {
   assert.match(res.stdout, /不在工单 '116g-B' 白名单/)
 })
 
-test('C8 116g-A fail-closed：pending 8 项未回填前 backend/src/** 一律拒绝，JSON 报告 pending=8', () => {
+test('C8 116g-A 回填后：8 个精确 backend/src 路径全部放行，pending=0', () => {
   const cfg = readRealLanes()
-  assert.equal(cfg.workorders['116g-A'].pending.length, 8, '116g-A 必须登记 8 个待定 controller/policy')
+  assert.equal(cfg.workorders['116g-A'].pending.length, 0, '116g-A pending 应已回填为 0')
   const { repo, base } = initRepo()
-  writeFile(repo, 'backend/src/app.js', 'module.exports = 2\n')
-  commitAll(repo, '116g-A 越界 backend/src')
+  for (const p of BACKEND_116G_A_PATHS) writeFile(repo, p, 'export const x = 1;\n')
+  commitAll(repo, '116g-A 8 个授权路径')
   const head = mustGit(repo, ['rev-parse', 'HEAD'])
   const res = runChecker(repo, ['--branch', 'collab/116g-backend-data', '--base', base, '--head', head, '--json'])
-  assert.equal(res.status, 1)
+  assert.equal(res.status, 0)
   const payload = JSON.parse(res.stdout)
+  assert.equal(payload.ok, true)
   assert.equal(payload.workorder, '116g-A')
-  assert.equal(payload.pending, 8)
-  assert.equal(payload.violations.length, 1)
-  assert.match(payload.violations[0].reason, /不在工单 '116g-A' 白名单/)
+  assert.equal(payload.pending, 0)
+  assert.equal(payload.files, 8)
+  assert.equal(payload.violations.length, 0)
 })
 
-test('C9 116g-A 临时回填白名单后：backend/src 精确路径通过', () => {
+test('C9 116g-A：backend/src 其余路径仍拒绝（app.js / order.service.js / 其他模块），不宽泛放行', () => {
   const { repo, base } = initRepo()
-  const cfgPath = copyConfig((cfg) => {
-    cfg.workorders['116g-A'].allow.push('backend/src/app.js')
-    cfg.workorders['116g-A'].pending = []
-  })
   writeFile(repo, 'backend/src/app.js', 'module.exports = 2\n')
-  commitAll(repo, '116g-A 回填后合法')
+  writeFile(repo, 'backend/src/modules/market/order.service.js', 'export const s = 1\n')
+  writeFile(repo, 'backend/src/modules/agri/detect.controller.js', 'export const d = 1\n')
+  commitAll(repo, '116g-A 越界其他 backend/src')
   const head = mustGit(repo, ['rev-parse', 'HEAD'])
-  const res = runChecker(repo, ['--branch', 'collab/116g-backend-data', '--base', base, '--head', head, '--config', cfgPath])
-  assert.equal(res.status, 0)
-  assert.match(res.stdout, /OK/)
+  const res = runChecker(repo, ['--branch', 'collab/116g-backend-data', '--base', base, '--head', head])
+  assert.equal(res.status, 1)
+  assert.equal((res.stdout.match(/不在工单 '116g-A' 白名单/g) || []).length, 3)
+  assert.match(res.stdout, /backend\/src\/app\.js/)
+  assert.match(res.stdout, /backend\/src\/modules\/market\/order\.service\.js/)
+  assert.match(res.stdout, /backend\/src\/modules\/agri\/detect\.controller\.js/)
 })
 
 test('C10 116h-A 白名单：基座/设计系统/Home/Shell/Test/pubspec/文档通过', () => {

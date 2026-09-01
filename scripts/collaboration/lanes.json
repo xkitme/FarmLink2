@@ -18,23 +18,22 @@
   "workorders": {
     "116g-A": {
       "lane": "backend",
-      "note": "Backend data 工单（collab/116g-backend-data）。8 个 controller/policy 的精确路径由该工单文档定稿，分支推送后由 Integration 回填 allow；未回填前 backend/src/** 一律拒绝（fail-closed）。",
+      "note": "Backend data 工单（collab/116g-backend-data）。116g-A 阶段 0 路径申请已审查并回填（2026-08-22）：8 个精确 controller/policy allow；backend/src/** 其余路径仍拒绝（不宽泛放行）。",
       "allow": [
         "backend/test/**",
         "backend/package.json",
         "backend/package-lock.json",
-        "docs/116g-A-*.md"
+        "docs/116g-A-*.md",
+        "backend/src/modules/market/order.policy.js",
+        "backend/src/modules/market/order.controller.js",
+        "backend/src/modules/data/sync.policy.js",
+        "backend/src/modules/data/sync.controller.js",
+        "backend/src/modules/machinery/booking.policy.js",
+        "backend/src/modules/machinery/booking.controller.js",
+        "backend/src/modules/platform/resource.policy.js",
+        "backend/src/modules/platform/resource.controller.js"
       ],
-      "pending": [
-        "<116g-A 工作单待定 controller/policy #1 —— 待回填精确路径>",
-        "<116g-A 工作单待定 controller/policy #2 —— 待回填精确路径>",
-        "<116g-A 工作单待定 controller/policy #3 —— 待回填精确路径>",
-        "<116g-A 工作单待定 controller/policy #4 —— 待回填精确路径>",
-        "<116g-A 工作单待定 controller/policy #5 —— 待回填精确路径>",
-        "<116g-A 工作单待定 controller/policy #6 —— 待回填精确路径>",
-        "<116g-A 工作单待定 controller/policy #7 —— 待回填精确路径>",
-        "<116g-A 工作单待定 controller/policy #8 —— 待回填精确路径>"
-      ]
+      "pending": []
     },
     "116h-A": {
       "lane": "flutter",
