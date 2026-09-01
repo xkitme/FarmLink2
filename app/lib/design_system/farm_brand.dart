@@ -39,11 +39,8 @@ class FarmBrand extends StatelessWidget {
             height: markSize,
             fit: BoxFit.cover,
             filterQuality: FilterQuality.medium,
-            errorBuilder: (_, __, ___) => Container(
-              width: markSize,
-              height: markSize,
-              color: FarmColors.primary,
-            ),
+            errorBuilder: (_, __, ___) =>
+                FarmBrandMarkFallback(markSize: markSize),
           ),
         ),
         if (showLabel) ...[
@@ -59,6 +56,26 @@ class FarmBrand extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// 品牌图加载失败的兜底块（主绿圆角方块），独立成组件便于测试与复用。
+class FarmBrandMarkFallback extends StatelessWidget {
+  /// 方块边长，与 [FarmBrand.markSize] 一致。
+  final double markSize;
+
+  const FarmBrandMarkFallback({super.key, required this.markSize});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: markSize,
+      height: markSize,
+      decoration: BoxDecoration(
+        color: FarmColors.primary,
+        borderRadius: BorderRadius.circular(8),
+      ),
     );
   }
 }

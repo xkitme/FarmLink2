@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/api_client.dart';
 import '../core/constants.dart';
+import '../design_system/farm_brand.dart';
 
 // 116h-A：统一五态组件（Loading/Empty/Error/Unauthorized/Offline）在 design_system 定义，
 // 经本文件再导出，让既有页面继续从 `widgets/common.dart` 取到全部状态组件。
@@ -52,10 +53,7 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
                 }
               },
             )
-          : const Center(
-              child:
-                  Icon(Icons.eco_rounded, color: AppColors.primary, size: 30),
-            ),
+          : const Center(child: FarmBrand(markSize: 30, showLabel: false)),
       title: Text(title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

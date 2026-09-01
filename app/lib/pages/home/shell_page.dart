@@ -75,12 +75,42 @@ class _ShellPageState extends State<ShellPage> {
       enabled: idx >= 0,
       child: Scaffold(
         body: widget.child,
-        bottomNavigationBar: idx >= 0 ? _navBar(idx, elder) : null,
+        bottomNavigationBar: idx >= 0
+            ? FarmShellNavBar(
+                selectedIndex: idx,
+                elder: elder,
+                onSelect: (i) => context.go(kShellTabs[i].path),
+              )
+            : null,
       ),
     );
   }
+}
 
-  Widget _navBar(int idx, bool elder) {
+/// 五栏底部导航条（116h-A 起独立成公开组件，便于测试与适老密度验收）。
+///
+/// 适老模式：图标与字号同步放大、触控目标抬高，但每个 tab 文案恒为单行——
+/// 文案用固定高度盒 + `FittedBox(scaleDown)` 兜底，杜绝「小田助手」在 411 窄屏
+/// 折行成两行导致的底栏高度跳动 / 相互遮挡。
+class FarmShellNavBar extends StatelessWidget {
+  /// 当前选中 tab 下标（对应 [kShellTabs]）。
+  final int selectedIndex;
+
+  /// 适老模式：放大图标 / 字号 / 触控密度。
+  final bool elder;
+
+  /// 点击第 i 个 tab。
+  final ValueChanged<int> onSelect;
+
+  const FarmShellNavBar({
+    super.key,
+    required this.selectedIndex,
+    required this.elder,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -95,7 +125,7 @@ class _ShellPageState extends State<ShellPage> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(8, elder ? 10 : 7, 8, elder ? 8 : 6),
+          padding: EdgeInsets.fromLTRB(8, elder ? 8 : 7, 8, elder ? 6 : 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -103,10 +133,10 @@ class _ShellPageState extends State<ShellPage> {
                 _NavItem(
                   icon: kShellTabs[i].icon,
                   label: kShellTabs[i].label,
-                  active: idx == i,
+                  active: selectedIndex == i,
                   prominent: kShellTabs[i].path == '/publish',
                   elder: elder,
-                  onTap: () => context.go(kShellTabs[i].path),
+                  onTap: () => onSelect(i),
                 ),
             ],
           ),
@@ -135,11 +165,32 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = active ? AppColors.primary : const Color(0xFFBFC3C2);
+    // 适老密度：图标盒与字号同步放大，但文案盒高固定为单行，FittedBox 兜底不折行。
+    final labelHeight = elder ? 20.0 : 16.0;
     final labelFont = elder ? 15.0 : 12.0;
+    final labelBox = SizedBox(
+      width: double.infinity,
+      height: labelHeight,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          label,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            fontSize: labelFont,
+            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+            color: prominent
+                ? (active ? AppColors.primary : AppColors.outline)
+                : color,
+          ),
+        ),
+      ),
+    );
     if (prominent) {
-      final size = elder ? 62.0 : 54.0;
-      final height = elder ? 52.0 : 44.0;
-      final iconSize = elder ? 36.0 : 30.0;
+      final size = elder ? 56.0 : 54.0;
+      final height = elder ? 46.0 : 44.0;
+      final iconSize = elder ? 34.0 : 30.0;
       return Expanded(
         child: InkWell(
           onTap: onTap,
@@ -164,15 +215,8 @@ class _NavItem extends StatelessWidget {
                 ),
                 child: Icon(icon, color: Colors.white, size: iconSize),
               ),
-              SizedBox(height: elder ? 3 : 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: labelFont,
-                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                  color: active ? AppColors.primary : AppColors.outline,
-                ),
-              ),
+              const SizedBox(height: 2),
+              labelBox,
             ],
           ),
         ),
@@ -184,25 +228,17 @@ class _NavItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(FarmRadius.md),
         child: AnimatedContainer(
           duration: FarmMotion.fast,
-          padding: EdgeInsets.symmetric(
-            horizontal: 4,
-            vertical: elder ? 6 : 4,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
-                width: elder ? 40 : 34,
-                height: elder ? 34 : 28,
-                child: Icon(icon, color: color, size: elder ? 32 : 26),
+                width: elder ? 36 : 34,
+                height: elder ? 30 : 28,
+                child: Icon(icon, color: color, size: elder ? 30 : 26),
               ),
-              SizedBox(height: elder ? 3 : 2),
-              Text(label,
-                  style: TextStyle(
-                    fontSize: labelFont,
-                    fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                    color: color,
-                  )),
+              const SizedBox(height: 2),
+              labelBox,
             ],
           ),
         ),

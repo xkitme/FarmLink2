@@ -196,7 +196,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _loading
-          ? const Loading(text: '正在加载首页...')
+          ? const FarmLoading(text: '正在加载首页...')
           : RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _load,
@@ -914,11 +914,8 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 6),
           if (_prices.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
-              child: Text('行情数据更新中',
-                  style: TextStyle(color: AppColors.outline, fontSize: 13)),
-            )
+            const FarmEmpty('行情数据更新中',
+                icon: Icons.trending_up_rounded, compact: true)
           else
             for (final p in _prices) _priceRow(p),
         ],

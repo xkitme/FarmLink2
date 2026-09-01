@@ -1,10 +1,20 @@
 import 'package:farmlink/core/constants.dart';
+import 'package:farmlink/design_system/farm_brand.dart';
 import 'package:farmlink/design_system/farm_state_views.dart';
 import 'package:farmlink/design_system/farm_tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
+
+/// 品牌图加载必失败的 asset bundle，用于触发 FarmBrand errorBuilder。
+class _ThrowingAssetBundle extends CachingAssetBundle {
+  @override
+  Future<ByteData> load(String key) async {
+    throw FlutterError('asset not found: $key');
+  }
+}
 
 void main() {
   group('设计 token', () {
@@ -87,6 +97,105 @@ void main() {
       )));
       expect(find.byIcon(Icons.cloud_off_rounded), findsOneWidget);
       expect(find.text('离线了'), findsOneWidget);
+    });
+
+    testWidgets('FarmStateView 五态全分发：loading/empty/error/unauthorized',
+        (tester) async {
+      await tester.pumpWidget(_wrap(const FarmStateView(
+        state: FarmViewState.loading,
+        message: '加载中',
+      )));
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('加载中'), findsOneWidget);
+
+      await tester.pumpWidget(_wrap(const FarmStateView(
+        state: FarmViewState.empty,
+        message: '暂无数据',
+      )));
+      expect(find.byIcon(Icons.inbox_outlined), findsOneWidget);
+      expect(find.text('暂无数据'), findsOneWidget);
+
+      await tester.pumpWidget(_wrap(FarmStateView(
+        state: FarmViewState.error,
+        message: '加载失败',
+        onRetry: () {},
+      )));
+      expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+      expect(find.text('加载失败'), findsOneWidget);
+      expect(find.text('重试'), findsOneWidget);
+
+      await tester.pumpWidget(_wrap(FarmStateView(
+        state: FarmViewState.unauthorized,
+        message: '登录已过期',
+        onLogin: () {},
+      )));
+      expect(find.byIcon(Icons.lock_outline_rounded), findsOneWidget);
+      expect(find.text('登录已过期'), findsOneWidget);
+      expect(find.text('重新登录'), findsOneWidget);
+    });
+
+    testWidgets('FarmEmpty compact 紧凑行内模式（卡片内空态）', (tester) async {
+      await tester.pumpWidget(_wrap(const FarmEmpty('行情数据更新中',
+          icon: Icons.trending_up_rounded, compact: true)));
+      expect(find.text('行情数据更新中'), findsOneWidget);
+      expect(find.byIcon(Icons.trending_up_rounded), findsOneWidget);
+      // 紧凑模式：小图标（20），无整页居中的大图标（56）
+      final icon = tester.widget<Icon>(find.byIcon(Icons.trending_up_rounded));
+      expect(icon.size, 20);
+      // 结构：Row 行内布局
+      expect(
+        find.ancestor(
+            of: find.text('行情数据更新中'), matching: find.byType(Row)),
+        findsWidgets,
+      );
+    });
+  });
+
+  group('FarmBrand 品牌标识', () {
+    testWidgets('使用真实品牌图 farmlink-mark.png + 「田园通」文字', (tester) async {
+      await tester.pumpWidget(_wrap(const FarmBrand()));
+      final image = tester.widget<Image>(find.byType(Image));
+      expect((image.image as AssetImage).assetName,
+          'assets/images/farmlink-mark.png');
+      expect(find.text('田园通'), findsOneWidget);
+    });
+
+    testWidgets('showLabel=false 隐藏文字，markSize 生效', (tester) async {
+      await tester.pumpWidget(_wrap(const FarmBrand(markSize: 44, showLabel: false)));
+      expect(find.text('田园通'), findsNothing);
+      final image = tester.widget<Image>(find.byType(Image));
+      expect(image.width, 44);
+      expect(image.height, 44);
+    });
+
+    testWidgets('FarmBrandMarkFallback 兜底块尺寸与主色', (tester) async {
+      await tester.pumpWidget(
+          _wrap(const FarmBrandMarkFallback(markSize: 40)));
+      final box = tester.widget<Container>(find.descendant(
+        of: find.byType(FarmBrandMarkFallback),
+        matching: find.byType(Container),
+      ));
+      final deco = box.decoration as BoxDecoration;
+      expect(deco.color, FarmColors.primary);
+      expect(tester.getSize(find.byType(FarmBrandMarkFallback)),
+          const Size(40, 40));
+    });
+
+    testWidgets('品牌图加载失败时渲染绿色兜底块（errorBuilder 生效）',
+        (tester) async {
+      // MaterialApp 会注入自己的 DefaultAssetBundle(rootBundle) 覆盖外层，
+      // 因此这里不包 MaterialApp，直接用 Directionality + 必失败 bundle 触发 errorBuilder。
+      await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: DefaultAssetBundle(
+          bundle: _ThrowingAssetBundle(),
+          child: const FarmBrand(markSize: 36),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(FarmBrandMarkFallback), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 }
