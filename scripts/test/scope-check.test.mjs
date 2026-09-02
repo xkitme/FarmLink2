@@ -11,6 +11,8 @@
  *     --branch 与 --lane/--workorder 冲突 → 退出码 2
  *  C. workorder 精确白名单：116g-X（本批）、116g-B（真实 18 文件全覆盖）、116h-A、
  *     116g-A（阶段 0 已回填：8 个精确 controller/policy 放行、其余 backend/src 拒绝、pending=0）；
+ *     116h-A 白名单补齐 elder_mode/splash 真实路径（collab/116h-flutter-* 修改放行，
+ *     backend/admin/scripts/.github/feature_catalog 等仍拒绝）；
  *     M5/M6、Prisma、数据库、生成产物不得被任何当前 workorder 放行
  *  D. workorder 模式下的 A/M/D/R 与中文/空格路径
  *
@@ -65,7 +67,9 @@ function initRepo() {
   writeFile(repo, 'backend/test/auth.test.js', 'test()\n')
   writeFile(repo, 'backend/prisma/schema.prisma', 'datasource db {}\n')
   writeFile(repo, 'app/lib/main.dart', 'void main() {}\n')
+  writeFile(repo, 'app/lib/core/elder_mode.dart', '// elder base\n')
   writeFile(repo, 'app/lib/core/feature_catalog.dart', '// generated\n')
+  writeFile(repo, 'app/lib/pages/splash/splash_page.dart', '// splash base\n')
   writeFile(repo, 'app/test/home_test.dart', 'test()\n')
   writeFile(repo, 'backend/admin/src/App.jsx', 'export default 1\n')
   writeFile(repo, 'backend/admin/src/api/auth.js', 'export const auth = 1\n')
@@ -720,6 +724,68 @@ test('C11 116h-A 白名单：M5 交易、M6 植保、生成产物拒绝', () => 
   assert.equal(res.status, 1)
   assert.match(res.stdout, /app\/lib\/features\/market\/product_page\.dart/)
   assert.match(res.stdout, /app\/lib\/pages\/agri\/photo_flow_page\.dart/)
+  assert.match(res.stdout, /app\/lib\/core\/feature_catalog\.dart/)
+  assert.match(res.stdout, /生成产物/)
+})
+
+test('C12 116h-A 白名单补齐：collab/116h-flutter-* 修改 elder_mode.dart 与 splash/splash_page.dart 通过（配置级 + 功能级双锁定）', () => {
+  // 配置级：两条真实路径必须被 116h-A allow 精确匹配（与 C6 同样的 glob 语义）
+  const cfg = readRealLanes()
+  const allow = cfg.workorders['116h-A'].allow
+  const matchAny = (filePath) => {
+    const norm = filePath.replace(/\\/g, '/')
+    return allow.some((pat) => {
+      let out = ''
+      let i = 0
+      while (i < pat.length) {
+        const ch = pat[i]
+        if (ch === '*') {
+          if (pat[i + 1] === '*') { out += '.*'; i += 2; continue }
+          out += '[^/]*'; i += 1; continue
+        }
+        if (ch === '?') { out += '[^/]'; i += 1; continue }
+        if ('\\^$+.()[]{}|'.includes(ch)) out += '\\'
+        out += ch
+        i += 1
+      }
+      return new RegExp(`^${out}$`).test(norm)
+    })
+  }
+  assert.ok(matchAny('app/lib/core/elder_mode.dart'), '116h-A 白名单未覆盖 app/lib/core/elder_mode.dart')
+  assert.ok(matchAny('app/lib/pages/splash/splash_page.dart'), '116h-A 白名单未覆盖 app/lib/pages/splash/splash_page.dart')
+
+  // 功能级：修改既有文件（M 状态）必须放行
+  const { repo, base } = initRepo()
+  writeFile(repo, 'app/lib/core/elder_mode.dart', '// elder modified\n')
+  writeFile(repo, 'app/lib/pages/splash/splash_page.dart', '// splash modified\n')
+  commitAll(repo, '116h-A 补齐路径修改')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/116h-flutter-shell-polish', '--base', base, '--head', head, '--json'])
+  assert.equal(res.status, 0, `应通过: ${res.stdout}`)
+  const payload = JSON.parse(res.stdout)
+  assert.equal(payload.ok, true)
+  assert.equal(payload.workorder, '116h-A')
+  assert.equal(payload.files, 2)
+  assert.equal(payload.counts.M, 2)
+  assert.equal(payload.violations.length, 0)
+})
+
+test('C13 116h-A 白名单：backend / admin / scripts / .github / feature_catalog 在 collab/116h-flutter-* 上仍拒绝', () => {
+  const { repo, base } = initRepo()
+  writeFile(repo, 'backend/src/app.js', 'module.exports = 2\n')
+  writeFile(repo, 'backend/admin/src/App.jsx', 'export default 2\n')
+  writeFile(repo, 'scripts/test/越界.test.mjs', 'test()\n')
+  writeFile(repo, '.github/workflows/ci.yml', 'name: x\n')
+  writeFile(repo, 'app/lib/core/feature_catalog.dart', '// hand edit\n')
+  commitAll(repo, '116h-A 跨区越界')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/116h-flutter-shell', '--base', base, '--head', head])
+  assert.equal(res.status, 1)
+  assert.equal((res.stdout.match(/不在工单 '116h-A' 白名单/g) || []).length, 4)
+  assert.match(res.stdout, /backend\/src\/app\.js/)
+  assert.match(res.stdout, /backend\/admin\/src\/App\.jsx/)
+  assert.match(res.stdout, /scripts\/test\/越界\.test\.mjs/)
+  assert.match(res.stdout, /\.github\/workflows\/ci\.yml/)
   assert.match(res.stdout, /app\/lib\/core\/feature_catalog\.dart/)
   assert.match(res.stdout, /生成产物/)
 })
