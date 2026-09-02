@@ -278,13 +278,12 @@ class _HomePageState extends State<HomePage> {
                           child: Container(
                             constraints: const BoxConstraints(
                                 minWidth: 16, minHeight: 16),
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
                             decoration: BoxDecoration(
                               color: FarmColors.error,
                               borderRadius: BorderRadius.circular(99),
-                              border: Border.all(
-                                  color: Colors.white, width: 1.5),
+                              border:
+                                  Border.all(color: Colors.white, width: 1.5),
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -640,23 +639,31 @@ class _HomePageState extends State<HomePage> {
         color: AppColors.primary,
       ),
     ];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            _platformStatBadge(
-              icon: items[i].icon,
-              label: items[i].label,
-              value: items[i].value,
-              unit: items[i].unit,
-              color: items[i].color,
-            ),
-            if (i != items.length - 1) const SizedBox(width: 10),
-          ],
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 10.0;
+        final visibleBadgeWidth = (constraints.maxWidth - gap * 2) / 3;
+        final badgeWidth = visibleBadgeWidth.clamp(108.0, 128.0);
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                _platformStatBadge(
+                  icon: items[i].icon,
+                  label: items[i].label,
+                  value: items[i].value,
+                  unit: items[i].unit,
+                  color: items[i].color,
+                  width: badgeWidth,
+                ),
+                if (i != items.length - 1) const SizedBox(width: gap),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -666,15 +673,16 @@ class _HomePageState extends State<HomePage> {
     required String value,
     required String unit,
     required Color color,
+    required double width,
   }) {
     return Container(
-      width: 128,
+      key: ValueKey('platform_stat_badge_$label'),
+      width: width,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(R.md),
         border: Border.all(color: AppColors.outlineVariant),
-        boxShadow: AppColors.ambientShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
