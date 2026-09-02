@@ -41,6 +41,7 @@ void main() {
   void resetApiClient() {
     ApiClient.baseUrl = kBaseUrl;
     ApiClient.setToken(null);
+    ApiClient.setCookieSessionActive(false);
     ApiClient.configureAuth(
       refreshHandler: () async => false,
       sessionExpiredHandler: () async {},
@@ -97,6 +98,25 @@ void main() {
                 'total': 0,
                 'pageNum': 1,
                 'pageSize': 50,
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        case '$kApiPrefix/data/dashboard':
+          return http.Response(
+            jsonEncode({
+              'code': 200,
+              'msg': 'success',
+              'data': {
+                'upcomingPolicyDeadline': null,
+                'platformStats': {
+                  'farmerCount': 6,
+                  'totalAreaMu': 65,
+                  'cropTypeCount': 3,
+                  'aiServiceCount': 14,
+                  'orderCount': 22,
+                },
               },
             }),
             200,
@@ -228,7 +248,18 @@ void main() {
     mockClient = null;
   });
 
-  Future<void> pumpFarmLinkApp(WidgetTester tester) async {
+  Future<void> pumpFarmLinkApp(
+    WidgetTester tester, {
+    String role = 'FARMER',
+  }) async {
+    SharedPreferences.setMockInitialValues({
+      'user': jsonEncode({
+        'id': role == 'ADMIN' ? 99 : 1,
+        'username': role == 'ADMIN' ? 'admin' : 'farmer1',
+        'nickname': role == 'ADMIN' ? '管理员' : '老李',
+        'role': role,
+      }),
+    });
     final storage = InMemoryCredentialStorage(
       const AuthCredentials(
           accessToken: 'test-token', refreshToken: 'test-refresh'),
@@ -401,6 +432,36 @@ void main() {
     });
   });
 
+  testWidgets(
+      'B15a-admin: platform stats strip keeps first three badges visible',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(411, 731);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await runTest(tester, () async {
+      await pumpFarmLinkApp(tester, role: 'ADMIN');
+      await openHome(tester);
+
+      final logicalWidth =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      for (final label in ['服务农户', '覆盖耕地', '服务作物']) {
+        final badge = find.byKey(ValueKey('platform_stat_badge_$label'));
+        expect(badge, findsOneWidget);
+        final rect = tester.getRect(badge);
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(logicalWidth),
+            reason: '$label badge should not be clipped at 411px width');
+      }
+
+      expect(find.text('AI 诊断'), findsOneWidget);
+      expect(find.text('累计交易'), findsOneWidget);
+    });
+  });
+
   testWidgets('B15b: navigate from /home to /agri via smart farming banner',
       (WidgetTester tester) async {
     await runTest(tester, () async {
@@ -504,14 +565,12 @@ void main() {
 
       gate.complete();
       await tester.pumpAndSettle();
-      expect(find.byType(FarmLoading), findsNothing,
-          reason: '数据就绪后加载态应消失');
+      expect(find.byType(FarmLoading), findsNothing, reason: '数据就绪后加载态应消失');
       expect(find.text('22°~34°  晴 · 湿度62% · 风2级 · 墒情适宜'), findsOneWidget);
     });
   });
 
-  testWidgets('B17b: 首页空行情使用统一 FarmEmpty 五态组件（紧凑模式）',
-      (tester) async {
+  testWidgets('B17b: 首页空行情使用统一 FarmEmpty 五态组件（紧凑模式）', (tester) async {
     await runTest(tester, () async {
       mockClient = createMockClient(captured, emptyPrices: true);
       ApiClient.setClientForTesting(mockClient);
