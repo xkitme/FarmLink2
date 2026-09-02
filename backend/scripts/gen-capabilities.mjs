@@ -332,6 +332,69 @@ const FEATURE_CATALOG = Object.freeze({
   ]),
 })
 
+const FEATURE_TIERS = Object.freeze(['primary', 'tool', 'experimental'])
+
+const PRIMARY_FEATURE_META = Object.freeze({
+  '病虫害识别': { id: 'plant-care.diagnose', journey: 'plant_care' },
+  '乡村集市': { id: 'market.trade', journey: 'market' },
+  '农机租赁': { id: 'machinery.booking', journey: 'machinery' },
+  '灾情上报': { id: 'disaster.report', journey: 'disaster' },
+  '补贴申请': { id: 'policy.subsidy', journey: 'policy' },
+  '农情数据看板': { id: 'village.dashboard', journey: 'village' },
+})
+
+const EXPERIMENTAL_FEATURES = Object.freeze(new Set([
+  '产量预测',
+  '碳排放核算',
+  '价格预测',
+  '期货行情',
+  '出口合规',
+  'AI 质量分级',
+  '直播话术',
+  '包装文案',
+  '冻害防护',
+  '火险预警',
+  '干旱指数',
+  '农业贷款',
+  '乡村旅游',
+  '民俗记录',
+  '遥感分析',
+]))
+
+const JOURNEY_BY_SECTION = Object.freeze({
+  agri: 'plant_care',
+  market: 'market',
+  machinery: 'machinery',
+  disaster: 'disaster',
+  policy: 'policy',
+  life: 'life_services',
+  data: 'village',
+  ai: 'assistant',
+})
+
+function featureIdFor(f, index) {
+  const routeKey = String(f.routeKey).replace(/_/g, '-')
+  return `${f.section}.${routeKey}.${String(index + 1).padStart(2, '0')}`
+}
+
+function withFeatureTiering(fc) {
+  return {
+    ...fc,
+    features: fc.features.map((f, index) => {
+      const primary = PRIMARY_FEATURE_META[f.name]
+      if (primary) {
+        return { ...f, id: primary.id, tier: 'primary', journey: primary.journey }
+      }
+      return {
+        ...f,
+        id: featureIdFor(f, index),
+        tier: EXPERIMENTAL_FEATURES.has(f.name) ? 'experimental' : 'tool',
+        journey: EXPERIMENTAL_FEATURES.has(f.name) ? null : (JOURNEY_BY_SECTION[f.section] || null),
+      }
+    }),
+  }
+}
+
 function slugForPath(routePath) {
   const parts = routePath.split('/').filter(Boolean).map((seg) => seg.replace(/^:/, ''))
   return parts.join('.') || 'root'
@@ -365,6 +428,7 @@ function validateFeatureCatalog(fc) {
   }
   const sectionKeys = new Set(Object.keys(fc.sections))
   const featureNames = new Set()
+  const featureIds = new Set()
   for (const f of fc.features) {
     if (!f || typeof f.name !== 'string' || !f.name) {
       errors.push('featureCatalog.features 存在缺少合法 name 的条目')
@@ -372,6 +436,19 @@ function validateFeatureCatalog(fc) {
     }
     if (featureNames.has(f.name)) errors.push(`featureCatalog.features name 重复：${f.name}`)
     featureNames.add(f.name)
+    if (typeof f.id !== 'string' || !/^[a-z0-9][a-z0-9.-]*$/.test(f.id)) {
+      errors.push(`featureCatalog.features ${f.name} id 非法：${f.id}`)
+    } else if (featureIds.has(f.id)) {
+      errors.push(`featureCatalog.features id 重复：${f.id}`)
+    }
+    featureIds.add(f.id)
+    if (!FEATURE_TIERS.includes(f.tier)) errors.push(`featureCatalog.features ${f.name} tier 非法：${f.tier}`)
+    if (f.tier === 'primary' && (typeof f.journey !== 'string' || !f.journey)) {
+      errors.push(`featureCatalog.features ${f.name} primary 必须登记 journey`)
+    }
+    if (f.journey !== null && f.journey !== undefined && (typeof f.journey !== 'string' || !/^[a-z][a-z0-9_]*$/.test(f.journey))) {
+      errors.push(`featureCatalog.features ${f.name} journey 非法：${f.journey}`)
+    }
     if (!Array.isArray(f.keywords) || f.keywords.length === 0 || f.keywords.some((k) => typeof k !== 'string' || !k)) {
       errors.push(`featureCatalog.features ${f.name} keywords 非法`)
     }
@@ -397,6 +474,8 @@ function validateFeatureCatalog(fc) {
       errors.push(`featureCatalog.routeFeatures ${key} 别名重复`)
     }
   }
+  const primaryCount = fc.features.filter((f) => f.tier === 'primary').length
+  if (primaryCount !== 6) errors.push(`featureCatalog.primary 数量必须为 6，当前 ${primaryCount}`)
   if (errors.length > 0) {
     throw new Error(`featureCatalog 校验失败：\n- ${errors.join('\n- ')}`)
   }
@@ -410,7 +489,8 @@ export function buildRegistry() {
   if (scan.invalid.length > 0) {
     throw new Error(`存在无法解析的路由定义，注册表拒绝生成：${JSON.stringify(scan.invalid, null, 2)}`)
   }
-  validateFeatureCatalog(FEATURE_CATALOG)
+  const featureCatalog = withFeatureTiering(FEATURE_CATALOG)
+  validateFeatureCatalog(featureCatalog)
 
   const capabilities = []
   const capIds = new Set()
@@ -477,7 +557,7 @@ export function buildRegistry() {
     migrationNotes: MIGRATION_NOTES,
     capabilities,
     // 116f-F：搜索/助手/功能墙唯一事实源（不影响 capabilities 数组 → 能力数 247 不变）
-    featureCatalog: FEATURE_CATALOG,
+    featureCatalog,
   }
 }
 

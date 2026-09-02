@@ -379,6 +379,11 @@ void main() {
       expect(find.text('22°~34°  晴 · 湿度62% · 风2级 · 墒情适宜'), findsOneWidget);
 
       await scrollToAndVerify(tester, '核心服务');
+      for (final label in ['AI 植保', '农产品交易', '农机服务', '防灾救助', '惠农政策', '农情看板']) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(find.text('智能物联'), findsNothing);
+      expect(find.text('生活服务'), findsNothing);
 
       await scrollToAndVerify(tester, '病虫害识别 · 农事建档 · 专家在线');
       await scrollToAndVerify(tester, '产地直发 · 溯源好物 · 一键下单');

@@ -193,10 +193,13 @@ test('admin apiCatalog 派生与注册表 v1 子集一致（C5）', async (t) =>
 test('Flutter feature_catalog 派生与注册表 featureCatalog 一致（C5/D5）', async (t) => {
   const catalog = buildFeatureCatalog()
 
-  await t.test('精确数量：8 sections / 70 功能点（盘点实测口径，非 71）', () => {
+  await t.test('精确数量：8 sections / 70 功能点 / 6 条主路径（盘点实测口径，非 71）', () => {
     assert.equal(catalog.sections.length, 8)
     assert.equal(catalog.features.length, 70)
     assert.equal(fc.features.length, 70)
+    assert.equal(catalog.features.filter((f) => f.tier === 'primary').length, 6)
+    assert.equal(catalog.features.filter((f) => f.tier === 'tool').length, 49)
+    assert.equal(catalog.features.filter((f) => f.tier === 'experimental').length, 15)
   })
 
   await t.test('逐字段一致 + 双向覆盖（features ↔ 注册表）', () => {
@@ -208,6 +211,9 @@ test('Flutter feature_catalog 派生与注册表 featureCatalog 一致（C5/D5�
     for (let i = 0; i < fc.features.length; i += 1) {
       const src = fc.features[i]
       const out = catalog.features[i]
+      assert.equal(out.id, src.id, `${src.name} id 不一致`)
+      assert.equal(out.tier, src.tier, `${src.name} tier 不一致`)
+      assert.equal(out.journey, src.journey ?? null, `${src.name} journey 不一致`)
       assert.deepEqual(out.keywords, src.keywords, `${src.name} keywords 不一致`)
       assert.equal(out.route, src.route, `${src.name} route 不一致`)
       assert.equal(out.icon, src.icon, `${src.name} icon 不一致`)
@@ -217,9 +223,14 @@ test('Flutter feature_catalog 派生与注册表 featureCatalog 一致（C5/D5�
 
   await t.test('结构一致性：name 唯一、route 与页面 path 一致、icon 为 Dart 标识符、section 已登记', () => {
     const names = new Set(catalog.features.map((f) => f.name))
+    const ids = new Set(catalog.features.map((f) => f.id))
     assert.equal(names.size, 70, '功能点 name 必须唯一')
+    assert.equal(ids.size, 70, '功能点 id 必须唯一')
     const sectionKeys = new Set(catalog.sections.map(([key]) => key))
     for (const f of catalog.features) {
+      assert.match(f.id, /^[a-z0-9][a-z0-9.-]*$/, `${f.name} id 必须为稳定锚点标识`)
+      assert.ok(['primary', 'tool', 'experimental'].includes(f.tier), `${f.name} tier 必须合法`)
+      if (f.tier === 'primary') assert.ok(f.journey, `${f.name} 主路径必须有 journey`)
       assert.ok(routeByKey.has(f.routeKey ?? '__missing__') || fc.features.some((s) => s.name === f.name), 'routeKey 映射由注册表保证')
       assert.ok(sectionKeys.has(f.section), `${f.name} section 必须已登记`)
       assert.match(f.icon, /^[A-Za-z_][A-Za-z0-9_]*$/, `${f.name} icon 必须为合法 Dart 标识符`)
@@ -234,7 +245,9 @@ test('Flutter feature_catalog 派生与注册表 featureCatalog 一致（C5/D5�
   await t.test('生成产物为合法 Dart 形态且含真实内容（正向与 fallback 明显不同）', () => {
     const text = readFileSync(FLUTTER_OUT, 'utf8')
     assert.ok(text.includes("import 'package:flutter/material.dart';"), '必须 import material')
+    assert.ok(text.includes('enum FeatureTier { primary, tool, experimental }'), '必须包含功能分级枚举')
     assert.ok(text.includes('class FeatureItem {'), '必须包含 FeatureItem 类')
+    assert.ok(text.includes("id: 'plant-care.diagnose',") && text.includes('tier: FeatureTier.primary,'), '必须含主路径 id/tier')
     assert.ok(text.includes("'agri': 'AI 农业生产',"), '必须含 section 标题')
     assert.ok(text.includes("name: '病虫害识别',") && text.includes("keywords: ['病虫害', '识病', '拍照识别', '叶片', '植保'],"),
       '必须含具体功能点与关键词')
@@ -251,6 +264,10 @@ test('Flutter feature_catalog 派生与注册表 featureCatalog 一致（C5/D5�
 
   await t.test('代表行 route 精确（search/all/home 消费语义不变）', () => {
     const byName = new Map(fc.features.map((f) => [f.name, f]))
+    assert.deepEqual(
+      ['病虫害识别', '乡村集市', '农机租赁', '灾情上报', '补贴申请', '农情数据看板'].map((name) => byName.get(name).tier),
+      ['primary', 'primary', 'primary', 'primary', 'primary', 'primary'],
+    )
     assert.equal(byName.get('病虫害识别').route, '/agri/diagnose')
     assert.equal(byName.get('实时行情').route, '/market')
     assert.equal(byName.get('补贴申请').route, '/policy/service')
@@ -258,6 +275,7 @@ test('Flutter feature_catalog 派生与注册表 featureCatalog 一致（C5/D5�
     assert.equal(byName.get('农机租赁').route, '/machinery')
     assert.equal(byName.get('村医问诊').route, '/life')
     assert.equal(byName.get('农情数据看板').route, '/data')
+    assert.equal(byName.get('价格预测').tier, 'experimental')
   })
 })
 
@@ -372,7 +390,7 @@ test('防共同漂移：HEAD 旧行为基线冻结（规范化 SHA256 + 代表�
   const BASELINE = Object.freeze({
     routeCatalog: 'EA7B84A968691CE775E29FE76A5E3C06C2E5A632A797B3D00DDE22ABB6B4E791',
     routeFeatures: 'F38DD61668F2B4CAC0DF875DAE83659E141F674999EF29308BEDFCC98D32DC91',
-    flutterCatalog: '6D909DBC18B1A5716C572CB218F2B27C2BE38FC6E06005E6FCF334532ACE0545',
+    flutterCatalog: '8A5819AF0D8424E7CEEA3779DB097594DE2AF58F196C2D9ACA02BF89E7EA6BE5',
   })
 
   await t.test('ROUTE_CATALOG 规范化 SHA256 与 HEAD 基线一致（34 页，含顺序）', () => {
@@ -413,9 +431,9 @@ test('防共同漂移：HEAD 旧行为基线冻结（规范化 SHA256 + 代表�
     assert.equal(catalog.features.length, 70, 'HEAD 基线：70 个功能点')
     const diagnose = catalog.features.find((f) => f.name === '病虫害识别')
     assert.deepEqual(
-      { route: diagnose.route, icon: diagnose.icon, section: diagnose.section },
-      { route: '/agri/diagnose', icon: 'biotech_outlined', section: 'agri' },
-      '病虫害识别必须路由 /agri/diagnose、biotech 图标、agri 分组',
+      { id: diagnose.id, tier: diagnose.tier, journey: diagnose.journey, route: diagnose.route, icon: diagnose.icon, section: diagnose.section },
+      { id: 'plant-care.diagnose', tier: 'primary', journey: 'plant_care', route: '/agri/diagnose', icon: 'biotech_outlined', section: 'agri' },
+      '病虫害识别必须为 plant_care 主路径并路由 /agri/diagnose',
     )
     const aiChat = catalog.features.find((f) => f.name === 'AI 智能问答')
     assert.equal(aiChat.route, '/ai/chat/new')

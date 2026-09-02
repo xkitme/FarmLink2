@@ -5,7 +5,7 @@
  * 的生成产物）。人工可编辑事实源 = gen-capabilities.mjs 的 FEATURE_CATALOG overlay
  * （sections/routes/routeFeatures/features），改后必须 `--write` 重建 capabilities.js。
  * - kFeatureSections 由 featureCatalog.sections 生成；
- * - kFeatureCatalog 由 featureCatalog.features 生成（name/keywords/route/icon/section 逐字段一致）。
+ * - kFeatureCatalog 由 featureCatalog.features 生成（id/tier/journey/name/keywords/route/icon/section 逐字段一致）。
  * icon 存 Material 图标常量名（如 biotech_outlined），渲染为 Icons.biotech_outlined；
  * 生成产物不依赖 Node/运行时网络，是可直接被 flutter analyze/test/build 消费的合法 Dart。
  *
@@ -45,6 +45,9 @@ export function buildFeatureCatalog(registry = CAPABILITY_REGISTRY) {
   return {
     sections: Object.entries(fc.sections),
     features: fc.features.map((f) => ({
+      id: String(f.id),
+      tier: String(f.tier),
+      journey: f.journey == null ? null : String(f.journey),
       name: String(f.name),
       keywords: f.keywords.map(String),
       route: String(f.route),
@@ -61,10 +64,15 @@ function render(catalog) {
     '// 漂移检查：cd backend && node scripts/gen-feature-catalog.mjs --check',
     '//',
     '// 116f-F Flutter 功能墙（数据源 = backend/src/contracts/capabilities.js featureCatalog，gen-capabilities.mjs 生成产物；',
-    '// 驱动全局搜索（search_page）、全部服务（all_features_page）与首页计数（home_page）。',
+    '// 驱动全局搜索（search_page）与全部服务（all_features_page）；tier/journey 用于 6 条主路径收敛）。',
     "import 'package:flutter/material.dart';",
     '',
+    'enum FeatureTier { primary, tool, experimental }',
+    '',
     'class FeatureItem {',
+    '  final String id;',
+    '  final FeatureTier tier;',
+    '  final String? journey;',
     '  final String name;',
     '  final List<String> keywords;',
     '  final String route;',
@@ -72,6 +80,9 @@ function render(catalog) {
     '  final String section;',
     '',
     '  const FeatureItem({',
+    '    required this.id,',
+    '    required this.tier,',
+    '    this.journey,',
     '    required this.name,',
     '    required this.keywords,',
     '    required this.route,',
@@ -88,13 +99,33 @@ function render(catalog) {
   ]
   for (const f of catalog.features) {
     lines.push('  FeatureItem(')
+    lines.push(`      id: '${dartString(f.id)}',`)
+    lines.push(`      tier: FeatureTier.${f.tier},`)
+    if (f.journey !== null) {
+      lines.push(`      journey: '${dartString(f.journey)}',`)
+    }
     lines.push(`      name: '${dartString(f.name)}',`)
     lines.push(`      keywords: ${renderKeywords(f.keywords)},`)
     lines.push(`      route: '${dartString(f.route)}',`)
     lines.push(`      icon: Icons.${f.icon},`)
     lines.push(`      section: '${dartString(f.section)}'),`)
   }
-  lines.push('];', '')
+  lines.push(
+    '];',
+    '',
+    'final kPrimaryFeatures = kFeatureCatalog',
+    '    .where((f) => f.tier == FeatureTier.primary)',
+    '    .toList(growable: false);',
+    '',
+    'final kToolFeatures = kFeatureCatalog',
+    '    .where((f) => f.tier == FeatureTier.tool)',
+    '    .toList(growable: false);',
+    '',
+    'final kExperimentalFeatures = kFeatureCatalog',
+    '    .where((f) => f.tier == FeatureTier.experimental)',
+    '    .toList(growable: false);',
+    '',
+  )
   return lines.join('\n')
 }
 

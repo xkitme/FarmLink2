@@ -88,7 +88,7 @@
     },
     "116x-60pct": {
       "lane": "integration",
-      "note": "60% 重构聚合工单（collab/116x-60pct-integration，跨 Backend/Flutter/Admin/Integration 四 lane 的单次整合主线）。allow = 本次精确授权路径的并集：8 个 controller/policy（同 116g-A）+ 4 个一致性测试 + Flutter 401 噪音治理 5 个文件 + Admin ops 基座 policies/pages/tests + 门禁 lanes/scope 测试 + 对应 docs。生成产物（5 个）、feature_catalog/apiCatalog/capabilities、backend/data/**、Prisma、其余 backend/src/** 与 app/lib/** 一律拒绝（不宽泛放行）。",
+      "note": "116x 重构聚合工单（collab/116x-*，跨 Backend/Flutter/Admin/Integration 四 lane 的单次整合主线）。allow = 60% 批次精确授权路径 + 40% 收口的功能目录分级生成链路：gen-capabilities/gen-feature-catalog、capabilities.js、feature_catalog.dart、全部服务页、首页主路径与对应测试/docs。生成产物仅允许 capabilities.js 与 feature_catalog.dart 随生成器重建；apiCatalog/assistant-catalog/inventory-report、backend/data/**、Prisma、其余 backend/src/** 与 app/lib/** 仍拒绝（不宽泛放行）。",
       "allow": [
         "backend/src/modules/market/order.policy.js",
         "backend/src/modules/market/order.controller.js",
@@ -99,12 +99,18 @@
         "backend/src/modules/platform/resource.policy.js",
         "backend/src/modules/platform/resource.controller.js",
         "backend/test/**",
+        "backend/scripts/gen-capabilities.mjs",
+        "backend/scripts/gen-feature-catalog.mjs",
+        "backend/src/contracts/capabilities.js",
         "backend/package.json",
         "docs/116g-A-*.md",
+        "app/lib/core/feature_catalog.dart",
         "app/lib/core/voice_wake.dart",
         "app/lib/core/auth_state.dart",
         "app/lib/core/api_client.dart",
         "app/lib/pages/auth/login_page.dart",
+        "app/lib/pages/all/all_features_page.dart",
+        "app/lib/pages/home/home_page.dart",
         "app/lib/widgets/voice_assistant_layer.dart",
         "app/test/**",
         "app/pubspec.yaml",
@@ -126,6 +132,7 @@
         "scripts/test/**",
         "docs/协作约定.md",
         "docs/116g-X-*.md",
+        "docs/116x-*.md",
         ".github/pull_request_template.md"
       ],
       "pending": []

@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/feature_catalog.dart';
-import '../../widgets/common.dart';
 
 class AllFeaturesPage extends StatefulWidget {
   const AllFeaturesPage({super.key});
@@ -14,10 +13,21 @@ class AllFeaturesPage extends StatefulWidget {
 
 class _AllFeaturesPageState extends State<AllFeaturesPage> {
   String _section = 'ALL';
+  FeatureTier? _tier;
 
-  List<FeatureItem> get _visible => _section == 'ALL'
-      ? kFeatureCatalog
-      : kFeatureCatalog.where((f) => f.section == _section).toList();
+  List<FeatureItem> get _visible {
+    final items = kFeatureCatalog.where((f) {
+      final sectionMatched = _section == 'ALL' || f.section == _section;
+      final tierMatched = _tier == null || f.tier == _tier;
+      return sectionMatched && tierMatched;
+    }).toList();
+    items.sort((a, b) {
+      final byTier = _tierRank(a.tier).compareTo(_tierRank(b.tier));
+      if (byTier != 0) return byTier;
+      return kFeatureCatalog.indexOf(a).compareTo(kFeatureCatalog.indexOf(b));
+    });
+    return items;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,19 +59,13 @@ class _AllFeaturesPageState extends State<AllFeaturesPage> {
             }
           },
         ),
-        title: Row(
-          children: [
-            const Text(
-              '全部服务',
-              style: TextStyle(
-                color: AppColors.onSurface,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(width: 8),
-            StatusChip('${kFeatureCatalog.length} 项', color: AppColors.primary),
-          ],
+        title: const Text(
+          '全部服务',
+          style: TextStyle(
+            color: AppColors.onSurface,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       body: Column(
@@ -72,9 +76,14 @@ class _AllFeaturesPageState extends State<AllFeaturesPage> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               children: [
-                _chip('ALL', '全部'),
+                _tierChip(null, '全部'),
+                _tierChip(FeatureTier.primary, '六条主路径'),
+                _tierChip(FeatureTier.tool, '工具箱'),
+                _tierChip(FeatureTier.experimental, '实验能力'),
+                const SizedBox(width: 10),
+                _sectionChip('ALL', '全板块'),
                 for (final entry in kFeatureSections.entries)
-                  _chip(entry.key, entry.value),
+                  _sectionChip(entry.key, entry.value),
               ],
             ),
           ),
@@ -108,6 +117,19 @@ class _AllFeaturesPageState extends State<AllFeaturesPage> {
                         child: Icon(feature.icon, color: color, size: 24),
                       ),
                       const SizedBox(height: 6),
+                      if (feature.tier == FeatureTier.primary) ...[
+                        const Text(
+                          '主路径',
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 10,
+                            height: 1,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                      ],
                       Text(
                         feature.name,
                         maxLines: 2,
@@ -130,7 +152,42 @@ class _AllFeaturesPageState extends State<AllFeaturesPage> {
     );
   }
 
-  Widget _chip(String key, String label) => Padding(
+  int _tierRank(FeatureTier tier) {
+    switch (tier) {
+      case FeatureTier.primary:
+        return 0;
+      case FeatureTier.tool:
+        return 1;
+      case FeatureTier.experimental:
+        return 2;
+    }
+  }
+
+  Widget _tierChip(FeatureTier? tier, String label) {
+    final selected = _tier == tier;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        selectedColor: AppColors.primaryContainer.withValues(alpha: 0.16),
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(R.sm),
+        ),
+        side: BorderSide(
+          color: selected ? AppColors.primary : AppColors.outlineVariant,
+        ),
+        labelStyle: TextStyle(
+          color: selected ? AppColors.primary : AppColors.onSurfaceVariant,
+          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+        ),
+        onSelected: (_) => setState(() => _tier = tier),
+      ),
+    );
+  }
+
+  Widget _sectionChip(String key, String label) => Padding(
         padding: const EdgeInsets.only(right: 8),
         child: ChoiceChip(
           label: Text(label),

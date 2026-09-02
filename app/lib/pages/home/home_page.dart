@@ -13,7 +13,7 @@ import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 
 /// 首页 — 排版参考设计稿「首页排版」，样式沿用项目 Agro-Modernist 系统。
-/// 块序：问候+天气 → 搜索 → 今日决策卡 → 核心服务宫格 → 板块大图 → 周边行情 → 惠农补贴 → 生活服务。
+/// 块序：问候+天气 → 搜索 → 今日决策卡 → 六条主路径 → 板块大图 → 周边行情 → 惠农补贴。
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -240,8 +240,6 @@ class _HomePageState extends State<HomePage> {
                           _priceCard(),
                           const SizedBox(height: 16),
                           _subsidyCard(),
-                          const SectionTitle('生活服务'),
-                          _lifeGrid(),
                         ],
                       ),
                     ),
@@ -732,27 +730,53 @@ class _HomePageState extends State<HomePage> {
 
   // ── 4 · 核心服务宫格 ─────────────────────────────────
   Widget _serviceGrid(BuildContext context) {
-    // 首页核心服务宫格：用「智能物联」替换「数据管理」入口
-    //（数据看板已移到「我的」页二级菜单，物联网提到首页快捷直达）。
-    // 村级经营按角色可见：仅 VILLAGE / ADMIN 显示（角色可见性）。
     final role = context.read<AuthState>().user?.role;
     final sections = [
-      for (final s in kSections)
-        if (s['key'] != 'data') s,
-      if (_roleCanVillage(role)) ...const [
-        {
+      const {
+        'key': 'agri',
+        'label': 'AI 植保',
+        'icon': Icons.biotech_outlined,
+        'color': Color(0xFF0D631B),
+      },
+      const {
+        'key': 'market',
+        'label': '农产品交易',
+        'icon': Icons.storefront_outlined,
+        'color': Color(0xFF926500),
+      },
+      const {
+        'key': 'machinery',
+        'label': '农机服务',
+        'icon': Icons.agriculture_outlined,
+        'color': Color(0xFF2E6E66),
+      },
+      const {
+        'key': 'disaster',
+        'label': '防灾救助',
+        'icon': Icons.report_outlined,
+        'color': Color(0xFFBA1A1A),
+      },
+      const {
+        'key': 'policy',
+        'label': '惠农政策',
+        'icon': Icons.account_balance_outlined,
+        'color': Color(0xFF2E7D32),
+      },
+      if (_roleCanVillage(role))
+        const {
           'key': 'village',
           'label': '村级经营',
           'icon': Icons.foundation_rounded,
           'color': Color(0xFF2E6E66),
+        }
+      else
+        const {
+          'key': 'data',
+          'label': '农情看板',
+          'icon': Icons.insights_outlined,
+          'color': Color(0xFF40493D),
         },
-      ],
-    ]..insert(6, const {
-        'key': 'iot',
-        'label': '智能物联',
-        'icon': Icons.sensors_rounded,
-        'color': Color(0xFF2E6E66),
-      });
+    ];
     return AppCard(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       child: GridView.builder(
@@ -1026,57 +1050,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-    );
-  }
-
-  // ── 8 · 生活服务网格 ─────────────────────────────────
-  Widget _lifeGrid() {
-    const items = [
-      (icon: Icons.medical_services_outlined, label: '乡村医生'),
-      (icon: Icons.local_shipping_outlined, label: '快递代收'),
-      (icon: Icons.receipt_long_outlined, label: '生活缴费'),
-      (icon: Icons.grid_view_rounded, label: '更多生活'),
-    ];
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 0.85,
-      ),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return AppCard(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-          onTap: () => context.push('/life'),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(R.md),
-                ),
-                child: Icon(item.icon, color: AppColors.secondary, size: 22),
-              ),
-              const SizedBox(height: 8),
-              Text(item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.onSurface,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  )),
-            ],
-          ),
-        );
-      },
     );
   }
 
