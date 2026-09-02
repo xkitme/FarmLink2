@@ -24,6 +24,7 @@ import {
   Table,
   Tabs,
   Tag,
+  Tooltip,
   Typography,
   Upload,
   Spin,
@@ -43,6 +44,7 @@ import {
 import { buildDeleteConfirmText, createWriteOperation, primaryRecordText } from '../policies/operationState.js'
 import { createResourceLoadCoordinator, LOAD_RESULT } from '../policies/resourceLoadCoordinator.js'
 import { isConfigUnavailable, isStaleResponse, resolveTableState, TABLE_STATE } from '../policies/resourceTablePolicy.js'
+import { DANGEROUS_ACTIONS, dangerousActionAvailability } from '../policies/dangerousOperationPolicy.js'
 
 const VALUE_LABELS = {
   FARMER: '农户',
@@ -476,6 +478,15 @@ function ResourceTable({ resourceKey, title }) {
   // 仅在配置加载成功后才放开（isConfigUnavailable 纯函数，页面与测试同口径）。
   const configUnavailable = isConfigUnavailable(config)
 
+  // 116x-60pct 危险操作可用性：config 缺失 / 表格错误态（403/API 关闭/网络/5xx）/
+  // 删除进行中 → 危险操作（删除）disabled，并给出禁用原因（防误触）。
+  const deleteAvailability = dangerousActionAvailability({
+    actionType: DANGEROUS_ACTIONS.DELETE,
+    configReady: !configUnavailable,
+    tableErrorCategory: tableError?.category ?? null,
+    busy: deleting,
+  })
+
   /** 用户动作入口：配置未就绪直接忽略且**不清错误态**；就绪后先清错误态再交给协调器。 */
   function requestList(page, pageSize, kw) {
     const coord = getCoord()
@@ -532,6 +543,7 @@ function ResourceTable({ resourceKey, title }) {
           <Button
             size="small"
             icon={<EditOutlined />}
+            disabled={deleting}
             onClick={() => {
               setEditing(record)
               setModalOpen(true)
@@ -539,26 +551,28 @@ function ResourceTable({ resourceKey, title }) {
           >
             编辑
           </Button>
-          <Popconfirm
-            title={buildDeleteConfirmText({
-              resourceTitle: config?.title || title,
-              record,
-              primaryValue: primaryRecordText(record, listFields),
-            })}
-            okText="删除"
-            cancelText="取消"
-            okButtonProps={{ danger: true, loading: deleting }}
-            cancelButtonProps={{ disabled: deleting }}
-            disabled={deleting}
-            onConfirm={() => removeRecord(record)}
-          >
-            <Button danger size="small" icon={<DeleteOutlined />} disabled={deleting} />
-          </Popconfirm>
+          <Tooltip title={deleteAvailability.reason}>
+            <Popconfirm
+              title={buildDeleteConfirmText({
+                resourceTitle: config?.title || title,
+                record,
+                primaryValue: primaryRecordText(record, listFields),
+              })}
+              okText="删除"
+              cancelText="取消"
+              okButtonProps={{ danger: true, loading: deleting }}
+              cancelButtonProps={{ disabled: deleting }}
+              disabled={deleteAvailability.disabled}
+              onConfirm={() => removeRecord(record)}
+            >
+              <Button danger size="small" icon={<DeleteOutlined />} disabled={deleteAvailability.disabled} />
+            </Popconfirm>
+          </Tooltip>
         </Space>
       ),
     })
     return cols
-  }, [fieldMap, listFields, config, title, deleting, resourceKey])
+  }, [fieldMap, listFields, config, title, deleting, resourceKey, deleteAvailability.disabled, deleteAvailability.reason])
 
   function openCreate() {
     // 整改 #1：配置未就绪不得触发无配置操作

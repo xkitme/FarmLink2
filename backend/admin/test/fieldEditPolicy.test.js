@@ -5,11 +5,13 @@ import assert from 'node:assert/strict';
 
 import {
   FORM_MODE,
+  SYSTEM_MAINTAINED_FIELD_NAMES,
   buildSubmitPayload,
   editableFormFields,
   isFieldEditable,
   isFieldRequired,
   isFieldVisible,
+  isSystemMaintainedFieldName,
   normalizeInitial,
 } from '../src/policies/fieldEditPolicy.js';
 
@@ -179,5 +181,37 @@ describe('buildSubmitPayload — 提交体只含当前模式可见且可编辑�
     assert.deepEqual(buildSubmitPayload({}, fields, FORM_MODE.CREATE), {});
     assert.deepEqual(buildSubmitPayload(null, [], FORM_MODE.CREATE), {});
     assert.deepEqual(buildSubmitPayload(null, null, FORM_MODE.CREATE), {});
+  });
+});
+
+describe('SYSTEM_MAINTAINED_FIELD_NAMES — 系统维护字段写路径硬防线（116x-60pct）', () => {
+  it('id / createdAt / updatedAt / lastLoginAt / passwordHash 判定为系统维护字段', () => {
+    for (const name of ['id', 'createdAt', 'updatedAt', 'lastLoginAt', 'passwordHash']) {
+      assert.equal(isSystemMaintainedFieldName(name), true, `${name} 必须判为系统维护`);
+      assert.ok(SYSTEM_MAINTAINED_FIELD_NAMES.includes(name));
+    }
+  });
+
+  it('业务字段名不是系统维护（正负对照）', () => {
+    assert.equal(isSystemMaintainedFieldName('username'), false);
+    assert.equal(isSystemMaintainedFieldName('status'), false);
+    assert.equal(isSystemMaintainedFieldName('remark'), false);
+  });
+
+  it('即使后端 config 意外把系统字段声明为可编辑，buildSubmitPayload 也绝不提交', () => {
+    const poisoned = [
+      { name: 'username', label: '用户名' },
+      { name: 'passwordHash', label: '密码散列', type: 'string' },
+      { name: 'createdAt', label: '创建时间', type: 'date' },
+      { name: 'role', label: '角色' },
+    ];
+    const body = buildSubmitPayload(
+      { username: 'a', passwordHash: 'hacked', createdAt: '2026-01-01', role: 'ADMIN' },
+      poisoned,
+      FORM_MODE.EDIT,
+    );
+    assert.deepEqual(body, { username: 'a', role: 'ADMIN' }, '系统维护字段必须被硬防线拦截');
+    assert.equal('passwordHash' in body, false);
+    assert.equal('createdAt' in body, false);
   });
 });

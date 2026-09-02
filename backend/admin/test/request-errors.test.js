@@ -202,6 +202,37 @@ describe('116g-B request() — 分类、仅 401 登出、重试与凭据契约',
     noSuccessFeedback();
   });
 
+  it('409（冲突）→ 分类 conflict，不清会话、不跳转、不自动重试', async () => {
+    const { request } = await req();
+    fetchBehaviors.push(() => jsonResponse({ code: 200, msg: 'data conflict' }, 409));
+
+    await assert.rejects(() => request('/admin/test', { method: 'PUT', body: {}, retries: 3, retryDelayMs: 0 }), (err) => {
+      assert.equal(err.category, 'conflict');
+      assert.equal(err.status, 409);
+      return true;
+    });
+
+    assert.equal(locationReplaceCalls.length, 0, '409 must not redirect');
+    assert.equal(fetchCalls.length, 1, '409 冲突写请求绝不自动重试');
+    const { getCurrentUser } = await import('../src/api/auth.js');
+    assert.deepEqual(getCurrentUser(), { id: 1, username: 'admin' }, 'session cache retained on conflict');
+    noSuccessFeedback();
+  });
+
+  it('422（不可处理）→ 分类 validation，不清会话、不跳转', async () => {
+    const { request } = await req();
+    fetchBehaviors.push(() => jsonResponse({ code: 200, msg: 'unprocessable' }, 422));
+
+    await assert.rejects(() => request('/admin/test', { method: 'POST', body: {} }), (err) => {
+      assert.equal(err.category, 'validation');
+      assert.equal(err.status, 422);
+      return true;
+    });
+
+    assert.equal(locationReplaceCalls.length, 0, '422 must not redirect');
+    noSuccessFeedback();
+  });
+
   it('写请求继续携带 credentials:include + X-CSRF-Token（强测试 3）', async () => {
     const { request } = await req();
     await request('/admin/test', { method: 'POST', body: { key: 'val' } });

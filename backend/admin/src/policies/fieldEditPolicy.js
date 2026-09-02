@@ -17,6 +17,24 @@ export const FORM_MODE = Object.freeze({
   EDIT: 'edit',
 })
 
+/**
+ * 系统/服务端维护字段（Admin 侧防御名单，与后端 resource.policy 的
+ * DANGEROUS_FIELD_NAMES 同口径）：即使后端 config 意外下发，前端也绝不提交。
+ * Admin 不据此推断领域状态，仅作写路径的最后一层硬防线。
+ */
+export const SYSTEM_MAINTAINED_FIELD_NAMES = Object.freeze([
+  'id',
+  'createdAt',
+  'updatedAt',
+  'lastLoginAt',
+  'passwordHash',
+])
+
+/** 字段名是否系统维护（服务端指派，前端不得提交）。 */
+export function isSystemMaintainedFieldName(name) {
+  return SYSTEM_MAINTAINED_FIELD_NAMES.includes(name)
+}
+
 /** 字段在该模式下是否渲染到表单（隐藏字段不进入初始值、不提交）。 */
 export function isFieldVisible(field, mode) {
   if (!field) return false
@@ -73,6 +91,7 @@ export function buildSubmitPayload(values, fields, mode = FORM_MODE.EDIT) {
     if (!field || !isFieldVisible(field, mode)) continue
     if (!isFieldEditable(field, mode)) continue
     if (!(field.name in source)) continue
+    if (isSystemMaintainedFieldName(field.name)) continue
     payload[field.name] = source[field.name]
   }
   return payload
