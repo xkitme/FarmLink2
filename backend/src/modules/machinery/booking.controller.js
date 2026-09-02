@@ -1,6 +1,11 @@
 import { prisma } from '../../db.js'
 import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams, parseJson } from '../../utils/page.js'
+import {
+  areDateRangesOverlapping,
+  canManageBooking,
+  isKnownBookingStatus,
+} from './booking.policy.js'
 
 const SERVICE_INTERVAL = 250   // 小时/次：常规保养
 const OVERHAUL_INTERVAL = 2000 // 小时/次：大修
@@ -18,6 +23,18 @@ export async function bookingCreate(req, res) {
 
   const s = new Date(startDate)
   const e = new Date(endDate)
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) throw errors.param('预约日期格式不合法')
+  if (e < s) throw errors.param('结束日期不能早于开始日期')
+
+  // 时间冲突：同机未取消（PENDING/CONFIRMED）的预约在重叠时段内拒绝，防止一机双约
+  const overlaps = await prisma.machineryBooking.findMany({
+    where: { machineryId: machine.id, status: { in: ['PENDING', 'CONFIRMED'] } },
+    select: { startDate: true, endDate: true },
+  })
+  if (overlaps.some((b) => areDateRangesOverlapping(s, e, b.startDate, b.endDate))) {
+    throw errors.param('该时段已有预约，请更换时间')
+  }
+
   const days = Math.max(1, Math.ceil((e - s) / 86400000) + 1)
   const totalAmount = Number((machine.dailyPrice * days).toFixed(2))
 
@@ -69,13 +86,12 @@ export async function bookingList(req, res) {
 export async function bookingStatus(req, res) {
   const id = Number(req.params.id)
   const { status } = req.body
-  const allowed = ['PENDING', 'CONFIRMED', 'DONE', 'CANCELLED']
-  if (!allowed.includes(status)) throw errors.param('状态不合法')
+  if (!isKnownBookingStatus(status)) throw errors.param('状态不合法')
 
   const booking = await prisma.machineryBooking.findUnique({ where: { id } })
   if (!booking) throw errors.notFound('预约不存在')
   const machine = await prisma.machinery.findUnique({ where: { id: booking.machineryId } })
-  if (booking.renterId !== req.user.id && machine?.ownerId !== req.user.id) {
+  if (!canManageBooking(req.user, booking, machine)) {
     throw errors.forbidden('无权操作该预约')
   }
   const updated = await prisma.machineryBooking.update({ where: { id }, data: { status } })

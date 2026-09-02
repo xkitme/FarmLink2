@@ -1,17 +1,17 @@
 import { prisma } from '../../db.js'
 import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams } from '../../utils/page.js'
-
-const SUPPORTED_REPLAY_TABLES = new Set(['land_plot', 'farm_record', 'disaster_report'])
+import {
+  isValidTableName,
+  isReplayTable,
+  normalizeTableName,
+  serverOwnershipFor,
+} from './sync.policy.js'
 
 function parseItems(body) {
   if (Array.isArray(body?.items)) return body.items
   if (Array.isArray(body)) return body
   return [body]
-}
-
-function tableNameOf(item) {
-  return String(item.tableName || item.table || '').replace(/^t_/, '')
 }
 
 function getPayload(item) {
@@ -29,24 +29,25 @@ async function conflictByLocalUuid(model, localUuid, clientUpdatedAt) {
   return exist.updatedAt > new Date(clientUpdatedAt) ? { conflict: true, exist } : exist
 }
 
-async function replayLandPlot(item) {
+async function replayLandPlot(item, ownership) {
   const payload = getPayload(item)
   const operation = String(item.operation || 'INSERT').toUpperCase()
   const localUuid = item.localUuid || payload.localUuid
   if (operation === 'DELETE') {
-    if (localUuid) await prisma.landPlot.deleteMany({ where: { localUuid, userId: item.userId } })
+    if (localUuid) await prisma.landPlot.deleteMany({ where: { localUuid, userId: ownership.userId } })
     return { replayed: true }
   }
   const exist = await conflictByLocalUuid(prisma.landPlot, localUuid, payload.updatedAt)
   if (exist?.conflict) return { conflict: true, reason: '服务端地块数据较新' }
   const data = {
-    userId: item.userId,
+    userId: ownership.userId,
     plotName: payload.plotName || payload.name || '未命名地块',
     areaMu: Number(payload.areaMu) || 0,
     boundaryGeojson: payload.boundaryGeojson ? String(payload.boundaryGeojson) : null,
     cropType: payload.cropType || null,
     soilType: payload.soilType || null,
-    regionCode: payload.regionCode || item.regionCode || null,
+    // regionCode 以服务端会话为准：普通用户不得伪造跨村/跨区数据归属
+    regionCode: ownership.regionCode,
     localUuid: localUuid || null,
   }
   if (exist) await prisma.landPlot.update({ where: { id: exist.id }, data })
@@ -54,18 +55,18 @@ async function replayLandPlot(item) {
   return { replayed: true }
 }
 
-async function replayFarmRecord(item) {
+async function replayFarmRecord(item, ownership) {
   const payload = getPayload(item)
   const operation = String(item.operation || 'INSERT').toUpperCase()
   const localUuid = item.localUuid || payload.localUuid
   if (operation === 'DELETE') {
-    if (localUuid) await prisma.farmRecord.deleteMany({ where: { localUuid, userId: item.userId } })
+    if (localUuid) await prisma.farmRecord.deleteMany({ where: { localUuid, userId: ownership.userId } })
     return { replayed: true }
   }
   const exist = await conflictByLocalUuid(prisma.farmRecord, localUuid, payload.updatedAt)
   if (exist?.conflict) return { conflict: true, reason: '服务端农事记录较新' }
   const data = {
-    userId: item.userId,
+    userId: ownership.userId,
     plotId: payload.plotId ? Number(payload.plotId) : null,
     recordType: payload.recordType || '其他',
     cropType: payload.cropType || null,
@@ -80,17 +81,17 @@ async function replayFarmRecord(item) {
   return { replayed: true }
 }
 
-async function replayDisasterReport(item) {
+async function replayDisasterReport(item, ownership) {
   const payload = getPayload(item)
   const operation = String(item.operation || 'INSERT').toUpperCase()
   const localUuid = item.localUuid || payload.localUuid
   if (operation === 'DELETE') {
-    if (localUuid) await prisma.disasterReport.deleteMany({ where: { localUuid, userId: item.userId } })
+    if (localUuid) await prisma.disasterReport.deleteMany({ where: { localUuid, userId: ownership.userId } })
     return { replayed: true }
   }
   const exist = localUuid ? await prisma.disasterReport.findFirst({ where: { localUuid } }) : null
   const data = {
-    userId: item.userId,
+    userId: ownership.userId,
     disasterType: payload.disasterType || '其他',
     plotId: payload.plotId ? Number(payload.plotId) : null,
     affectedArea: Number(payload.affectedArea) || 0,
@@ -100,7 +101,8 @@ async function replayDisasterReport(item) {
     location: payload.location ? JSON.stringify(payload.location) : null,
     aiLossLevel: payload.aiLossLevel || '轻',
     status: payload.status || 'REPORTED',
-    regionCode: payload.regionCode || item.regionCode || null,
+    // regionCode 以服务端会话为准：普通用户不得伪造跨村/跨区数据归属
+    regionCode: ownership.regionCode,
     localUuid: localUuid || null,
   }
   if (exist) await prisma.disasterReport.update({ where: { id: exist.id }, data })
@@ -108,18 +110,21 @@ async function replayDisasterReport(item) {
   return { replayed: true }
 }
 
-async function replay(item) {
-  const tableName = tableNameOf(item)
-  if (!SUPPORTED_REPLAY_TABLES.has(tableName)) {
-    return { replayed: false, reason: '该表暂按日志模式同步，未回放业务表' }
+async function replay(item, ownership) {
+  const tableName = normalizeTableName(item.tableName || item.table)
+  if (!isValidTableName(tableName)) {
+    return { replayed: false, reason: `非法同步表名：${String(item.tableName || item.table).slice(0, 40)}` }
   }
-  if (tableName === 'land_plot') return replayLandPlot(item)
-  if (tableName === 'farm_record') return replayFarmRecord(item)
-  if (tableName === 'disaster_report') return replayDisasterReport(item)
+  if (!isReplayTable(tableName)) {
+    return { replayed: false, reason: `非法同步表：${tableName}（仅支持 ${['land_plot', 'farm_record', 'disaster_report'].join('/')} 回放）` }
+  }
+  if (tableName === 'land_plot') return replayLandPlot(item, ownership)
+  if (tableName === 'farm_record') return replayFarmRecord(item, ownership)
+  if (tableName === 'disaster_report') return replayDisasterReport(item, ownership)
   return { replayed: false }
 }
 
-/** 数据同步：核心表真实回放，其余表记录日志。 */
+/** 数据同步：仅 replay 白名单表真实回放，非法表名/非白名单表拒绝（不静默成功）。 */
 export async function syncData(req, res) {
   const rawItems = parseItems(req.body)
   if (!rawItems.length) throw errors.param('同步队列不能为空')
@@ -131,7 +136,9 @@ export async function syncData(req, res) {
       userId: req.user.id,
       regionCode: req.user.regionCode || null,
     }
-    const tableName = tableNameOf(item)
+    // 所有权强制：userId/regionCode 一律取服务端会话值，忽略客户端提交的伪造字段
+    const ownership = serverOwnershipFor(req.user)
+    const tableName = normalizeTableName(item.tableName || item.table)
     const operation = String(item.operation || 'INSERT').toUpperCase()
     const localUuid = item.localUuid || getPayload(item).localUuid || null
 
@@ -139,12 +146,13 @@ export async function syncData(req, res) {
     let detail = null
     try {
       if (!tableName) throw new Error('缺少 tableName')
-      const replayResult = await replay(item)
+      const replayResult = await replay(item, ownership)
       if (replayResult.conflict) {
         status = 'CONFLICT'
         detail = replayResult.reason
       } else if (!replayResult.replayed) {
-        detail = replayResult.reason
+        status = 'FAILED'
+        detail = replayResult.reason || '同步失败'
       }
     } catch (err) {
       status = 'FAILED'
@@ -196,7 +204,7 @@ export async function logs(req, res) {
   const where = {}
   if (req.user.role !== 'ADMIN') where.userId = req.user.id
   if (req.query.syncStatus) where.syncStatus = String(req.query.syncStatus)
-  if (req.query.tableName) where.tableName = String(req.query.tableName).replace(/^t_/, '')
+  if (req.query.tableName) where.tableName = normalizeTableName(req.query.tableName)
   const [records, total] = await Promise.all([
     prisma.syncLog.findMany({ where, orderBy: { syncedAt: 'desc' }, skip, take }),
     prisma.syncLog.count({ where }),

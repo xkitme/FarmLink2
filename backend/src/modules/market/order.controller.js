@@ -1,8 +1,12 @@
 import { prisma } from '../../db.js'
 import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams, parseJson } from '../../utils/page.js'
-
-const STATUS_FLOW = ['PENDING', 'PAID', 'SHIPPED', 'DONE', 'CANCELLED']
+import {
+  canManageOrder,
+  canViewOrder,
+  isIdempotentRepeat,
+  isKnownOrderStatus,
+} from './order.policy.js'
 
 /** 下单 */
 export async function create(req, res) {
@@ -64,7 +68,7 @@ export async function list(req, res) {
 export async function detail(req, res) {
   const order = await prisma.order.findUnique({ where: { id: Number(req.params.id) } })
   if (!order) throw errors.notFound('订单不存在')
-  if (order.buyerId !== req.user.id && order.sellerId !== req.user.id) {
+  if (!canViewOrder(req.user, order)) {
     throw errors.forbidden('无权查看该订单')
   }
   const product = await prisma.product.findUnique({ where: { id: order.productId } })
@@ -75,12 +79,19 @@ export async function detail(req, res) {
 export async function updateStatus(req, res) {
   const id = Number(req.params.id)
   const { status } = req.body
-  if (!STATUS_FLOW.includes(status)) throw errors.param('订单状态不合法')
+  // 非法状态：明确错误（400 / 40001 / msg=订单状态不合法）
+  if (!isKnownOrderStatus(status)) throw errors.param('订单状态不合法')
 
   const order = await prisma.order.findUnique({ where: { id } })
   if (!order) throw errors.notFound('订单不存在')
-  if (order.buyerId !== req.user.id && order.sellerId !== req.user.id) {
+  if (!canManageOrder(req.user, order)) {
     throw errors.forbidden('无权操作该订单')
+  }
+
+  // 幂等：同状态重复提交直接返回当前订单（不重复执行发货/回补副作用）
+  if (isIdempotentRepeat(order.status, status)) {
+    ok(res, order, '订单状态已更新')
+    return
   }
 
   const data = { status }
