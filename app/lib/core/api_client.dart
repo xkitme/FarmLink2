@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'constants.dart';
+import 'api_http_client.dart'
+    if (dart.library.js_interop) 'api_http_client_web.dart';
 
 typedef _ResponseFactory = Future<http.Response> Function(
     Map<String, String> headers);
@@ -33,6 +35,8 @@ const String kV2Prefix = '/api/v2';
 class ApiClient {
   static String baseUrl = kBaseUrl;
   static String? _token;
+  static bool _cookieSessionActive = false;
+  static final http.Client _defaultClient = createApiHttpClient();
   static http.Client? _clientForTesting;
 
   @visibleForTesting
@@ -55,8 +59,17 @@ class ApiClient {
     _automaticRefreshEnabled = true;
   }
 
-  static void setToken(String? t) => _token = t;
+  static http.Client get _client => _clientForTesting ?? _defaultClient;
+
+  static void setToken(String? t) =>
+      _token = t?.trim().isEmpty == true ? null : t;
   static String? get token => _token;
+  static bool get hasAuthSession =>
+      (_token != null && _token!.isNotEmpty) || _cookieSessionActive;
+
+  static void setCookieSessionActive(bool active) {
+    _cookieSessionActive = active;
+  }
 
   /// API v2 只读命名空间（116f-D）：共用同一 token / 自动刷新 / 统一信封
   /// 解析与测试客户端注入，仅请求前缀为 `/api/v2`（后端 v2 当前只有只读端点）。
@@ -70,10 +83,14 @@ class ApiClient {
     await _refreshInFlight;
   }
 
-  static Map<String, String> _headersFor(String? token) => {
-        'Content-Type': 'application/json; charset=utf-8',
-        if (token != null) 'Authorization': 'Bearer $token',
-      };
+  static Map<String, String> _headersFor(String? token) {
+    final csrfToken = _cookieSessionActive ? readCsrfToken() : null;
+    return {
+      'Content-Type': 'application/json; charset=utf-8',
+      if (token != null) 'Authorization': 'Bearer $token',
+      if (csrfToken != null && csrfToken.isNotEmpty) 'X-CSRF-Token': csrfToken,
+    };
+  }
 
   static Uri _uri(String path, [Map<String, dynamic>? query]) =>
       _uriWithPrefix('$kApiPrefix$path', query);
@@ -102,9 +119,7 @@ class ApiClient {
     final res = await _sendAuthenticated(
       (headers) {
         final uri = _uriWithPrefix(fullPath, query);
-        final future = client != null
-            ? client.get(uri, headers: headers)
-            : http.get(uri, headers: headers);
+        final future = (client ?? _client).get(uri, headers: headers);
         return future.timeout(const Duration(seconds: 15));
       },
     );
@@ -114,7 +129,7 @@ class ApiClient {
   static Future<dynamic> post(String path, {Map<String, dynamic>? body}) async {
     final encoded = jsonEncode(body ?? {});
     final res = await _sendAuthenticated(
-      (headers) => http
+      (headers) => _client
           .post(_uri(path), headers: headers, body: encoded)
           .timeout(const Duration(seconds: 30)),
     );
@@ -124,11 +139,30 @@ class ApiClient {
   /// refresh rotation 使用不携带 access 的原始请求，避免 401 处理递归。
   static Future<Map<String, dynamic>> refreshSession(
       String refreshToken) async {
-    final res = await http
+    final res = await _client
         .post(
           _uri('/auth/refresh'),
           headers: _headersFor(null),
           body: jsonEncode(<String, dynamic>{'refreshToken': refreshToken}),
+        )
+        .timeout(const Duration(seconds: 30));
+    final data = _parse(res);
+    if (data is! Map<String, dynamic>) {
+      throw ApiException(res.statusCode, '刷新会话响应异常');
+    }
+    return data;
+  }
+
+  /// 浏览器 HttpOnly Cookie 会话的 refresh rotation。
+  ///
+  /// refresh_token 在 HttpOnly Cookie 中，前端不能也不应读取；后端从 cookie
+  /// 完成轮换并返回当前用户数据，body 继续不泄露 token。
+  static Future<Map<String, dynamic>> refreshCookieSession() async {
+    final res = await _client
+        .post(
+          _uri('/auth/refresh'),
+          headers: _headersFor(null),
+          body: jsonEncode(<String, dynamic>{}),
         )
         .timeout(const Duration(seconds: 30));
     final data = _parse(res);
@@ -145,7 +179,7 @@ class ApiClient {
       Duration timeout = const Duration(seconds: 30)}) async {
     final encoded = jsonEncode(body ?? {});
     final res = await _sendAuthenticated(
-      (headers) => http
+      (headers) => _client
           .post(_uri(path), headers: headers, body: encoded)
           .timeout(timeout),
     );
@@ -168,7 +202,7 @@ class ApiClient {
   static Future<dynamic> put(String path, {Map<String, dynamic>? body}) async {
     final encoded = jsonEncode(body ?? {});
     final res = await _sendAuthenticated(
-      (headers) => http
+      (headers) => _client
           .put(_uri(path), headers: headers, body: encoded)
           .timeout(const Duration(seconds: 15)),
     );
@@ -177,7 +211,7 @@ class ApiClient {
 
   static Future<dynamic> delete(String path) async {
     final res = await _sendAuthenticated(
-      (headers) => http
+      (headers) => _client
           .delete(_uri(path), headers: headers)
           .timeout(const Duration(seconds: 15)),
     );
@@ -190,14 +224,16 @@ class ApiClient {
     final res = await _sendAuthenticated((headers) async {
       final req = http.MultipartRequest('POST', _uri(path))
         ..headers.addAll(<String, String>{
-          if (headers['Authorization'] != null)
-            'Authorization': headers['Authorization']!,
+          for (final entry in headers.entries)
+            if (entry.key.toLowerCase() != 'content-type')
+              entry.key: entry.value,
         })
         ..files.add(
           http.MultipartFile.fromBytes(field, bytes, filename: filename),
         );
       if (fields != null) req.fields.addAll(fields);
-      final streamed = await req.send().timeout(const Duration(seconds: 240));
+      final streamed =
+          await _client.send(req).timeout(const Duration(seconds: 240));
       return http.Response.fromStream(streamed);
     });
     return _parse(res);
@@ -210,7 +246,7 @@ class ApiClient {
       final req = http.Request('POST', _uri(path))
         ..headers.addAll(headers)
         ..body = encoded;
-      return req.send().timeout(const Duration(seconds: 12));
+      return _client.send(req).timeout(const Duration(seconds: 12));
     });
     if (res.statusCode != 200) throw ApiException(res.statusCode, '请求失败');
 
@@ -316,7 +352,8 @@ class ApiClient {
   ) async {
     final failedToken = _token;
     var response = await send(_headersFor(failedToken));
-    if (response.statusCode != 401 || failedToken == null) return response;
+    final canRefresh = failedToken != null || _cookieSessionActive;
+    if (response.statusCode != 401 || !canRefresh) return response;
     if (!_automaticRefreshEnabled) return response;
 
     if (await _refreshAfter(failedToken)) {
@@ -333,7 +370,8 @@ class ApiClient {
   ) async {
     final failedToken = _token;
     var response = await send(_headersFor(failedToken));
-    if (response.statusCode != 401 || failedToken == null) return response;
+    final canRefresh = failedToken != null || _cookieSessionActive;
+    if (response.statusCode != 401 || !canRefresh) return response;
     if (!_automaticRefreshEnabled) return response;
 
     await response.stream.drain<void>();
@@ -346,9 +384,9 @@ class ApiClient {
     return response;
   }
 
-  static Future<bool> _refreshAfter(String failedToken) async {
+  static Future<bool> _refreshAfter(String? failedToken) async {
     // 较晚返回的旧 401 看到 token 已换代时只需重放，不能再次 rotation。
-    if (_token != failedToken) return _token != null;
+    if (failedToken != null && _token != failedToken) return _token != null;
     final active = _refreshInFlight;
     if (active != null) return active;
     final handler = _refreshHandler;

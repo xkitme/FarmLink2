@@ -89,7 +89,7 @@
     },
     "116x-60pct": {
       "lane": "integration",
-      "note": "116x 重构聚合工单（collab/116x-*，跨 Backend/Flutter/Admin/Integration 四 lane 的单次整合主线）。allow = 60% 批次精确授权路径 + 40% 收口的功能目录分级生成链路：gen-capabilities/gen-feature-catalog、capabilities.js、feature_catalog.dart、全部服务页、首页主路径与对应测试/docs。生成产物仅允许 capabilities.js 与 feature_catalog.dart 随生成器重建；apiCatalog/assistant-catalog/inventory-report、backend/data/**、Prisma、其余 backend/src/** 与 app/lib/** 仍拒绝（不宽泛放行）。",
+      "note": "116x 重构聚合工单（collab/116x-*，跨 Backend/Flutter/Admin/Integration 四 lane 的单次整合主线）。allow = 60% 批次精确授权路径 + 40% 收口的功能目录分级生成链路 + Flutter Web Cookie 登录收口：gen-capabilities/gen-feature-catalog、capabilities.js、feature_catalog.dart、全部服务页、首页主路径与对应测试/docs。生成产物仅允许 capabilities.js 与 feature_catalog.dart 随生成器重建；apiCatalog/assistant-catalog/inventory-report、backend/data/**、Prisma、其余 backend/src/** 与 app/lib/** 仍拒绝（不宽泛放行）。",
       "allow": [
         "backend/src/modules/market/order.policy.js",
         "backend/src/modules/market/order.controller.js",
@@ -109,6 +109,9 @@
         "app/lib/core/voice_wake.dart",
         "app/lib/core/auth_state.dart",
         "app/lib/core/api_client.dart",
+        "app/lib/core/api_http_client.dart",
+        "app/lib/core/api_http_client_web.dart",
+        "app/lib/core/notification_state.dart",
         "app/lib/pages/auth/login_page.dart",
         "app/lib/pages/all/all_features_page.dart",
         "app/lib/pages/home/home_page.dart",
