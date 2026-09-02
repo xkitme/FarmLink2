@@ -14,7 +14,8 @@
     { "branch": "collab/116h-flutter-*", "lane": "flutter",     "workorder": "116h-A" },
     { "branch": "collab/116g-admin-*",   "lane": "admin",       "workorder": "116g-B" },
     { "branch": "collab/integration-*",  "lane": "integration", "workorder": "116g-X" },
-    { "branch": "collab/116x-*",         "lane": "integration", "workorder": "116x-60pct" }
+    { "branch": "collab/116x-*",         "lane": "integration", "workorder": "116x-60pct" },
+    { "branch": "collab/116m-*",         "lane": "integration", "workorder": "116m-release" }
   ],
   "workorders": {
     "116g-A": {
@@ -134,6 +135,19 @@
         "docs/116g-X-*.md",
         "docs/116x-*.md",
         ".github/pull_request_template.md"
+      ],
+      "pending": []
+    },
+    "116m-release": {
+      "lane": "integration",
+      "note": "116m 比赛发布与本地验收收口文档工单（collab/116m-*）。只允许发布验收文档、进度总览口径修正、协作/门禁文档与 scope 测试；不允许业务代码、DB、Prisma 或生成产物。",
+      "allow": [
+        "docs/进度总览.md",
+        "docs/116m-*.md",
+        "docs/协作约定.md",
+        "docs/116g-X-四轨协作与集成门禁.md",
+        "scripts/collaboration/lanes.json",
+        "scripts/test/scope-check.test.mjs"
       ],
       "pending": []
     }

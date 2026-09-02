@@ -7,7 +7,8 @@
  *     未知 lane / 缺 base / 分叉 / 脏工作树 / 前后内容与 mtime 不变 / 空 diff / --json
  *  B. branchMap（真实分支映射）：collab/116g-backend-data→backend/116g-A、
  *     collab/116h-flutter-shell→flutter/116h-A、collab/116g-admin-safety→admin/116g-B、
- *     collab/integration-gates→integration/116g-X；未知分支 / 模糊分支 → 退出码 2；
+ *     collab/integration-gates→integration/116g-X、collab/116m-release-docs→integration/116m-release；
+ *     未知分支 / 模糊分支 → 退出码 2；
  *     --branch 与 --lane/--workorder 冲突 → 退出码 2
  *  C. workorder 精确白名单：116g-X（本批）、116g-B（真实 18 文件全覆盖）、116h-A、
  *     116g-A（阶段 0 已回填：8 个精确 controller/policy 放行、其余 backend/src 拒绝、pending=0）；
@@ -464,13 +465,14 @@ test('A25 workorder 模式：临时 workorder 白名单可授权 prisma（正确
  * B. branchMap 真实分支映射
  * ═══════════════════════════════════════════════════════════ */
 
-test('B1 真实分支映射：五个分支解析为正确 lane+workorder（空 diff 通过）', () => {
+test('B1 真实分支映射：六个分支解析为正确 lane+workorder（空 diff 通过）', () => {
   const cases = [
     ['collab/116g-backend-data', 'backend', '116g-A'],
     ['collab/116h-flutter-shell', 'flutter', '116h-A'],
     ['collab/116g-admin-safety', 'admin', '116g-B'],
     ['collab/integration-gates', 'integration', '116g-X'],
     ['collab/116x-60pct-integration', 'integration', '116x-60pct'],
+    ['collab/116m-release-docs', 'integration', '116m-release'],
   ]
   const { repo, base } = initRepo()
   for (const [branch, lane, workorder] of cases) {
@@ -881,6 +883,47 @@ test('C15 116x 仅允许 final40 指定生成产物，其余生成产物仍拒�
   assert.match(res.stdout, /assistant-catalog\.generated\.js/)
   assert.match(res.stdout, /backend\/admin\/src\/apiCatalog\.js/)
   assert.match(res.stdout, /不在工单 '116x-60pct' 白名单/)
+})
+
+test('C16 116m-release 文档收口：116m 文档与进度总览通过，业务/DB/Prisma/生成产物拒绝', () => {
+  const { repo, base } = initRepo()
+  const allowedFiles = [
+    'docs/进度总览.md',
+    'docs/116m-比赛发布与本地验收收口.md',
+    'docs/116m-项目总收尾工单.md',
+    'docs/协作约定.md',
+    'docs/116g-X-四轨协作与集成门禁.md',
+    'scripts/collaboration/lanes.json',
+    'scripts/test/scope-check.test.mjs',
+  ]
+  for (const p of allowedFiles) writeFile(repo, p, 'x\n')
+  commitAll(repo, '116m 文档收口授权文件')
+  const headOk = mustGit(repo, ['rev-parse', 'HEAD'])
+  const resOk = runChecker(repo, ['--branch', 'collab/116m-release-docs', '--base', base, '--head', headOk, '--json'])
+  assert.equal(resOk.status, 0, `116m 文档收口授权文件应通过: ${resOk.stdout}`)
+  const payloadOk = JSON.parse(resOk.stdout)
+  assert.equal(payloadOk.ok, true)
+  assert.equal(payloadOk.workorder, '116m-release')
+  assert.equal(payloadOk.files, allowedFiles.length)
+  assert.equal(payloadOk.violations.length, 0)
+
+  const forbiddenFiles = [
+    'app/lib/pages/home/home_page.dart',
+    'backend/src/app.js',
+    'backend/admin/src/App.jsx',
+    'backend/src/contracts/capabilities.js',
+    'app/lib/core/feature_catalog.dart',
+    'backend/prisma/schema.prisma',
+    'backend/data/village.db',
+  ]
+  for (const p of forbiddenFiles) writeFile(repo, p, 'x\n')
+  commitAll(repo, '116m 越界文件')
+  const headBad = mustGit(repo, ['rev-parse', 'HEAD'])
+  const resBad = runChecker(repo, ['--branch', 'collab/116m-release-docs', '--base', headOk, '--head', headBad, '--json'])
+  assert.equal(resBad.status, 1, '116m 越界文件必须失败')
+  const payloadBad = JSON.parse(resBad.stdout)
+  const badPaths = new Set(payloadBad.violations.map((v) => v.path))
+  for (const p of forbiddenFiles) assert.ok(badPaths.has(p), `越界文件必须被列出: ${p}`)
 })
 
 
