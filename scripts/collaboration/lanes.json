@@ -37,14 +37,16 @@
     },
     "116h-A": {
       "lane": "flutter",
-      "note": "Flutter 基座/设计系统/Home/Shell 工单（collab/116h-flutter-shell）。授权路径取自 116-大重构总计划 M4 重点文件 + 设计系统目录；feature_catalog.dart 仍由 generatedProducts 硬拒。",
+      "note": "Flutter 基座/设计系统/Home/Shell 工单（collab/116h-flutter-*，含 polish）。授权路径取自 116-大重构总计划 M4 重点文件 + 设计系统目录；116h-A 白名单已按 collab/116h-flutter-shell-polish 实测路径补齐 app/lib/core/elder_mode.dart 与 app/lib/pages/splash/splash_page.dart；feature_catalog.dart 仍由 generatedProducts 硬拒。",
       "allow": [
         "app/lib/main.dart",
         "app/lib/core/theme.dart",
         "app/lib/core/router.dart",
+        "app/lib/core/elder_mode.dart",
         "app/lib/design_system/**",
         "app/lib/pages/home/shell_page.dart",
         "app/lib/pages/home/home_page.dart",
+        "app/lib/pages/splash/splash_page.dart",
         "app/lib/widgets/common.dart",
         "app/test/**",
         "app/pubspec.yaml",
