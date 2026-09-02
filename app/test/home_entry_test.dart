@@ -455,6 +455,10 @@ void main() {
         expect(rect.left, greaterThanOrEqualTo(0));
         expect(rect.right, lessThanOrEqualTo(logicalWidth),
             reason: '$label badge should not be clipped at 411px width');
+        final container = tester.widget<Container>(badge);
+        final decoration = container.decoration as BoxDecoration;
+        expect(decoration.boxShadow, isNull,
+            reason: '$label badge should stay flat without dirty edge shadow');
       }
 
       expect(find.text('AI 诊断'), findsOneWidget);

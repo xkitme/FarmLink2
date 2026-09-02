@@ -683,7 +683,6 @@ class _HomePageState extends State<HomePage> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(R.md),
         border: Border.all(color: AppColors.outlineVariant),
-        boxShadow: AppColors.ambientShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
