@@ -5,6 +5,7 @@ import '../models/user.dart';
 import 'api_client.dart';
 import 'auth_credential_store.dart';
 import 'notification_state.dart';
+import 'voice_wake.dart';
 
 /// 全局登录态。
 class AuthState extends ChangeNotifier {
@@ -60,6 +61,8 @@ class AuthState extends ChangeNotifier {
     );
     _loading = false;
     notifyListeners();
+    // 冷启动恢复登录态：会话已建立，语音唤醒配置可安全拉取（未登录零请求）
+    if (_token != null) VoiceWakeState.notifySessionEstablished();
   }
 
   /// 标记引导页已看过
@@ -186,6 +189,8 @@ class AuthState extends ChangeNotifier {
     _refreshToken = null;
     ApiClient.setToken(null);
     NotificationState.setUnread(0);
+    // 退出登录/会话失效：语音唤醒词清回默认（不残留上一会话的远端配置）
+    VoiceWakeState.notifySessionCleared();
     await _mutateCredentials<void>(() async {
       await _credentialStorage.clear();
       final sp = await SharedPreferences.getInstance();
@@ -228,6 +233,8 @@ class AuthState extends ChangeNotifier {
       await sp.remove('user');
     }
     await NotificationState.refresh();
+    // 登录/注册成功：会话已建立，语音唤醒配置可安全拉取（未登录零请求）
+    VoiceWakeState.notifySessionEstablished();
     notifyListeners();
   }
 }
