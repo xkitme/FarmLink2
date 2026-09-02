@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/site_images.dart';
+import '../../design_system/farm_brand.dart';
+import '../../design_system/farm_tokens.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -201,34 +203,18 @@ class _SlideView extends StatelessWidget {
                 left: 0,
                 right: 0,
                 child: Center(
+                  // 116h-A polish：旧「叶子图标 + 田园通」胶囊改为统一 FarmBrand 品牌标识
+                  // （真实 farmlink-mark.png 品牌图，禁通用图标替身）。
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppColors.surface.withValues(alpha: 0.85),
                       borderRadius: BorderRadius.circular(999),
                       boxShadow: AppColors.ambientShadow,
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.agriculture,
-                          color: AppColors.primary,
-                          size: 22,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          '田园通',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: const FarmBrand(
+                        markSize: 30, labelColor: FarmColors.primary),
                   ),
                 ),
               ),

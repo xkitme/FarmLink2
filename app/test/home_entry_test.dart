@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:farmlink/core/api_client.dart';
 import 'package:farmlink/core/auth_credential_store.dart';
 import 'package:farmlink/core/auth_state.dart';
 import 'package:farmlink/core/constants.dart';
+import 'package:farmlink/design_system/farm_state_views.dart';
 import 'package:farmlink/pages/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,7 +47,11 @@ void main() {
     );
   }
 
-  http.Client createMockClient(List<_CapturedRequest> captured) {
+  http.Client createMockClient(
+    List<_CapturedRequest> captured, {
+    bool emptyPrices = false,
+    Future<void>? weatherGate,
+  }) {
     return MockClient((request) async {
       final uri = request.url;
       final req = _CapturedRequest(
@@ -58,6 +64,8 @@ void main() {
 
       switch (uri.path) {
         case '$kApiPrefix/agri/weather':
+          // 116h-A polish：加载态测试用——请求挂起直到测试放行，保证首帧处于 loading。
+          if (weatherGate != null) await weatherGate;
           return http.Response(
             jsonEncode({
               'code': 200,
@@ -95,6 +103,17 @@ void main() {
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
         case '$kApiPrefix/market/price':
+          if (emptyPrices) {
+            return http.Response(
+              jsonEncode({
+                'code': 200,
+                'msg': 'success',
+                'data': <dynamic>[],
+              }),
+              200,
+              headers: {'content-type': 'application/json; charset=utf-8'},
+            );
+          }
           return http.Response(
             jsonEncode({
               'code': 200,
@@ -459,6 +478,48 @@ void main() {
       expect(machPlaceholder, findsOneWidget);
       expect(GoRouterState.of(tester.element(machPlaceholder)).uri.toString(),
           '/machinery');
+    });
+  });
+
+  // ── 116h-A polish：首页统一五态组件使用点（结构 + 文案断言） ──
+
+  testWidgets('B17a: 首页加载态使用统一 FarmLoading 五态组件', (tester) async {
+    await runTest(tester, () async {
+      final gate = Completer<void>();
+      mockClient = createMockClient(captured, weatherGate: gate.future);
+      ApiClient.setClientForTesting(mockClient);
+      await pumpFarmLinkApp(tester);
+
+      router!.go('/home');
+      await tester.pump(); // 处理 go_router 异步导航
+      await tester.pump(const Duration(milliseconds: 300)); // 过渡帧：仍在加载态
+      expect(find.byType(FarmLoading), findsOneWidget,
+          reason: '首页加载态必须用统一五态 FarmLoading');
+      expect(find.text('正在加载首页...'), findsOneWidget);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(FarmLoading), findsNothing,
+          reason: '数据就绪后加载态应消失');
+      expect(find.text('22°~34°  晴 · 湿度62% · 风2级 · 墒情适宜'), findsOneWidget);
+    });
+  });
+
+  testWidgets('B17b: 首页空行情使用统一 FarmEmpty 五态组件（紧凑模式）',
+      (tester) async {
+    await runTest(tester, () async {
+      mockClient = createMockClient(captured, emptyPrices: true);
+      ApiClient.setClientForTesting(mockClient);
+      await pumpFarmLinkApp(tester);
+      await openHome(tester);
+
+      await scrollToAndVerify(tester, '周边行情速览');
+      expect(find.byType(FarmEmpty), findsOneWidget,
+          reason: '行情为空时必须渲染统一五态 FarmEmpty');
+      expect(find.text('行情数据更新中'), findsOneWidget);
+      // 紧凑行内图标（非整页大图标）
+      final icon = tester.widget<Icon>(find.byIcon(Icons.trending_up_rounded));
+      expect(icon.size, 20);
     });
   });
 }

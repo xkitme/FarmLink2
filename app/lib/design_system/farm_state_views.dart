@@ -97,10 +97,36 @@ class FarmLoading extends StatelessWidget {
 class FarmEmpty extends StatelessWidget {
   final String text;
   final IconData icon;
-  const FarmEmpty(this.text, {super.key, this.icon = Icons.inbox_outlined});
+
+  /// 紧凑行内模式：用于卡片内 / 区块级空态，缩小图标与间距，可嵌进现有排版。
+  final bool compact;
+  const FarmEmpty(
+    this.text, {
+    super.key,
+    this.icon = Icons.inbox_outlined,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: FarmSpacing.sm),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, color: FarmColors.outlineVariant),
+            const SizedBox(width: FarmSpacing.sm),
+            Flexible(
+              child: Text(text,
+                  style: const TextStyle(
+                      color: FarmColors.onSurfaceVariant,
+                      fontSize: FarmTypography.sm)),
+            ),
+          ],
+        ),
+      );
+    }
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
