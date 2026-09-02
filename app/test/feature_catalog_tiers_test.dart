@@ -1,4 +1,4 @@
-import 'package:farm_link/core/feature_catalog.dart';
+import 'package:farmlink/core/feature_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
