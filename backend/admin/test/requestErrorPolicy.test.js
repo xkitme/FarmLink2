@@ -90,6 +90,23 @@ describe('classifyRequestError — HTTP 状态兜底与补充分类', () => {
     assert.equal(classify(null, 404).category, ERROR_CATEGORY.NOT_FOUND);
   });
 
+  it('无信封 409 → conflict（数据冲突/已变更）；无信封 422 → validation（校验失败）', () => {
+    const conflict = classify(null, 409);
+    assert.equal(conflict.category, ERROR_CATEGORY.CONFLICT);
+    assert.equal(isSessionExpired(conflict.category), false, '409 不清会话');
+    assert.equal(isTransientFailure(conflict.category), false, '409 不自动重试');
+
+    const unprocessable = classify(null, 422);
+    assert.equal(unprocessable.category, ERROR_CATEGORY.VALIDATION);
+    assert.equal(isSessionExpired(unprocessable.category), false, '422 不清会话');
+    assert.equal(isTransientFailure(unprocessable.category), false, '422 不自动重试');
+
+    // 正负对照：conflict 与 server / validation 明显不同
+    assert.notEqual(conflict.category, ERROR_CATEGORY.SERVER);
+    assert.notEqual(conflict.category, ERROR_CATEGORY.VALIDATION);
+    assert.notEqual(unprocessable.category, ERROR_CATEGORY.CONFLICT);
+  });
+
   it('无信封 502 / 503 / 500 → server', () => {
     assert.equal(classify(null, 502).category, ERROR_CATEGORY.SERVER);
     assert.equal(classify(null, 503).category, ERROR_CATEGORY.SERVER);

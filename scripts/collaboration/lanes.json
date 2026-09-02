@@ -13,7 +13,8 @@
     { "branch": "collab/116g-backend-*", "lane": "backend",     "workorder": "116g-A" },
     { "branch": "collab/116h-flutter-*", "lane": "flutter",     "workorder": "116h-A" },
     { "branch": "collab/116g-admin-*",   "lane": "admin",       "workorder": "116g-B" },
-    { "branch": "collab/integration-*",  "lane": "integration", "workorder": "116g-X" }
+    { "branch": "collab/integration-*",  "lane": "integration", "workorder": "116g-X" },
+    { "branch": "collab/116x-*",         "lane": "integration", "workorder": "116x-60pct" }
   ],
   "workorders": {
     "116g-A": {
@@ -82,6 +83,50 @@
         "scripts/test/**",
         "docs/协作约定.md",
         "docs/116g-X-四轨协作与集成门禁.md"
+      ],
+      "pending": []
+    },
+    "116x-60pct": {
+      "lane": "integration",
+      "note": "60% 重构聚合工单（collab/116x-60pct-integration，跨 Backend/Flutter/Admin/Integration 四 lane 的单次整合主线）。allow = 本次精确授权路径的并集：8 个 controller/policy（同 116g-A）+ 4 个一致性测试 + Flutter 401 噪音治理 5 个文件 + Admin ops 基座 policies/pages/tests + 门禁 lanes/scope 测试 + 对应 docs。生成产物（5 个）、feature_catalog/apiCatalog/capabilities、backend/data/**、Prisma、其余 backend/src/** 与 app/lib/** 一律拒绝（不宽泛放行）。",
+      "allow": [
+        "backend/src/modules/market/order.policy.js",
+        "backend/src/modules/market/order.controller.js",
+        "backend/src/modules/data/sync.policy.js",
+        "backend/src/modules/data/sync.controller.js",
+        "backend/src/modules/machinery/booking.policy.js",
+        "backend/src/modules/machinery/booking.controller.js",
+        "backend/src/modules/platform/resource.policy.js",
+        "backend/src/modules/platform/resource.controller.js",
+        "backend/test/**",
+        "backend/package.json",
+        "docs/116g-A-*.md",
+        "app/lib/core/voice_wake.dart",
+        "app/lib/core/auth_state.dart",
+        "app/lib/core/api_client.dart",
+        "app/lib/pages/auth/login_page.dart",
+        "app/lib/widgets/voice_assistant_layer.dart",
+        "app/test/**",
+        "app/pubspec.yaml",
+        "app/pubspec.lock",
+        "docs/116h-A-*.md",
+        "backend/admin/src/api/**",
+        "backend/admin/src/App.jsx",
+        "backend/admin/src/layouts/**",
+        "backend/admin/src/pages/**",
+        "backend/admin/src/components/**",
+        "backend/admin/src/policies/**",
+        "backend/admin/src/styles.css",
+        "backend/admin/test/**",
+        "backend/admin/package.json",
+        "backend/admin/package-lock.json",
+        "docs/116g-B-*.md",
+        ".github/**",
+        "scripts/collaboration/**",
+        "scripts/test/**",
+        "docs/协作约定.md",
+        "docs/116g-X-*.md",
+        ".github/pull_request_template.md"
       ],
       "pending": []
     }

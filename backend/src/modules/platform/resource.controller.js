@@ -3,10 +3,23 @@ import { prisma } from '../../db.js'
 import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams } from '../../utils/page.js'
 import { getResourceConfig, listResourceConfigs, RESOURCE_GROUPS } from './resource.config.js'
+import {
+  isDangerousFieldName,
+  isKnownResourceKey,
+  pickWritableFields,
+} from './resource.policy.js'
 
-const SYSTEM_FIELDS = new Set(['id', 'createdAt', 'updatedAt', 'lastLoginAt'])
+// 资源 key 索引（policy 白名单判定用；模块级构建一次）
+const RESOURCE_INDEX = Object.freeze(
+  listResourceConfigs().reduce((acc, cfg) => {
+    acc[cfg.key] = true
+    return acc
+  }, {}),
+)
 
 function assertResource(resource) {
+  // 越权资源名：未登记的资源 key 直接拒绝（404 / 40401 / msg=管理资源不存在）
+  if (!isKnownResourceKey(resource, RESOURCE_INDEX)) throw errors.notFound('管理资源不存在')
   const config = getResourceConfig(resource)
   if (!config || !prisma[config.model]) throw errors.notFound('管理资源不存在')
   return config
@@ -43,12 +56,13 @@ function parseValue(field, value, mode) {
 
 async function buildData(config, body, mode) {
   const data = {}
+  // 字段白名单（policy）：只允许 config.fields 声明字段；危险/系统字段不可写
+  const clean = pickWritableFields(config, body || {}, mode)
   for (const field of config.fields) {
-    if (field.createOnly && mode !== 'create') continue
-    if (field.virtual || SYSTEM_FIELDS.has(field.name)) continue
-    if (!(field.name in body)) continue
+    if (!(field.name in clean)) continue
+    if (field.virtual || isDangerousFieldName(field.name)) continue
     if (config.model === 'user' && field.name === 'password') continue
-    const parsed = parseValue(field, body[field.name], mode)
+    const parsed = parseValue(field, clean[field.name], mode)
     if (parsed !== undefined) data[field.name] = parsed
   }
 

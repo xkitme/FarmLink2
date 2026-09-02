@@ -24,6 +24,7 @@ export const ERROR_CATEGORY = Object.freeze({
   NETWORK: 'network',
   SERVER: 'server',
   VALIDATION: 'validation',
+  CONFLICT: 'conflict',
   NOT_FOUND: 'not-found',
   UNKNOWN: 'unknown',
 })
@@ -55,6 +56,7 @@ const DEFAULT_MESSAGES = Object.freeze({
   [ERROR_CATEGORY.NETWORK]: '网络连接失败，请检查网络后重试',
   [ERROR_CATEGORY.SERVER]: '服务端异常，请稍后重试',
   [ERROR_CATEGORY.VALIDATION]: '请求未通过校验',
+  [ERROR_CATEGORY.CONFLICT]: '数据冲突或已变更，请刷新后重试',
   [ERROR_CATEGORY.NOT_FOUND]: '资源不存在',
   [ERROR_CATEGORY.UNKNOWN]: '请求失败，请稍后重试',
 })
@@ -94,7 +96,9 @@ export function classifyRequestError({ payload = null, status = null, networkErr
   if (status === 401) return { category: ERROR_CATEGORY.UNAUTHENTICATED, code: null, status }
   if (status === 403) return { category: ERROR_CATEGORY.FORBIDDEN, code: null, status }
   if (status === 429) return { category: ERROR_CATEGORY.RATE_LIMITED, code: null, status }
+  if (status === 409) return { category: ERROR_CATEGORY.CONFLICT, code: null, status }
   if (status === 400) return { category: ERROR_CATEGORY.VALIDATION, code: null, status }
+  if (status === 422) return { category: ERROR_CATEGORY.VALIDATION, code: null, status }
   if (status === 404) return { category: ERROR_CATEGORY.NOT_FOUND, code: null, status }
   if (status !== null && status >= 500) return { category: ERROR_CATEGORY.SERVER, code: null, status }
   return { category: ERROR_CATEGORY.UNKNOWN, code: null, status }

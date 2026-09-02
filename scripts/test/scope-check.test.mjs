@@ -464,12 +464,13 @@ test('A25 workorder 模式：临时 workorder 白名单可授权 prisma（正确
  * B. branchMap 真实分支映射
  * ═══════════════════════════════════════════════════════════ */
 
-test('B1 真实分支映射：四个分支解析为正确 lane+workorder（空 diff 通过）', () => {
+test('B1 真实分支映射：五个分支解析为正确 lane+workorder（空 diff 通过）', () => {
   const cases = [
     ['collab/116g-backend-data', 'backend', '116g-A'],
     ['collab/116h-flutter-shell', 'flutter', '116h-A'],
     ['collab/116g-admin-safety', 'admin', '116g-B'],
     ['collab/integration-gates', 'integration', '116g-X'],
+    ['collab/116x-60pct-integration', 'integration', '116x-60pct'],
   ]
   const { repo, base } = initRepo()
   for (const [branch, lane, workorder] of cases) {
@@ -521,7 +522,6 @@ test('B5 未知 workorder（--workorder 显式）：退出码 2 且列出已登�
 /* ═══════════════════════════════════════════════════════════
  * C. workorder 精确白名单
  * ═══════════════════════════════════════════════════════════ */
-
 test('C1 116g-X 白名单：.github / scripts/collaboration / scripts/test / 协作约定 / 116g-X 文档通过', () => {
   const { repo, base } = initRepo()
   writeFile(repo, '.github/workflows/ci.yml', 'name: x\n')
@@ -789,6 +789,84 @@ test('C13 116h-A 白名单：backend / admin / scripts / .github / feature_catal
   assert.match(res.stdout, /app\/lib\/core\/feature_catalog\.dart/)
   assert.match(res.stdout, /生成产物/)
 })
+
+test('C14 116x-60pct 聚合工单：四 lane 精确文件通过、禁区（生成产物/DB/Prisma/其余业务代码）仍拒绝', () => {
+  const { repo, base } = initRepo()
+  // 本次聚合工单精确授权的代表性文件（四 lane 各取一条 + 测试/docs）
+  const allowedFiles = [
+    // Backend 116g-A
+    'backend/src/modules/market/order.policy.js',
+    'backend/src/modules/data/sync.policy.js',
+    'backend/src/modules/machinery/booking.policy.js',
+    'backend/src/modules/platform/resource.policy.js',
+    'backend/test/order-consistency.test.js',
+    // Flutter 116h-A 语音唤醒 401 治理
+    'app/lib/core/voice_wake.dart',
+    'app/lib/core/auth_state.dart',
+    'app/test/voice_wake_401_test.dart',
+    // Admin 116g-B ops 基座
+    'backend/admin/src/policies/dangerousOperationPolicy.js',
+    'backend/admin/src/policies/requestErrorPolicy.js',
+    'backend/admin/test/dangerousOperationPolicy.test.js',
+    // Integration 116g-X 门禁
+    'scripts/collaboration/lanes.json',
+    'scripts/test/scope-check.test.mjs',
+    'docs/协作约定.md',
+    'docs/116g-X-四轨协作与集成门禁.md',
+  ]
+  for (const p of allowedFiles) writeFile(repo, p, 'x\n')
+  commitAll(repo, '116x-60pct 精确授权文件')
+  const headOk = mustGit(repo, ['rev-parse', 'HEAD'])
+  const resOk = runChecker(repo, ['--branch', 'collab/116x-60pct-integration', '--base', base, '--head', headOk, '--json'])
+  assert.equal(resOk.status, 0, `聚合工单授权文件应通过: ${resOk.stdout}`)
+  const payloadOk = JSON.parse(resOk.stdout)
+  assert.equal(payloadOk.ok, true)
+  assert.equal(payloadOk.workorder, '116x-60pct')
+  assert.equal(payloadOk.files, allowedFiles.length)
+  assert.equal(payloadOk.violations.length, 0)
+
+  // 禁区：生成产物 / DB / Prisma / 其余 backend/src 与 app/lib 业务代码 / 宽泛 docs
+  const forbiddenFiles = [
+    'backend/src/app.js',                                    // 其余 backend/src（非 8 个精确 controller/policy）
+    'backend/src/modules/market/order.service.js',           // 未授权业务文件
+    'app/lib/main.dart',                                     // 116h-A 已授权，但不在 116x-60pct 精确集（本批不动）
+    'app/lib/features/agri/photo_flow_page.dart',            // 其余 app/lib
+    'backend/admin/src/resourceGroups.js',                   // 116g-B 文档明确禁止
+    'backend/admin/src/apiCatalog.js',                       // 生成产物
+    'app/lib/core/feature_catalog.dart',                     // 生成产物
+    'backend/src/contracts/capabilities.js',                 // 生成产物
+    'backend/prisma/schema.prisma',                          // Prisma
+    'backend/data/village.db',                               // 正式 DB
+    'docs/进度总览.md',                                      // docs 不再宽泛放行
+  ]
+  for (const p of forbiddenFiles) writeFile(repo, p, 'x\n')
+  commitAll(repo, '116x-60pct 越界禁区')
+  const headBad = mustGit(repo, ['rev-parse', 'HEAD'])
+  const resBad = runChecker(repo, ['--branch', 'collab/116x-60pct-integration', '--base', headOk, '--head', headBad, '--json'])
+  assert.equal(resBad.status, 1, '越界文件必须失败')
+  const payloadBad = JSON.parse(resBad.stdout)
+  assert.equal(payloadBad.ok, false)
+  assert.equal(payloadBad.files, forbiddenFiles.length)
+  const badPaths = new Set(payloadBad.violations.map((v) => v.path))
+  for (const p of forbiddenFiles) assert.ok(badPaths.has(p), `越界文件必须被列出: ${p}`)
+  // 正负对照：通过集与失败集路径集合不相交
+  for (const p of allowedFiles) assert.ok(!badPaths.has(p), `授权文件不得出现在越界列表: ${p}`)
+})
+
+test('C15 116x-60pct 不在生成产物白名单（integration lane 也不得手改生成产物）', () => {
+  // 分支映射 lane=integration 但工单 allow 未含任何生成产物 → 手改生成产物仍被拒
+  const { repo, base } = initRepo()
+  writeFile(repo, 'backend/src/contracts/inventory-report.json', '// hand edit\n')
+  writeFile(repo, 'backend/src/modules/ai/services/assistant-catalog.generated.js', '// hand edit\n')
+  commitAll(repo, '116x-60pct 手改生成产物')
+  const head = mustGit(repo, ['rev-parse', 'HEAD'])
+  const res = runChecker(repo, ['--branch', 'collab/116x-60pct-integration', '--base', base, '--head', head])
+  assert.equal(res.status, 1)
+  assert.match(res.stdout, /backend\/src\/contracts\/inventory-report\.json/)
+  assert.match(res.stdout, /assistant-catalog\.generated\.js/)
+  assert.match(res.stdout, /不在工单 '116x-60pct' 白名单/)
+})
+
 
 /* ═══════════════════════════════════════════════════════════
  * D. workorder 模式下的 A/M/D/R 与中文/空格路径
