@@ -22,9 +22,10 @@ function payloadDate(value, fallback = new Date()) {
   return value ? new Date(value) : fallback
 }
 
-async function conflictByLocalUuid(model, localUuid, clientUpdatedAt) {
+async function conflictByLocalUuid(model, localUuid, clientUpdatedAt, ownership) {
   if (!localUuid) return null
-  const exist = await model.findFirst({ where: { localUuid } })
+  const where = ownership?.userId ? { localUuid, userId: ownership.userId } : { localUuid }
+  const exist = await model.findFirst({ where })
   if (!exist || !clientUpdatedAt || !exist.updatedAt) return exist
   return exist.updatedAt > new Date(clientUpdatedAt) ? { conflict: true, exist } : exist
 }
@@ -37,7 +38,7 @@ async function replayLandPlot(item, ownership) {
     if (localUuid) await prisma.landPlot.deleteMany({ where: { localUuid, userId: ownership.userId } })
     return { replayed: true }
   }
-  const exist = await conflictByLocalUuid(prisma.landPlot, localUuid, payload.updatedAt)
+  const exist = await conflictByLocalUuid(prisma.landPlot, localUuid, payload.updatedAt, ownership)
   if (exist?.conflict) return { conflict: true, reason: '服务端地块数据较新' }
   const data = {
     userId: ownership.userId,
@@ -63,7 +64,7 @@ async function replayFarmRecord(item, ownership) {
     if (localUuid) await prisma.farmRecord.deleteMany({ where: { localUuid, userId: ownership.userId } })
     return { replayed: true }
   }
-  const exist = await conflictByLocalUuid(prisma.farmRecord, localUuid, payload.updatedAt)
+  const exist = await conflictByLocalUuid(prisma.farmRecord, localUuid, payload.updatedAt, ownership)
   if (exist?.conflict) return { conflict: true, reason: '服务端农事记录较新' }
   const data = {
     userId: ownership.userId,
@@ -89,7 +90,8 @@ async function replayDisasterReport(item, ownership) {
     if (localUuid) await prisma.disasterReport.deleteMany({ where: { localUuid, userId: ownership.userId } })
     return { replayed: true }
   }
-  const exist = localUuid ? await prisma.disasterReport.findFirst({ where: { localUuid } }) : null
+  const exist = await conflictByLocalUuid(prisma.disasterReport, localUuid, payload.updatedAt, ownership)
+  if (exist?.conflict) return { conflict: true, reason: '服务端灾情数据较新' }
   const data = {
     userId: ownership.userId,
     disasterType: payload.disasterType || '其他',

@@ -3,7 +3,10 @@ import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams, parseJson } from '../../utils/page.js'
 import {
   areDateRangesOverlapping,
+  canChangeBookingStatus,
   canManageBooking,
+  canTransitionBookingStatus,
+  isIdempotentBookingStatus,
   isKnownBookingStatus,
 } from './booking.policy.js'
 
@@ -93,6 +96,16 @@ export async function bookingStatus(req, res) {
   const machine = await prisma.machinery.findUnique({ where: { id: booking.machineryId } })
   if (!canManageBooking(req.user, booking, machine)) {
     throw errors.forbidden('无权操作该预约')
+  }
+  if (!canTransitionBookingStatus(booking.status, status)) {
+    throw errors.param('预约状态流转不合法')
+  }
+  if (!isIdempotentBookingStatus(booking.status, status) && !canChangeBookingStatus(req.user, booking, machine, status)) {
+    throw errors.forbidden('无权执行该预约状态变更')
+  }
+  if (isIdempotentBookingStatus(booking.status, status)) {
+    ok(res, booking, '预约状态已更新')
+    return
   }
   const updated = await prisma.machineryBooking.update({ where: { id }, data: { status } })
   ok(res, updated, '预约状态已更新')

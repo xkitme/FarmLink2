@@ -233,11 +233,29 @@ describe('K3 预约跨用户访问边界', () => {
     assert.equal((await prisma.machineryBooking.findUnique({ where: { id: booking.id } })).status, 'CONFIRMED')
   })
 
-  it('承租方可操作自己的预约（状态白名单内）→ 200', async () => {
+  it('承租方不能把已确认预约标记完成 → 403/code=40301，DB 未变', async () => {
     clearRateLimits()
     const { status, payload } = await api('PUT', `/machinery/booking/${booking.id}/status`, { status: 'DONE' }, renterToken)
-    assert.equal(status, 200)
-    assert.equal(payload.data.status, 'DONE')
+    assert.equal(status, 403)
+    assert.equal(payload.code, 40301)
+    assert.equal(payload.msg, '无权执行该预约状态变更')
+    assert.equal(payload.data, null)
+    assert.equal((await prisma.machineryBooking.findUnique({ where: { id: booking.id } })).status, 'CONFIRMED')
+  })
+
+  it('机主可把已确认预约标记完成，DONE 终态不得回退', async () => {
+    clearRateLimits()
+    const done = await api('PUT', `/machinery/booking/${booking.id}/status`, { status: 'DONE' }, ownerToken)
+    assert.equal(done.status, 200)
+    assert.equal(done.payload.code, 200)
+    assert.equal(done.payload.data.status, 'DONE')
+
+    const rollback = await api('PUT', `/machinery/booking/${booking.id}/status`, { status: 'CONFIRMED' }, ownerToken)
+    assert.equal(rollback.status, 400)
+    assert.equal(rollback.payload.code, 40001)
+    assert.equal(rollback.payload.msg, '预约状态流转不合法')
+    assert.equal(rollback.payload.data, null)
+    assert.equal((await prisma.machineryBooking.findUnique({ where: { id: booking.id } })).status, 'DONE')
   })
 
   it('无关第三方改状态 → 403/code=40301/msg=无权操作该预约，DB 未变', async () => {
@@ -258,6 +276,19 @@ describe('K3 预约跨用户访问边界', () => {
     assert.equal(payload.code, 40001)
     assert.equal(payload.msg, '状态不合法')
     assert.equal(payload.data, null)
+  })
+
+  it('非法流转 PENDING→DONE → 400/code=40001/msg=预约状态流转不合法，DB 未变', async () => {
+    clearRateLimits()
+    const r = await book(machine.id, '2027-02-01', '2027-02-03', renter)
+    assert.equal(r.status, 200)
+    const pending = r.payload.data
+    const { status, payload } = await api('PUT', `/machinery/booking/${pending.id}/status`, { status: 'DONE' }, ownerToken)
+    assert.equal(status, 400)
+    assert.equal(payload.code, 40001)
+    assert.equal(payload.msg, '预约状态流转不合法')
+    assert.equal(payload.data, null)
+    assert.equal((await prisma.machineryBooking.findUnique({ where: { id: pending.id } })).status, 'PENDING')
   })
 
   it('不存在的预约 → 404/code=40401/msg=预约不存在', async () => {

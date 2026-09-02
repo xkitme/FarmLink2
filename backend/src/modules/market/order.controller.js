@@ -2,7 +2,9 @@ import { prisma } from '../../db.js'
 import { ok, okPage, errors } from '../../utils/response.js'
 import { pageParams, parseJson } from '../../utils/page.js'
 import {
+  canChangeOrderStatus,
   canManageOrder,
+  canTransitionOrderStatus,
   canViewOrder,
   isIdempotentRepeat,
   isKnownOrderStatus,
@@ -86,6 +88,12 @@ export async function updateStatus(req, res) {
   if (!order) throw errors.notFound('订单不存在')
   if (!canManageOrder(req.user, order)) {
     throw errors.forbidden('无权操作该订单')
+  }
+  if (!canTransitionOrderStatus(order.status, status)) {
+    throw errors.param('订单状态流转不合法')
+  }
+  if (!isIdempotentRepeat(order.status, status) && !canChangeOrderStatus(req.user, order, status)) {
+    throw errors.forbidden('无权执行该订单状态变更')
   }
 
   // 幂等：同状态重复提交直接返回当前订单（不重复执行发货/回补副作用）

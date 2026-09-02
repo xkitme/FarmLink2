@@ -269,6 +269,47 @@ describe('S3 localUuid 幂等（重复回放不产生重复业务记录）', () 
     assert.equal(delMine.payload.data.success, 1)
     assert.equal(await prisma.landPlot.count({ where: { localUuid } }), 0, '本人 DELETE 应删除记录')
   })
+
+  it('同一 localUuid 跨用户 UPDATE/INSERT 互不覆盖：三张 replay 表均按 userId 隔离', async () => {
+    clearRateLimits()
+    const bSession = await issueSession(farmerB, { deviceName: '116g-sync-test' })
+
+    const landUuid = 'sync-cross-land-' + Date.now()
+    await api('POST', '/data/sync', {
+      items: [{ tableName: 'land_plot', operation: 'INSERT', localUuid: landUuid, payload: { plotName: 'A地块', areaMu: 1, updatedAt: new Date().toISOString() } }],
+    }, farmerToken)
+    const landB = await api('POST', '/data/sync', {
+      items: [{ tableName: 'land_plot', operation: 'UPDATE', localUuid: landUuid, payload: { plotName: 'B地块', areaMu: 2, updatedAt: new Date(Date.now() + 5000).toISOString() } }],
+    }, bSession.token)
+    assert.equal(landB.payload.data.success, 1)
+    assert.equal(await prisma.landPlot.count({ where: { localUuid: landUuid } }), 2)
+    assert.equal((await prisma.landPlot.findFirst({ where: { localUuid: landUuid, userId: farmer.id } })).plotName, 'A地块')
+    assert.equal((await prisma.landPlot.findFirst({ where: { localUuid: landUuid, userId: farmerB.id } })).plotName, 'B地块')
+
+    const recordUuid = 'sync-cross-record-' + Date.now()
+    await api('POST', '/data/sync', {
+      items: [{ tableName: 'farm_record', operation: 'INSERT', localUuid: recordUuid, payload: { recordType: '施肥', content: 'A农事', recordDate: '2026-09-01T08:00:00.000Z', updatedAt: new Date().toISOString() } }],
+    }, farmerToken)
+    const recordB = await api('POST', '/data/sync', {
+      items: [{ tableName: 'farm_record', operation: 'UPDATE', localUuid: recordUuid, payload: { recordType: '打药', content: 'B农事', recordDate: '2026-09-02T08:00:00.000Z', updatedAt: new Date(Date.now() + 5000).toISOString() } }],
+    }, bSession.token)
+    assert.equal(recordB.payload.data.success, 1)
+    assert.equal(await prisma.farmRecord.count({ where: { localUuid: recordUuid } }), 2)
+    assert.equal((await prisma.farmRecord.findFirst({ where: { localUuid: recordUuid, userId: farmer.id } })).content, 'A农事')
+    assert.equal((await prisma.farmRecord.findFirst({ where: { localUuid: recordUuid, userId: farmerB.id } })).content, 'B农事')
+
+    const disasterUuid = 'sync-cross-disaster-' + Date.now()
+    await api('POST', '/data/sync', {
+      items: [{ tableName: 'disaster_report', operation: 'INSERT', localUuid: disasterUuid, payload: { disasterType: '暴雨', description: 'A灾情', affectedArea: 1, updatedAt: new Date().toISOString() } }],
+    }, farmerToken)
+    const disasterB = await api('POST', '/data/sync', {
+      items: [{ tableName: 'disaster_report', operation: 'UPDATE', localUuid: disasterUuid, payload: { disasterType: '冰雹', description: 'B灾情', affectedArea: 2, updatedAt: new Date(Date.now() + 5000).toISOString() } }],
+    }, bSession.token)
+    assert.equal(disasterB.payload.data.success, 1)
+    assert.equal(await prisma.disasterReport.count({ where: { localUuid: disasterUuid } }), 2)
+    assert.equal((await prisma.disasterReport.findFirst({ where: { localUuid: disasterUuid, userId: farmer.id } })).description, 'A灾情')
+    assert.equal((await prisma.disasterReport.findFirst({ where: { localUuid: disasterUuid, userId: farmerB.id } })).description, 'B灾情')
+  })
 })
 
 // ═══════════════ S4 status/logs 隔离 ═══════════════

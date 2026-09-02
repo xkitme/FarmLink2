@@ -27,12 +27,21 @@ export function isKnownBookingStatus(status) {
   return BOOKING_STATUSES.includes(status)
 }
 
+const BOOKING_TRANSITIONS = Object.freeze({
+  PENDING: Object.freeze(['CONFIRMED', 'CANCELLED']),
+  CONFIRMED: Object.freeze(['DONE', 'CANCELLED']),
+  DONE: Object.freeze([]),
+  CANCELLED: Object.freeze([]),
+})
+
 /**
- * 状态变更判定：目标状态必须属于白名单；同状态重复提交视为幂等成功。
- * 语义与现状一致：白名单内任意流转均允许，方向由业务侧保证。
+ * 状态变更判定：目标状态必须属于白名单；同状态重复提交视为幂等成功；
+ * 非白名单方向拒绝，DONE/CANCELLED 终态不允许再回退或改写。
  */
 export function canTransitionBookingStatus(from, to) {
-  return isKnownBookingStatus(to)
+  if (!isKnownBookingStatus(from) || !isKnownBookingStatus(to)) return false
+  if (from === to) return true
+  return BOOKING_TRANSITIONS[from].includes(to)
 }
 
 /** 是否「同状态幂等重复」。 */
@@ -73,4 +82,15 @@ export function bookingPartyOf(user, booking, machine) {
 export function canManageBooking(user, booking, machine) {
   const party = bookingPartyOf(user, booking, machine)
   return party === 'renter' || party === 'owner'
+}
+
+/** 是否可执行指定预约状态动作。 */
+export function canChangeBookingStatus(user, booking, machine, targetStatus) {
+  const party = bookingPartyOf(user, booking, machine)
+  if (party !== 'renter' && party !== 'owner') return false
+  if (targetStatus === booking.status) return true
+  if (targetStatus === 'CONFIRMED') return party === 'owner'
+  if (targetStatus === 'DONE') return party === 'owner'
+  if (targetStatus === 'CANCELLED') return party === 'renter' || party === 'owner'
+  return false
 }

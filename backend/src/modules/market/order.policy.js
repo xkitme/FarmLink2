@@ -27,15 +27,24 @@ export function isKnownOrderStatus(status) {
   return ORDER_STATUSES.includes(status)
 }
 
+const ORDER_TRANSITIONS = Object.freeze({
+  PENDING: Object.freeze(['PAID', 'CANCELLED']),
+  PAID: Object.freeze(['SHIPPED', 'CANCELLED']),
+  SHIPPED: Object.freeze(['DONE']),
+  DONE: Object.freeze([]),
+  CANCELLED: Object.freeze([]),
+})
+
 /**
  * 状态变更判定（controller 更新状态前调用）。
  * - 目标状态必须属于白名单；
- * - 同状态重复提交（from === to）视为幂等成功，不拒绝（副作用由 controller 幂等化）。
- * 语义与现状一致：合法白名单内任意正向流转均允许，由业务侧保证方向。
+ * - 同状态重复提交（from === to）视为幂等成功，不拒绝（副作用由 controller 幂等化）；
+ * - 非白名单方向拒绝，终态 DONE/CANCELLED 不允许再回退或改写。
  */
 export function canTransitionOrderStatus(from, to) {
-  if (!isKnownOrderStatus(to)) return false
-  return true
+  if (!isKnownOrderStatus(from) || !isKnownOrderStatus(to)) return false
+  if (from === to) return true
+  return ORDER_TRANSITIONS[from].includes(to)
 }
 
 /** 是否「同状态幂等重复」（供 controller 短路副作用：发货/取消只执行一次）。 */
@@ -69,4 +78,16 @@ export function canViewOrder(user, order) {
 /** 是否可操作订单状态（与查看同边界）。 */
 export function canManageOrder(user, order) {
   return canViewOrder(user, order)
+}
+
+/** 是否可执行指定订单状态动作。 */
+export function canChangeOrderStatus(user, order, targetStatus) {
+  const party = orderPartyOf(user, order)
+  if (party !== 'buyer' && party !== 'seller') return false
+  if (targetStatus === order.status) return true
+  if (targetStatus === 'PAID') return party === 'buyer'
+  if (targetStatus === 'SHIPPED') return party === 'seller'
+  if (targetStatus === 'DONE') return party === 'buyer'
+  if (targetStatus === 'CANCELLED') return party === 'buyer' || party === 'seller'
+  return false
 }

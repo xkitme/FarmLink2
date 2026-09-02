@@ -312,11 +312,12 @@ describe('B5 GET /market/order/:id', () => {
 
 // ═══════════════ B6 订单状态变更（每 test 独立 status=0 产品+独立订单基线） ═══════════════
 describe('B6 PUT /market/order/:id/status', () => {
-  let buyerToken, seller2Token
+  let buyerToken, sellerToken, seller2Token
 
   before(async () => {
-    ;[{ token: buyerToken }, { token: seller2Token }] = await Promise.all([
+    ;[{ token: buyerToken }, { token: sellerToken }, { token: seller2Token }] = await Promise.all([
       issueSession(buyer, { deviceName: '116d-market-test' }),
+      issueSession(seller, { deviceName: '116d-market-test' }),
       issueSession(seller2, { deviceName: '116d-market-test' }),
     ])
   })
@@ -377,5 +378,57 @@ describe('B6 PUT /market/order/:id/status', () => {
     assert.equal((await prisma.order.findUnique({ where: { id: order.id } })).status, 'PENDING')
     assert.equal((await prisma.product.findUnique({ where: { id: b6Product.id } })).stock, prodBaseline.stock)
     assert.equal((await prisma.product.findUnique({ where: { id: b6Product.id } })).soldCount, prodBaseline.soldCount)
+  })
+
+  it('非法流转 PENDING→DONE → 400, msg=订单状态流转不合法, DB 未变', async () => {
+    clearRateLimits()
+    const b6Product = await prisma.product.create({ data: { sellerId: seller.id, title: 'B6专属产品-04', category: '蔬菜', price: 10, unit: '斤', stock: 200, soldCount: 0, regionCode: '440100456', status: 0, createdAt: new Date('2026-08-08T04:00:00.000Z') } })
+    const order = await prisma.order.create({ data: { orderNo: 'OD116D-B6-04', buyerId: buyer.id, sellerId: seller.id, productId: b6Product.id, quantity: 1, totalAmount: 10, status: 'PENDING' } })
+
+    const { status, payload } = await api('PUT', `/market/order/${order.id}/status`, { status: 'DONE' }, buyerToken)
+    assert.equal(status, 400)
+    assert.equal(payload.code, 40001)
+    assert.equal(payload.msg, '订单状态流转不合法')
+    assert.equal(payload.data, null)
+    assert.equal((await prisma.order.findUnique({ where: { id: order.id } })).status, 'PENDING')
+  })
+
+  it('角色动作收窄：买家不能发货，卖家不能代支付，DB 未变', async () => {
+    clearRateLimits()
+    const b6Product = await prisma.product.create({ data: { sellerId: seller.id, title: 'B6专属产品-05', category: '蔬菜', price: 10, unit: '斤', stock: 200, soldCount: 0, regionCode: '440100456', status: 0, createdAt: new Date('2026-08-08T05:00:00.000Z') } })
+    const paid = await prisma.order.create({ data: { orderNo: 'OD116D-B6-05A', buyerId: buyer.id, sellerId: seller.id, productId: b6Product.id, quantity: 1, totalAmount: 10, status: 'PAID' } })
+    const pending = await prisma.order.create({ data: { orderNo: 'OD116D-B6-05B', buyerId: buyer.id, sellerId: seller.id, productId: b6Product.id, quantity: 1, totalAmount: 10, status: 'PENDING' } })
+
+    const buyerShip = await api('PUT', `/market/order/${paid.id}/status`, { status: 'SHIPPED' }, buyerToken)
+    assert.equal(buyerShip.status, 403)
+    assert.equal(buyerShip.payload.code, 40301)
+    assert.equal(buyerShip.payload.msg, '无权执行该订单状态变更')
+    assert.equal((await prisma.order.findUnique({ where: { id: paid.id } })).status, 'PAID')
+
+    const sellerPay = await api('PUT', `/market/order/${pending.id}/status`, { status: 'PAID' }, sellerToken)
+    assert.equal(sellerPay.status, 403)
+    assert.equal(sellerPay.payload.code, 40301)
+    assert.equal(sellerPay.payload.msg, '无权执行该订单状态变更')
+    assert.equal((await prisma.order.findUnique({ where: { id: pending.id } })).status, 'PENDING')
+  })
+
+  it('卖家发货后买家确认完成，DONE 终态不得回退', async () => {
+    clearRateLimits()
+    const b6Product = await prisma.product.create({ data: { sellerId: seller.id, title: 'B6专属产品-06', category: '蔬菜', price: 10, unit: '斤', stock: 200, soldCount: 0, regionCode: '440100456', status: 0, createdAt: new Date('2026-08-08T06:00:00.000Z') } })
+    const order = await prisma.order.create({ data: { orderNo: 'OD116D-B6-06', buyerId: buyer.id, sellerId: seller.id, productId: b6Product.id, quantity: 1, totalAmount: 10, status: 'PAID' } })
+
+    const shipped = await api('PUT', `/market/order/${order.id}/status`, { status: 'SHIPPED' }, sellerToken)
+    assert.equal(shipped.status, 200)
+    assert.equal(shipped.payload.data.status, 'SHIPPED')
+    assert.ok(shipped.payload.data.logisticsNo)
+
+    const done = await api('PUT', `/market/order/${order.id}/status`, { status: 'DONE' }, buyerToken)
+    assert.equal(done.status, 200)
+    assert.equal(done.payload.data.status, 'DONE')
+
+    const rollback = await api('PUT', `/market/order/${order.id}/status`, { status: 'PAID' }, buyerToken)
+    assert.equal(rollback.status, 400)
+    assert.equal(rollback.payload.msg, '订单状态流转不合法')
+    assert.equal((await prisma.order.findUnique({ where: { id: order.id } })).status, 'DONE')
   })
 })
