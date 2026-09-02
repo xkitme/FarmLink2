@@ -66,7 +66,7 @@ class VoiceWakeState extends ChangeNotifier {
 
   /// 已登录才拉取唤醒词；未登录直接返回（不发 `/ai/assistant/config`）。
   Future<void> refreshWakeWordsIfAuthenticated() async {
-    if (ApiClient.token == null || ApiClient.token!.isEmpty) return;
+    if (!ApiClient.hasAuthSession) return;
     await refreshWakeWords();
   }
 

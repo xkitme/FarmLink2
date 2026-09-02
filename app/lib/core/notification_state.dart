@@ -15,7 +15,7 @@ class NotificationState {
 
   static Future<void> refresh() async {
     final seq = ++_refreshSeq;
-    if (ApiClient.token == null) {
+    if (!ApiClient.hasAuthSession) {
       setUnread(0);
       return;
     }

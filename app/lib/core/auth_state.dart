@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import 'api_client.dart';
@@ -9,13 +9,18 @@ import 'voice_wake.dart';
 
 /// 全局登录态。
 class AuthState extends ChangeNotifier {
-  AuthState({CredentialStorage? credentialStorage})
-      : _credentialStorage = credentialStorage ?? SecureCredentialStorage();
+  AuthState({
+    CredentialStorage? credentialStorage,
+    bool? browserCookieSessionEnabled,
+  })  : _credentialStorage = credentialStorage ?? SecureCredentialStorage(),
+        _browserCookieSessionEnabled = browserCookieSessionEnabled ?? kIsWeb;
 
   final CredentialStorage _credentialStorage;
+  final bool _browserCookieSessionEnabled;
   AppUser? _user;
   String? _token;
   String? _refreshToken;
+  bool _cookieSessionActive = false;
   bool _loading = true;
   bool _onboardingSeen = false;
   bool _handlingExpiry = false;
@@ -24,7 +29,7 @@ class AuthState extends ChangeNotifier {
 
   AppUser? get user => _user;
   String? get token => _token;
-  bool get isLoggedIn => _token != null;
+  bool get isLoggedIn => _token != null || _cookieSessionActive;
   bool get loading => _loading;
 
   /// 引导页是否已看过（只在首次启动展示）
@@ -55,14 +60,18 @@ class AuthState extends ChangeNotifier {
     } else {
       ApiClient.setToken(null);
     }
+    ApiClient.setCookieSessionActive(false);
     ApiClient.configureAuth(
       refreshHandler: _refreshAccessToken,
       sessionExpiredHandler: _handleExpiry,
     );
+    if (_token == null && _browserCookieSessionEnabled) {
+      await _restoreCookieSession();
+    }
     _loading = false;
     notifyListeners();
     // 冷启动恢复登录态：会话已建立，语音唤醒配置可安全拉取（未登录零请求）
-    if (_token != null) VoiceWakeState.notifySessionEstablished();
+    if (isLoggedIn) VoiceWakeState.notifySessionEstablished();
   }
 
   /// 标记引导页已看过
@@ -75,7 +84,10 @@ class AuthState extends ChangeNotifier {
 
   /// 收到 401：清登录态（防重入），AuthState 通知后路由自动跳登录页
   Future<void> _handleExpiry() async {
-    if ((_token == null && _refreshToken == null) || _handlingExpiry) return;
+    if ((_token == null && _refreshToken == null && !_cookieSessionActive) ||
+        _handlingExpiry) {
+      return;
+    }
     _handlingExpiry = true;
     try {
       await _clearLocalSession();
@@ -126,7 +138,7 @@ class AuthState extends ChangeNotifier {
       // 避免退出与刷新竞态留下孤儿服务端会话。
       await ApiClient.waitForPendingRefresh();
       final refreshToken = _refreshToken;
-      if (_token != null || refreshToken != null) {
+      if (_token != null || refreshToken != null || _cookieSessionActive) {
         try {
           await ApiClient.post(
             '/auth/logout',
@@ -147,10 +159,30 @@ class AuthState extends ChangeNotifier {
   Future<bool> _refreshAccessToken() async {
     final refreshToken = _refreshToken;
     final generation = _sessionGeneration;
-    if (refreshToken == null || refreshToken.isEmpty) return false;
+    if ((refreshToken == null || refreshToken.isEmpty) &&
+        !(_browserCookieSessionEnabled && _cookieSessionActive)) {
+      return false;
+    }
 
     try {
-      final data = await ApiClient.refreshSession(refreshToken);
+      if (_browserCookieSessionEnabled && _cookieSessionActive) {
+        final data = await ApiClient.refreshCookieSession();
+        final rawUser = data['user'];
+        final user = rawUser == null
+            ? null
+            : AppUser.fromJson(rawUser as Map<String, dynamic>);
+        if (generation != _sessionGeneration) return false;
+        if (user != null) {
+          _user = user;
+          final sp = await SharedPreferences.getInstance();
+          await sp.setString('user', jsonEncode(user.toJson()));
+        }
+        ApiClient.setCookieSessionActive(true);
+        notifyListeners();
+        return true;
+      }
+
+      final data = await ApiClient.refreshSession(refreshToken!);
       final access = '${data['token'] ?? ''}'.trim();
       final rotatedRefresh = '${data['refreshToken'] ?? ''}'.trim();
       if (access.isEmpty || rotatedRefresh.isEmpty) return false;
@@ -187,7 +219,9 @@ class AuthState extends ChangeNotifier {
     _user = null;
     _token = null;
     _refreshToken = null;
+    _cookieSessionActive = false;
     ApiClient.setToken(null);
+    ApiClient.setCookieSessionActive(false);
     NotificationState.setUnread(0);
     // 退出登录/会话失效：语音唤醒词清回默认（不残留上一会话的远端配置）
     VoiceWakeState.notifySessionCleared();
@@ -203,6 +237,15 @@ class AuthState extends ChangeNotifier {
     final access = '${data['token'] ?? ''}'.trim();
     final refresh = '${data['refreshToken'] ?? ''}'.trim();
     if (access.isEmpty || refresh.isEmpty) {
+      if (_browserCookieSessionEnabled &&
+          access.isEmpty &&
+          refresh.isEmpty &&
+          data['user'] is Map<String, dynamic>) {
+        await _saveCookieSession(
+          AppUser.fromJson(data['user'] as Map<String, dynamic>),
+        );
+        return;
+      }
       throw ApiException(50001, '登录会话响应异常');
     }
     final u = data['user'];
@@ -222,8 +265,10 @@ class AuthState extends ChangeNotifier {
       }
       _token = access;
       _refreshToken = refresh;
+      _cookieSessionActive = false;
       _user = user;
       ApiClient.setToken(access);
+      ApiClient.setCookieSessionActive(false);
     });
 
     final sp = await SharedPreferences.getInstance();
@@ -234,6 +279,43 @@ class AuthState extends ChangeNotifier {
     }
     await NotificationState.refresh();
     // 登录/注册成功：会话已建立，语音唤醒配置可安全拉取（未登录零请求）
+    VoiceWakeState.notifySessionEstablished();
+    notifyListeners();
+  }
+
+  Future<void> _restoreCookieSession() async {
+    try {
+      final data = await ApiClient.get('/auth/me');
+      if (data is Map<String, dynamic>) {
+        await _saveCookieSession(AppUser.fromJson(data));
+      }
+    } catch (_) {
+      _cookieSessionActive = false;
+      ApiClient.setCookieSessionActive(false);
+    }
+  }
+
+  Future<void> _saveCookieSession(AppUser user) async {
+    final generation = ++_sessionGeneration;
+    await _mutateCredentials<void>(() async {
+      if (generation != _sessionGeneration) {
+        throw ApiException(40101, '登录状态已变化，请重新登录');
+      }
+      await _credentialStorage.clear();
+      if (generation != _sessionGeneration) {
+        throw ApiException(40101, '登录状态已变化，请重新登录');
+      }
+      _token = null;
+      _refreshToken = null;
+      _cookieSessionActive = true;
+      _user = user;
+      ApiClient.setToken(null);
+      ApiClient.setCookieSessionActive(true);
+    });
+
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString('user', jsonEncode(user.toJson()));
+    await NotificationState.refresh();
     VoiceWakeState.notifySessionEstablished();
     notifyListeners();
   }

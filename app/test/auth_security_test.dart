@@ -24,6 +24,7 @@ Future<HttpServer> startServer(
 void configureApiClient() {
   ApiClient.baseUrl = kBaseUrl;
   ApiClient.setToken(null);
+  ApiClient.setCookieSessionActive(false);
   ApiClient.configureAuth(
     refreshHandler: () async => false,
     sessionExpiredHandler: () async {},
@@ -293,5 +294,125 @@ void main() {
     expect(auth.user, isNull);
     expect(storage.current, isNull);
     expect(ApiClient.token, isNull);
+  });
+
+  test('AuthState accepts browser Cookie login body without exposed tokens',
+      () async {
+    final paths = <String>[];
+    final server = await startServer((request) async {
+      paths.add(request.uri.path);
+      switch (request.uri.path) {
+        case '$kApiPrefix/auth/me':
+          request.response.statusCode = HttpStatus.unauthorized;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(<String, dynamic>{
+            'code': 40101,
+            'msg': '未登录或登录已失效',
+          }));
+          break;
+        case '$kApiPrefix/auth/login':
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(<String, dynamic>{
+            'code': 200,
+            'data': <String, dynamic>{
+              'user': <String, dynamic>{
+                'id': 3,
+                'username': 'web-farmer',
+                'nickname': '浏览器农户',
+              },
+            },
+          }));
+          break;
+        case '$kApiPrefix/notification/unread':
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(<String, dynamic>{
+            'code': 200,
+            'data': <String, dynamic>{'unread': 2},
+          }));
+          break;
+        default:
+          request.response.statusCode = HttpStatus.notFound;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(<String, dynamic>{
+            'code': 404,
+            'msg': 'not found',
+          }));
+      }
+      await request.response.close();
+    });
+    addTearDown(() async => server.close(force: true));
+
+    ApiClient.baseUrl = 'http://${server.address.host}:${server.port}';
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final storage = InMemoryCredentialStorage();
+    final auth = AuthState(
+      credentialStorage: storage,
+      browserCookieSessionEnabled: true,
+    );
+    await auth.init();
+
+    await auth.login('web-farmer', '123456');
+    final preferences = await SharedPreferences.getInstance();
+
+    expect(auth.isLoggedIn, isTrue);
+    expect(auth.token, isNull);
+    expect(ApiClient.token, isNull);
+    expect(ApiClient.hasAuthSession, isTrue);
+    expect(storage.current, isNull);
+    expect(auth.user?.username, 'web-farmer');
+    expect(preferences.getString('user'), contains('web-farmer'));
+    expect(paths, contains('$kApiPrefix/notification/unread'));
+  });
+
+  test(
+      'AuthState still rejects tokenless login body outside browser Cookie mode',
+      () async {
+    final server = await startServer((request) async {
+      switch (request.uri.path) {
+        case '$kApiPrefix/auth/login':
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(<String, dynamic>{
+            'code': 200,
+            'data': <String, dynamic>{
+              'user': <String, dynamic>{
+                'id': 4,
+                'username': 'native-farmer',
+              },
+            },
+          }));
+          break;
+        default:
+          request.response.statusCode = HttpStatus.notFound;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(<String, dynamic>{
+            'code': 404,
+            'msg': 'not found',
+          }));
+      }
+      await request.response.close();
+    });
+    addTearDown(() async => server.close(force: true));
+
+    ApiClient.baseUrl = 'http://${server.address.host}:${server.port}';
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final auth = AuthState(
+      credentialStorage: InMemoryCredentialStorage(),
+      browserCookieSessionEnabled: false,
+    );
+    await auth.init();
+
+    await expectLater(
+      auth.login('native-farmer', '123456'),
+      throwsA(
+        isA<ApiException>()
+            .having((e) => e.code, 'code', 50001)
+            .having((e) => e.message, 'message', '登录会话响应异常'),
+      ),
+    );
+    expect(auth.isLoggedIn, isFalse);
+    expect(ApiClient.hasAuthSession, isFalse);
   });
 }
