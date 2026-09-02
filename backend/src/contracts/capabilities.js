@@ -7386,7 +7386,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri_diagnose",
         "route": "/agri/diagnose",
         "icon": "biotech_outlined",
-        "section": "agri"
+        "section": "agri",
+        "id": "plant-care.diagnose",
+        "tier": "primary",
+        "journey": "plant_care"
       },
       {
         "name": "作物长势监测",
@@ -7398,7 +7401,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "eco_outlined",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.02",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "杂草识别",
@@ -7409,7 +7415,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "grass_outlined",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.03",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "种子检测",
@@ -7420,7 +7429,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "spa_outlined",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.04",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "智能施肥",
@@ -7432,7 +7444,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "science_outlined",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.05",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "灌溉计划",
@@ -7444,7 +7459,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "water_drop_outlined",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.06",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "产量预测",
@@ -7456,7 +7474,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "trending_up",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.07",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "农事日历",
@@ -7469,7 +7490,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "calendar_month_outlined",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.08",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "农药安全查询",
@@ -7481,7 +7505,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "medication_outlined",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.09",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "地块管理",
@@ -7493,7 +7520,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "map_outlined",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.10",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "农事记录",
@@ -7505,7 +7535,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "note_alt_outlined",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.11",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "碳排放核算",
@@ -7517,7 +7550,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri",
         "route": "/agri",
         "icon": "co2",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.agri.12",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "智能物联",
@@ -7533,7 +7569,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "iot",
         "route": "/iot",
         "icon": "sensors_rounded",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.iot.13",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "设备联动",
@@ -7548,7 +7587,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "iot",
         "route": "/iot",
         "icon": "bolt_rounded",
-        "section": "agri"
+        "section": "agri",
+        "id": "agri.iot.14",
+        "tier": "tool",
+        "journey": "plant_care"
       },
       {
         "name": "实时行情",
@@ -7560,7 +7602,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market",
         "route": "/market",
         "icon": "show_chart",
-        "section": "market"
+        "section": "market",
+        "id": "market.market.15",
+        "tier": "tool",
+        "journey": "market"
       },
       {
         "name": "乡村集市",
@@ -7573,7 +7618,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market",
         "route": "/market",
         "icon": "storefront_outlined",
-        "section": "market"
+        "section": "market",
+        "id": "market.trade",
+        "tier": "primary",
+        "journey": "market"
       },
       {
         "name": "价格预测",
@@ -7584,7 +7632,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market_service",
         "route": "/market/service",
         "icon": "query_stats",
-        "section": "market"
+        "section": "market",
+        "id": "market.market-service.17",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "期货行情",
@@ -7594,7 +7645,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market_service",
         "route": "/market/service",
         "icon": "candlestick_chart",
-        "section": "market"
+        "section": "market",
+        "id": "market.market-service.18",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "出口合规",
@@ -7606,7 +7660,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market_service",
         "route": "/market/service",
         "icon": "public",
-        "section": "market"
+        "section": "market",
+        "id": "market.market-service.19",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "收购站地图",
@@ -7617,7 +7674,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market_service",
         "route": "/market/service",
         "icon": "store_outlined",
-        "section": "market"
+        "section": "market",
+        "id": "market.market-service.20",
+        "tier": "tool",
+        "journey": "market"
       },
       {
         "name": "农资团购",
@@ -7628,7 +7688,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market_service",
         "route": "/market/service",
         "icon": "groups_outlined",
-        "section": "market"
+        "section": "market",
+        "id": "market.market-service.21",
+        "tier": "tool",
+        "journey": "market"
       },
       {
         "name": "AI 质量分级",
@@ -7640,7 +7703,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market_service",
         "route": "/market/service",
         "icon": "grade_outlined",
-        "section": "market"
+        "section": "market",
+        "id": "market.market-service.22",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "直播话术",
@@ -7652,7 +7718,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market_service",
         "route": "/market/service",
         "icon": "mic_none_outlined",
-        "section": "market"
+        "section": "market",
+        "id": "market.market-service.23",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "包装文案",
@@ -7663,7 +7732,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market_service",
         "route": "/market/service",
         "icon": "inventory_2_outlined",
-        "section": "market"
+        "section": "market",
+        "id": "market.market-service.24",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "溯源码",
@@ -7674,7 +7746,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market_service",
         "route": "/market/service",
         "icon": "qr_code_2",
-        "section": "market"
+        "section": "market",
+        "id": "market.market-service.25",
+        "tier": "tool",
+        "journey": "market"
       },
       {
         "name": "物流查询",
@@ -7686,7 +7761,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "market_service",
         "route": "/market/service",
         "icon": "local_shipping_outlined",
-        "section": "market"
+        "section": "market",
+        "id": "market.market-service.26",
+        "tier": "tool",
+        "journey": "market"
       },
       {
         "name": "农机租赁",
@@ -7699,7 +7777,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "machinery",
         "route": "/machinery",
         "icon": "agriculture_outlined",
-        "section": "machinery"
+        "section": "machinery",
+        "id": "machinery.booking",
+        "tier": "primary",
+        "journey": "machinery"
       },
       {
         "name": "维保提醒",
@@ -7710,7 +7791,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "machinery_service",
         "route": "/machinery/service",
         "icon": "build_outlined",
-        "section": "machinery"
+        "section": "machinery",
+        "id": "machinery.machinery-service.28",
+        "tier": "tool",
+        "journey": "machinery"
       },
       {
         "name": "故障诊断",
@@ -7722,7 +7806,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "machinery_service",
         "route": "/machinery/service",
         "icon": "handyman_outlined",
-        "section": "machinery"
+        "section": "machinery",
+        "id": "machinery.machinery-service.29",
+        "tier": "tool",
+        "journey": "machinery"
       },
       {
         "name": "作业轨迹",
@@ -7733,7 +7820,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "machinery_service",
         "route": "/machinery/service",
         "icon": "route_outlined",
-        "section": "machinery"
+        "section": "machinery",
+        "id": "machinery.machinery-service.30",
+        "tier": "tool",
+        "journey": "machinery"
       },
       {
         "name": "成本核算",
@@ -7744,7 +7834,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "machinery_service",
         "route": "/machinery/service",
         "icon": "calculate_outlined",
-        "section": "machinery"
+        "section": "machinery",
+        "id": "machinery.machinery-service.31",
+        "tier": "tool",
+        "journey": "machinery"
       },
       {
         "name": "土地流转",
@@ -7755,7 +7848,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "machinery_service",
         "route": "/machinery/service",
         "icon": "swap_horiz",
-        "section": "machinery"
+        "section": "machinery",
+        "id": "machinery.machinery-service.32",
+        "tier": "tool",
+        "journey": "machinery"
       },
       {
         "name": "机手认证",
@@ -7766,7 +7862,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "machinery_service",
         "route": "/machinery/service",
         "icon": "verified_user_outlined",
-        "section": "machinery"
+        "section": "machinery",
+        "id": "machinery.machinery-service.33",
+        "tier": "tool",
+        "journey": "machinery"
       },
       {
         "name": "农机保险",
@@ -7777,7 +7876,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "machinery_service",
         "route": "/machinery/service",
         "icon": "shield_outlined",
-        "section": "machinery"
+        "section": "machinery",
+        "id": "machinery.machinery-service.34",
+        "tier": "tool",
+        "journey": "machinery"
       },
       {
         "name": "极端天气预警",
@@ -7790,7 +7892,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "disaster",
         "route": "/disaster",
         "icon": "thunderstorm_outlined",
-        "section": "disaster"
+        "section": "disaster",
+        "id": "disaster.disaster.35",
+        "tier": "tool",
+        "journey": "disaster"
       },
       {
         "name": "灾情上报",
@@ -7802,7 +7907,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "disaster",
         "route": "/disaster",
         "icon": "report_outlined",
-        "section": "disaster"
+        "section": "disaster",
+        "id": "disaster.report",
+        "tier": "primary",
+        "journey": "disaster"
       },
       {
         "name": "保险理赔",
@@ -7813,7 +7921,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "disaster",
         "route": "/disaster",
         "icon": "assignment_turned_in_outlined",
-        "section": "disaster"
+        "section": "disaster",
+        "id": "disaster.disaster.37",
+        "tier": "tool",
+        "journey": "disaster"
       },
       {
         "name": "应急预案",
@@ -7824,7 +7935,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "disaster",
         "route": "/disaster",
         "icon": "emergency_outlined",
-        "section": "disaster"
+        "section": "disaster",
+        "id": "disaster.disaster.38",
+        "tier": "tool",
+        "journey": "disaster"
       },
       {
         "name": "冻害防护",
@@ -7836,7 +7950,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "disaster",
         "route": "/disaster",
         "icon": "ac_unit",
-        "section": "disaster"
+        "section": "disaster",
+        "id": "disaster.disaster.39",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "火险预警",
@@ -7847,7 +7964,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "disaster",
         "route": "/disaster",
         "icon": "local_fire_department_outlined",
-        "section": "disaster"
+        "section": "disaster",
+        "id": "disaster.disaster.40",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "干旱指数",
@@ -7858,7 +7978,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "disaster",
         "route": "/disaster",
         "icon": "wb_sunny_outlined",
-        "section": "disaster"
+        "section": "disaster",
+        "id": "disaster.disaster.41",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "一键求助",
@@ -7870,7 +7993,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "disaster",
         "route": "/disaster",
         "icon": "sos_outlined",
-        "section": "disaster"
+        "section": "disaster",
+        "id": "disaster.disaster.42",
+        "tier": "tool",
+        "journey": "disaster"
       },
       {
         "name": "政策推送",
@@ -7882,7 +8008,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "policy",
         "route": "/policy",
         "icon": "account_balance_outlined",
-        "section": "policy"
+        "section": "policy",
+        "id": "policy.policy.43",
+        "tier": "tool",
+        "journey": "policy"
       },
       {
         "name": "补贴申请",
@@ -7894,7 +8023,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "policy_service",
         "route": "/policy/service",
         "icon": "fact_check_outlined",
-        "section": "policy"
+        "section": "policy",
+        "id": "policy.subsidy",
+        "tier": "primary",
+        "journey": "policy"
       },
       {
         "name": "政策 AI 问答",
@@ -7905,7 +8037,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "policy_service",
         "route": "/policy/service",
         "icon": "question_answer_outlined",
-        "section": "policy"
+        "section": "policy",
+        "id": "policy.policy-service.45",
+        "tier": "tool",
+        "journey": "policy"
       },
       {
         "name": "党建学习",
@@ -7917,7 +8052,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "policy",
         "route": "/policy",
         "icon": "flag_outlined",
-        "section": "policy"
+        "section": "policy",
+        "id": "policy.policy.46",
+        "tier": "tool",
+        "journey": "policy"
       },
       {
         "name": "村务公开",
@@ -7928,7 +8066,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "policy",
         "route": "/policy",
         "icon": "campaign_outlined",
-        "section": "policy"
+        "section": "policy",
+        "id": "policy.policy.47",
+        "tier": "tool",
+        "journey": "policy"
       },
       {
         "name": "文明乡风榜",
@@ -7940,7 +8081,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "policy",
         "route": "/policy",
         "icon": "emoji_events_outlined",
-        "section": "policy"
+        "section": "policy",
+        "id": "policy.policy.48",
+        "tier": "tool",
+        "journey": "policy"
       },
       {
         "name": "法律咨询",
@@ -7952,7 +8096,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "policy_service",
         "route": "/policy/service",
         "icon": "gavel_outlined",
-        "section": "policy"
+        "section": "policy",
+        "id": "policy.policy-service.49",
+        "tier": "tool",
+        "journey": "policy"
       },
       {
         "name": "职业农民培训",
@@ -7964,7 +8111,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "policy_service",
         "route": "/policy/service",
         "icon": "school_outlined",
-        "section": "policy"
+        "section": "policy",
+        "id": "policy.policy-service.50",
+        "tier": "tool",
+        "journey": "policy"
       },
       {
         "name": "村医问诊",
@@ -7977,7 +8127,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "medical_services_outlined",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.51",
+        "tier": "tool",
+        "journey": "life_services"
       },
       {
         "name": "快递代收",
@@ -7989,7 +8142,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "local_post_office_outlined",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.52",
+        "tier": "tool",
+        "journey": "life_services"
       },
       {
         "name": "就业平台",
@@ -8001,7 +8157,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "work_outline",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.53",
+        "tier": "tool",
+        "journey": "life_services"
       },
       {
         "name": "水电气缴费",
@@ -8014,7 +8173,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "receipt_long_outlined",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.54",
+        "tier": "tool",
+        "journey": "life_services"
       },
       {
         "name": "乡村旅游",
@@ -8025,7 +8187,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "landscape_outlined",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.55",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "养老关爱",
@@ -8037,7 +8202,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "elderly",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.56",
+        "tier": "tool",
+        "journey": "life_services"
       },
       {
         "name": "农业贷款",
@@ -8049,7 +8217,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "savings_outlined",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.57",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "教育辅导",
@@ -8061,7 +8232,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "menu_book_outlined",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.58",
+        "tier": "tool",
+        "journey": "life_services"
       },
       {
         "name": "邻里互助",
@@ -8073,7 +8247,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "handshake_outlined",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.59",
+        "tier": "tool",
+        "journey": "life_services"
       },
       {
         "name": "二手交易",
@@ -8085,7 +8262,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "sell_outlined",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.60",
+        "tier": "tool",
+        "journey": "life_services"
       },
       {
         "name": "民俗记录",
@@ -8097,7 +8277,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "festival_outlined",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.61",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "环境举报",
@@ -8109,7 +8292,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "life",
         "route": "/life",
         "icon": "eco",
-        "section": "life"
+        "section": "life",
+        "id": "life.life.62",
+        "tier": "tool",
+        "journey": "life_services"
       },
       {
         "name": "农情数据看板",
@@ -8122,7 +8308,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "data",
         "route": "/data",
         "icon": "insights_outlined",
-        "section": "data"
+        "section": "data",
+        "id": "village.dashboard",
+        "tier": "primary",
+        "journey": "village"
       },
       {
         "name": "农事年度报告",
@@ -8133,7 +8322,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "data_service",
         "route": "/data/service",
         "icon": "event_note_outlined",
-        "section": "data"
+        "section": "data",
+        "id": "data.data-service.64",
+        "tier": "tool",
+        "journey": "village"
       },
       {
         "name": "统计上报",
@@ -8144,7 +8336,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "data_service",
         "route": "/data/service",
         "icon": "upload_file_outlined",
-        "section": "data"
+        "section": "data",
+        "id": "data.data-service.65",
+        "tier": "tool",
+        "journey": "village"
       },
       {
         "name": "数据同步",
@@ -8155,7 +8350,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "data_service",
         "route": "/data/service",
         "icon": "sync_alt",
-        "section": "data"
+        "section": "data",
+        "id": "data.data-service.66",
+        "tier": "tool",
+        "journey": "village"
       },
       {
         "name": "遥感分析",
@@ -8167,7 +8365,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "data",
         "route": "/data",
         "icon": "satellite_alt_outlined",
-        "section": "data"
+        "section": "data",
+        "id": "data.data.67",
+        "tier": "experimental",
+        "journey": null
       },
       {
         "name": "AI 智能问答",
@@ -8180,7 +8381,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "ai_chat",
         "route": "/ai/chat/new",
         "icon": "smart_toy_outlined",
-        "section": "ai"
+        "section": "ai",
+        "id": "ai.ai-chat.68",
+        "tier": "tool",
+        "journey": "assistant"
       },
       {
         "name": "拍照识病",
@@ -8192,7 +8396,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "agri_diagnose",
         "route": "/agri/diagnose",
         "icon": "center_focus_strong_outlined",
-        "section": "ai"
+        "section": "ai",
+        "id": "ai.agri-diagnose.69",
+        "tier": "tool",
+        "journey": "assistant"
       },
       {
         "name": "AI 对话历史",
@@ -8204,7 +8411,10 @@ export const CAPABILITY_REGISTRY =
         "routeKey": "ai",
         "route": "/ai",
         "icon": "history",
-        "section": "ai"
+        "section": "ai",
+        "id": "ai.ai.70",
+        "tier": "tool",
+        "journey": "assistant"
       }
     ]
   }
