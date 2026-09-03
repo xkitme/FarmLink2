@@ -801,6 +801,7 @@ test('C14 116x 聚合工单：四 lane 精确文件与 final40 生成链路通�
     'backend/src/modules/data/sync.policy.js',
     'backend/src/modules/machinery/booking.policy.js',
     'backend/src/modules/platform/resource.policy.js',
+    'backend/src/modules/platform/site.controller.js',
     'backend/test/order-consistency.test.js',
     // Flutter 116h-A 语音唤醒 401 治理
     'app/lib/core/voice_wake.dart',
