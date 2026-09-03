@@ -38,6 +38,7 @@ class FarmBrand extends StatelessWidget {
             width: markSize,
             height: markSize,
             fit: BoxFit.cover,
+            alignment: Alignment.centerLeft,
             filterQuality: FilterQuality.medium,
             errorBuilder: (_, __, ___) =>
                 FarmBrandMarkFallback(markSize: markSize),
