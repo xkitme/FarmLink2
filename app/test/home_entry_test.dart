@@ -88,16 +88,45 @@ void main() {
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
-        case '$kApiPrefix/agri/record/list':
+        case '$kApiPrefix/site/startup-ad':
           return http.Response(
             jsonEncode({
               'code': 200,
               'msg': 'success',
               'data': {
-                'records': [],
-                'total': 0,
-                'pageNum': 1,
-                'pageSize': 50,
+                'enabled': true,
+                'imageKey': 'app-fullscreen-ad',
+                'imageUrl': '/uploads/site/farm-market.jpg',
+                'durationMs': 5000,
+                'serverTime': 1785672000000,
+                'homeCarouselSlides': [
+                  {
+                    'id': 'weather-monitoring',
+                    'imageUrl': '/uploads/site/weather-monitoring.jpg',
+                    'fallbackAsset':
+                        'assets/images/generated/weather-monitoring.jpg',
+                    'title': '今天也要照看好田地',
+                    'subtitle': '天气、墒情与防护提醒已同步',
+                    'targetPath': '/disaster',
+                  },
+                  {
+                    'id': 'smart-farming',
+                    'imageUrl': '/uploads/site/smart-farming.jpg',
+                    'fallbackAsset':
+                        'assets/images/generated/smart-farming.jpg',
+                    'title': 'AI 植保到田间',
+                    'subtitle': '病虫害识别、农事建档、专家在线',
+                    'targetPath': '/agri',
+                  },
+                  {
+                    'id': 'farm-market',
+                    'imageUrl': '/uploads/site/farm-market.jpg',
+                    'fallbackAsset': 'assets/images/generated/farm-market.jpg',
+                    'title': '产地好物直连市场',
+                    'subtitle': '行情、订单与农产品交易一站处理',
+                    'targetPath': '/market',
+                  },
+                ],
               },
             }),
             200,
@@ -215,11 +244,11 @@ void main() {
     expect(
         paths,
         {
-          '$testHost$kApiPrefix/agri/record/list?pageNum=1&pageSize=50',
           '$testHost$kApiPrefix/agri/weather',
           '$testHost$kApiPrefix/market/price',
           '$testHost$kApiPrefix/notification/unread',
           '$testHost$kApiPrefix/policy/list?pageNum=1&pageSize=10',
+          '$testHost$kApiPrefix/site/startup-ad',
         },
         reason: 'exact request paths mismatch. Got: $paths');
   }
@@ -331,6 +360,7 @@ void main() {
     'http://farmlink.test/uploads/site/smart-farming.jpg',
     'http://farmlink.test/uploads/site/farm-market.jpg',
     'http://farmlink.test/uploads/site/machinery-sharing.jpg',
+    'http://farmlink.test/uploads/site/weather-monitoring.jpg',
   };
 
   Future<void> runTest(
@@ -407,7 +437,10 @@ void main() {
 
       assertCommonRequests(captured);
 
-      expect(find.text('22°~34°  晴 · 湿度62% · 风2级 · 墒情适宜'), findsOneWidget);
+      expect(find.byKey(const Key('home_image_carousel')), findsOneWidget);
+      expect(find.text('今天也要照看好田地'), findsOneWidget);
+      expect(find.text('天气、墒情与防护提醒已同步'), findsOneWidget);
+      expect(find.text('今日最重要的事'), findsNothing);
 
       await scrollToAndVerify(tester, '核心服务');
       for (final label in ['AI 植保', '农产品交易', '农机服务', '防灾救助', '惠农政策', '农情看板']) {
@@ -570,7 +603,8 @@ void main() {
       gate.complete();
       await tester.pumpAndSettle();
       expect(find.byType(FarmLoading), findsNothing, reason: '数据就绪后加载态应消失');
-      expect(find.text('22°~34°  晴 · 湿度62% · 风2级 · 墒情适宜'), findsOneWidget);
+      expect(find.byKey(const Key('home_image_carousel')), findsOneWidget);
+      expect(find.text('今天也要照看好田地'), findsOneWidget);
     });
   });
 

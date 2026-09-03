@@ -12,6 +12,32 @@ const IMAGE_EXT_ORDER = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
 const STARTUP_AD_SETTING_KEY = 'startup_ad'
 const STARTUP_AD_IMAGE_KEY = 'app-fullscreen-ad'
 const AUTH_BACKGROUND_IMAGE_KEY = 'auth-hero'
+const HOME_CAROUSEL_SLIDES = [
+  {
+    id: 'weather-monitoring',
+    imageKey: 'weather-monitoring',
+    fallbackAsset: 'assets/images/generated/weather-monitoring.jpg',
+    title: '今天也要照看好田地',
+    subtitle: '天气、墒情与防护提醒已同步',
+    targetPath: '/disaster',
+  },
+  {
+    id: 'smart-farming',
+    imageKey: 'smart-farming',
+    fallbackAsset: 'assets/images/generated/smart-farming.jpg',
+    title: 'AI 植保到田间',
+    subtitle: '病虫害识别、农事建档、专家在线',
+    targetPath: '/agri',
+  },
+  {
+    id: 'farm-market',
+    imageKey: 'farm-market',
+    fallbackAsset: 'assets/images/generated/farm-market.jpg',
+    title: '产地好物直连市场',
+    subtitle: '行情、订单与农产品交易一站处理',
+    targetPath: '/market',
+  },
+]
 const DEFAULT_STARTUP_AD = {
   enabled: true,
   imageKey: STARTUP_AD_IMAGE_KEY,
@@ -74,10 +100,18 @@ async function startupAdPayload(config = null) {
   return {
     ...current,
     imageUrl,
+    homeCarouselSlides: homeCarouselPayload(),
     durationMs: current.durationSeconds * 1000,
     serverTime: Date.now(),
     enabled: current.enabled && Boolean(imageUrl),
   }
+}
+
+export function homeCarouselPayload() {
+  return HOME_CAROUSEL_SLIDES.map((slide) => ({
+    ...slide,
+    imageUrl: siteImageUrlForKey(slide.imageKey),
+  }))
 }
 
 // 站点图清单：运维/管理台把图片放进 backend/uploads/site/ 即对外可用，

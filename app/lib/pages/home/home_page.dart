@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -13,7 +15,7 @@ import '../../core/offline_cache.dart';
 import '../../widgets/common.dart';
 
 /// 首页 — 排版参考设计稿「首页排版」，样式沿用项目 Agro-Modernist 系统。
-/// 块序：问候+天气 → 搜索 → 今日决策卡 → 六条主路径 → 板块大图 → 周边行情 → 惠农补贴。
+/// 块序：搜索 → 首页图片轮播 → 六条主路径 → 板块大图 → 周边行情 → 惠农补贴。
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -28,9 +30,10 @@ class _HomePageState extends State<HomePage> {
   bool _fromCache = false;
   String? _cacheTime;
   List<Map<String, dynamic>> _days = [];
-  List<Map<String, dynamic>> _alerts = [];
-  List<Map<String, dynamic>> _todoRecords = [];
-  Map<String, dynamic>? _upcomingPolicyDeadline;
+  List<Map<String, dynamic>> _heroSlides = const [];
+  int _heroSlideIndex = 0;
+  late final PageController _heroSlideController = PageController();
+  Timer? _heroSlideTimer;
   Map<String, dynamic>? _platformStats;
   List<Map<String, dynamic>> _prices = [];
   Map<String, dynamic>? _subsidy;
@@ -46,7 +49,7 @@ class _HomePageState extends State<HomePage> {
     final isAdmin = context.read<AuthState>().user?.role == 'ADMIN';
     final results = await Future.wait<dynamic>([
       _loadWeatherSnapshot(),
-      _loadTodoRecords(),
+      _loadHomeCarouselSlides(),
       isAdmin
           ? _loadDashboardExtras()
           : Future.value({'policy': null, 'stats': null}),
@@ -58,19 +61,24 @@ class _HomePageState extends State<HomePage> {
     final weather = results[0] as Map<String, dynamic>;
     setState(() {
       _days = _listOfMaps(weather['days']);
-      _alerts = _listOfMaps(weather['alerts']);
       _fromCache = weather['fromCache'] == true;
       _cacheTime =
           weather['cacheTime'] == null ? null : '${weather['cacheTime']}';
-      _todoRecords = _listOfMaps(results[1]);
+      _heroSlides = _listOfMaps(results[1]);
       final dashboardExtras = results[2] as Map<String, dynamic>;
-      _upcomingPolicyDeadline =
-          dashboardExtras['policy'] as Map<String, dynamic>?;
       _platformStats = dashboardExtras['stats'] as Map<String, dynamic>?;
       _prices = (results[3] as List).whereType<Map<String, dynamic>>().toList();
       _subsidy = results[4] as Map<String, dynamic>?;
       _loading = false;
     });
+    _startHeroSlideTimer();
+  }
+
+  @override
+  void dispose() {
+    _heroSlideTimer?.cancel();
+    _heroSlideController.dispose();
+    super.dispose();
   }
 
   Future<Map<String, dynamic>> _loadWeatherSnapshot() async {
@@ -107,24 +115,14 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _loadTodoRecords() async {
+  Future<List<Map<String, dynamic>>> _loadHomeCarouselSlides() async {
     try {
-      final data = await ApiClient.get('/agri/record/list',
-          query: {'pageNum': 1, 'pageSize': 50});
-      final records = _recordsOf(data);
-      final today = _dateOnly(DateTime.now());
-      final lastDay = today.add(const Duration(days: 7));
-      final todos = records.where((record) {
-        final date = _recordDateOf(record);
-        if (date == null || date.isBefore(today) || date.isAfter(lastDay)) {
-          return false;
-        }
-        return _isTodoType(_text(record['recordType']));
-      }).toList();
-      todos.sort((a, b) => _recordDateOf(a)!.compareTo(_recordDateOf(b)!));
-      return todos;
+      final data = await ApiClient.get('/site/startup-ad');
+      if (data is! Map) return _defaultHeroSlides();
+      final slides = _listOfMaps(data['homeCarouselSlides']);
+      return slides.isEmpty ? _defaultHeroSlides() : slides.take(3).toList();
     } catch (_) {
-      return const [];
+      return _defaultHeroSlides();
     }
   }
 
@@ -221,10 +219,6 @@ class _HomePageState extends State<HomePage> {
                                 critical: false),
                             const SizedBox(height: 12),
                           ],
-                          _decisionCard()
-                              .animate(delay: 60.ms)
-                              .fadeIn(duration: 340.ms)
-                              .slideY(begin: 0.06),
                           if (isAdmin && _hasPlatformStats) ...[
                             const SizedBox(height: 14),
                             _platformStatsStrip()
@@ -306,7 +300,7 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 8),
           _homeSearch(),
           const SizedBox(height: 16),
-          _greetingWeather()
+          _homeImageCarousel()
               .animate()
               .fadeIn(duration: 300.ms)
               .slideY(begin: 0.05),
@@ -315,77 +309,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ── 1 · 问候 + 天气条 ─────────────────────────────────
-  Widget _greetingWeather() {
-    final t = _today;
-    final cond = '${t['condition'] ?? '晴'}';
-    final low = _int(t['tempLow']);
-    final high = _int(t['tempHigh']);
-    final humidity = _int(t['humidity']);
-    final wind = _int(t['windLevel']);
-    final soil = _soilStatusOf(humidity, cond);
-    final hour = DateTime.now().hour;
-    final greet = hour < 11
-        ? '早安'
-        : hour < 14
-            ? '午安'
-            : hour < 18
-                ? '下午好'
-                : '晚上好';
-    return AppCard(
-      onTap: () => context.push('/disaster'),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(R.md),
-            ),
-            child:
-                Icon(_conditionIcon(cond), color: AppColors.primary, size: 28),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$greet，今天也要照看好田地',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.onSurface,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  _days.isEmpty
-                      ? '气象数据更新中'
-                      : '$low°~$high°  $cond · 湿度$humidity% · 风$wind级 · 墒情$soil',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.onSurfaceVariant,
-                    fontSize: 12,
-                    height: 1.25,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.outline),
-        ],
-      ),
-    );
-  }
-
-  // ── 2 · 搜索条（接入全局搜索 /search，#21）──────────────
+  // ── 1 · 搜索条（接入全局搜索 /search，#21）──────────────
   Widget _homeSearch() {
     return GestureDetector(
       onTap: () => context.push('/search'),
@@ -426,177 +350,188 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  IconData _conditionIcon(String c) {
-    if (c.contains('雷')) return Icons.thunderstorm;
-    if (c.contains('雨')) return Icons.grain;
-    if (c.contains('雪')) return Icons.ac_unit;
-    if (c.contains('云') || c.contains('阴')) return Icons.cloud;
-    return Icons.wb_sunny;
-  }
-
-  String _soilStatusOf(int humidity, String cond) {
-    if (cond.contains('雨') || humidity >= 85) return '偏湿';
-    if (humidity < 55 && humidity > 0) return '偏旱';
-    return '适宜';
-  }
-
-  // ── 3 · 今日决策卡 ───────────────────────────────────
-  Widget _decisionCard() {
-    final decision = _computeDecision();
+  // ── 2 · 后端图片轮播 ─────────────────────────────────
+  Widget _homeImageCarousel() {
+    final slides = _heroSlides.isEmpty ? _defaultHeroSlides() : _heroSlides;
+    final current = _heroSlideIndex.clamp(0, slides.length - 1).toInt();
     return Container(
+      height: 184,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [decision.tone, AppColors.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
         borderRadius: BorderRadius.circular(R.lg),
-        boxShadow: AppColors.ambientShadow,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.lg),
-          onTap: () => context.push(decision.route),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          PageView.builder(
+            key: const Key('home_image_carousel'),
+            controller: _heroSlideController,
+            itemCount: slides.length,
+            onPageChanged: (index) => setState(() => _heroSlideIndex = index),
+            itemBuilder: (context, index) => _heroSlideImage(slides[index]),
+          ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [Color(0xB3000000), Color(0x14000000)],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 18,
+            right: 18,
+            bottom: 16,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(R.md),
-                      ),
-                      child: Icon(decision.icon, color: Colors.white, size: 26),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('今日最重要的事',
-                              style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 4),
-                          Text(decision.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  height: 1.3,
-                                  fontWeight: FontWeight.w800)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(decision.subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 13, height: 1.45)),
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  constraints: const BoxConstraints(minHeight: 48),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(R.sm),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(decision.cta,
-                          style: TextStyle(
-                              color: decision.tone,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800)),
-                      const SizedBox(width: 4),
-                      Icon(Icons.chevron_right_rounded,
-                          color: decision.tone, size: 20),
-                    ],
-                  ),
-                ),
+                Expanded(child: _heroSlideCaption(slides[current])),
+                const SizedBox(width: 12),
+                _heroSlideDots(slides.length, current),
               ],
             ),
           ),
-        ),
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _openHeroSlide(slides[current]),
+                splashColor: Colors.white.withValues(alpha: 0.08),
+                highlightColor: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  _Decision _computeDecision() {
-    if (_alerts.isNotEmpty) {
-      final alert = _alerts.first;
-      final level = _text(alert['alertLevel'], fallback: '预警');
-      return _Decision(
-        icon: Icons.warning_amber_rounded,
-        tone: _alertTone(level),
-        title:
-            '【$level】${_text(alert['title'], fallback: _text(alert['content'], fallback: '请注意防范'))}',
-        subtitle: _text(alert['content'], fallback: '请及时查看防护指引，做好田间应对准备。'),
-        cta: '查看防护',
-        route: '/disaster',
-      );
-    }
-    final recheck = _firstWhere(
-        _todoRecords, (record) => _text(record['recordType']).contains('复查'));
-    if (recheck != null) {
-      final days = _daysUntil(_recordDateOf(recheck)!);
-      return _Decision(
-        icon: Icons.fact_check_outlined,
-        tone: AppColors.primary,
-        title: '待复查：${_todoContentOf(recheck)}',
-        subtitle: days == 0 ? '复查今天到期，请及时处理。' : '距离复查还有 $days 天，建议提前安排田间检查。',
-        cta: '去复查',
-        route: '/agri',
-      );
-    }
-    final todo = _firstWhere(
-        _todoRecords, (record) => !_text(record['recordType']).contains('复查'));
-    if (todo != null) {
-      final days = _daysUntil(_recordDateOf(todo)!);
-      return _Decision(
-        icon: Icons.eco_outlined,
-        tone: AppColors.primary,
-        title: '农事待办：${_todoContentOf(todo)}',
-        subtitle: days == 0 ? '今天安排的农事，请及时查看处理。' : '$days 天后进入计划日程，可提前做好准备。',
-        cta: '查看农事',
-        route: '/agri',
-      );
-    }
-    final policy = _upcomingPolicyDeadline;
-    final deadline = _parseDate(policy?['validTo']);
-    if (policy != null && deadline != null) {
-      final days = _daysUntil(deadline);
-      return _Decision(
-        icon: Icons.account_balance_outlined,
-        tone: AppColors.primary,
-        title: '政策截止：${_text(policy['title'], fallback: '惠农政策申报')}',
-        subtitle: days == 0 ? '申报今天截止，请及时查看办理。' : '距离申报截止还有 $days 天，请及时确认办理材料。',
-        cta: '去办理',
-        route: '/policy/service',
-      );
-    }
-    final condition = _text(_today['condition'], fallback: '晴');
-    return _Decision(
-      icon: Icons.wb_sunny_outlined,
-      tone: AppColors.primary,
-      title: '今日天气$condition，适宜农事',
-      subtitle: '今天没有紧急事项，可查看农情数据安排接下来的工作。',
-      cta: '看农情',
-      route: '/data',
+  Widget _heroSlideImage(Map<String, dynamic> slide) {
+    final remote = _text(slide['imageUrl']);
+    final fallback = _text(slide['fallbackAsset'],
+        fallback: 'assets/images/generated/weather-monitoring.jpg');
+    final fallbackImage = SiteImage(
+      fallback,
+      fit: BoxFit.cover,
+      errorFallback: Container(color: AppColors.primaryContainer),
     );
+    if (remote.isEmpty) return fallbackImage;
+    return Image.network(
+      ApiClient.resolveImageUrl(remote),
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (_, __, ___) => fallbackImage,
+    );
+  }
+
+  Widget _heroSlideCaption(Map<String, dynamic> slide) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _text(slide['title'], fallback: '田园通服务'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 19,
+            height: 1.15,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          _text(slide['subtitle'], fallback: '农情、服务与交易一屏直达'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.82),
+            fontSize: 12.5,
+            height: 1.2,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _heroSlideDots(int count, int current) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < count; i++)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            width: i == current ? 18 : 6,
+            height: 6,
+            margin: EdgeInsets.only(left: i == 0 ? 0 : 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: i == current ? 0.95 : 0.46),
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _startHeroSlideTimer() {
+    _heroSlideTimer?.cancel();
+    final slides = _heroSlides.isEmpty ? _defaultHeroSlides() : _heroSlides;
+    if (slides.length <= 1) return;
+    _heroSlideTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_heroSlideController.hasClients) return;
+      final next = (_heroSlideIndex + 1) % slides.length;
+      _heroSlideController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  void _openHeroSlide(Map<String, dynamic> slide) {
+    final route = _text(slide['targetPath'], fallback: '/home');
+    if (route == '/home') return;
+    context.push(route);
+  }
+
+  List<Map<String, dynamic>> _defaultHeroSlides() {
+    final t = _today;
+    final cond = _text(t['condition'], fallback: '晴');
+    final low = _int(t['tempLow']);
+    final high = _int(t['tempHigh']);
+    final weatherSub =
+        _days.isEmpty ? '天气、墒情与防护提醒已同步' : '$low°~$high°  $cond · 农事防护提醒已同步';
+    return [
+      {
+        'id': 'weather-monitoring',
+        'imageUrl': '/uploads/site/weather-monitoring.jpg',
+        'fallbackAsset': 'assets/images/generated/weather-monitoring.jpg',
+        'title': '今天也要照看好田地',
+        'subtitle': weatherSub,
+        'targetPath': '/disaster',
+      },
+      {
+        'id': 'smart-farming',
+        'imageUrl': '/uploads/site/smart-farming.jpg',
+        'fallbackAsset': 'assets/images/generated/smart-farming.jpg',
+        'title': 'AI 植保到田间',
+        'subtitle': '病虫害识别、农事建档、专家在线',
+        'targetPath': '/agri',
+      },
+      {
+        'id': 'farm-market',
+        'imageUrl': '/uploads/site/farm-market.jpg',
+        'fallbackAsset': 'assets/images/generated/farm-market.jpg',
+        'title': '产地好物直连市场',
+        'subtitle': '行情、订单与农产品交易一站处理',
+        'targetPath': '/market',
+      },
+    ];
   }
 
   // ── 3.5 · 平台服务规模徽章带 ───────────────────────────
@@ -1118,48 +1053,4 @@ class _HomePageState extends State<HomePage> {
     }
     return null;
   }
-
-  static DateTime _dateOnly(DateTime value) =>
-      DateTime(value.year, value.month, value.day);
-
-  static DateTime? _parseDate(dynamic value) {
-    final parsed = DateTime.tryParse(_text(value));
-    return parsed == null ? null : _dateOnly(parsed.toLocal());
-  }
-
-  static DateTime? _recordDateOf(Map<String, dynamic> record) =>
-      _parseDate(record['recordDate']);
-
-  static bool _isTodoType(String type) {
-    const keywords = ['复查', '打药', '施肥', '灌溉', '采收', '收获', '播种', '巡田'];
-    return keywords.any(type.contains);
-  }
-
-  static int _daysUntil(DateTime date) =>
-      _dateOnly(date).difference(_dateOnly(DateTime.now())).inDays;
-
-  static String _todoContentOf(Map<String, dynamic> record) =>
-      _text(record['content'],
-          fallback: _text(record['recordType'], fallback: '农事安排'));
-
-  static Color _alertTone(String level) =>
-      level.contains('红') ? AppColors.error : AppColors.warning;
-}
-
-class _Decision {
-  final IconData icon;
-  final Color tone;
-  final String title;
-  final String subtitle;
-  final String cta;
-  final String route;
-
-  const _Decision({
-    required this.icon,
-    required this.tone,
-    required this.title,
-    required this.subtitle,
-    required this.cta,
-    required this.route,
-  });
 }

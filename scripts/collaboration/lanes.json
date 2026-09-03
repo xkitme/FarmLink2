@@ -99,6 +99,7 @@
         "backend/src/modules/machinery/booking.controller.js",
         "backend/src/modules/platform/resource.policy.js",
         "backend/src/modules/platform/resource.controller.js",
+        "backend/src/modules/platform/site.controller.js",
         "backend/test/**",
         "backend/scripts/gen-capabilities.mjs",
         "backend/scripts/gen-feature-catalog.mjs",
