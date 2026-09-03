@@ -516,7 +516,7 @@ void main() {
       final carousel = find.byKey(const Key('home_image_carousel'));
       expect(frame, findsOneWidget);
       expect(carousel, findsOneWidget);
-      expect(tester.getSize(frame).height, 152);
+      expect(tester.getSize(frame).height, 172);
       expect(find.text('今天也要照看好田地'), findsOneWidget);
 
       await tester.drag(carousel, const Offset(-320, 0));
