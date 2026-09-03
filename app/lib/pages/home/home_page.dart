@@ -245,7 +245,7 @@ class _HomePageState extends State<HomePage> {
       child: Stack(
         children: [
           const Positioned.fill(
-            bottom: 88,
+            bottom: 104,
             child: DecoratedBox(
               decoration: BoxDecoration(gradient: AppColors.heroGradient),
             ),
@@ -363,7 +363,7 @@ class _HomePageState extends State<HomePage> {
     final current = _heroSlideIndex.clamp(0, slides.length - 1).toInt();
     return Container(
       key: const Key('home_image_carousel_frame'),
-      height: 152,
+      height: 172,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
