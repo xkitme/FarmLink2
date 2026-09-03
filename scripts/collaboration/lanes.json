@@ -116,6 +116,7 @@
         "app/lib/pages/auth/login_page.dart",
         "app/lib/pages/all/all_features_page.dart",
         "app/lib/pages/home/home_page.dart",
+        "app/lib/pages/market/product_detail_page.dart",
         "app/lib/widgets/voice_assistant_layer.dart",
         "app/test/**",
         "app/pubspec.yaml",

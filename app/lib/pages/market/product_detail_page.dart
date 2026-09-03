@@ -96,8 +96,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   }
 
   // ── 取值（详情优先，回退 preview；与迁移前的回退链逐项一致）──
-  String get _title =>
-      _product?.title ?? widget.preview?.title ?? '乡村好物';
+  String get _title => _product?.title ?? widget.preview?.title ?? '乡村好物';
   double get _price => _product?.price ?? widget.preview?.price ?? 0;
   String get _unit => _product?.unit ?? widget.preview?.unit ?? '件';
   int get _stock => _product?.stock ?? 0;
@@ -188,16 +187,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       backgroundColor: AppColors.surface,
       foregroundColor: AppColors.onSurface,
       elevation: 0,
-      title: Text(
-        _title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: AppColors.onSurface,
-        ),
-      ),
+      title: _GalleryTitlePill(title: _title),
       leading: _circleBtn(
         Icons.arrow_back,
         () {
@@ -568,6 +558,39 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ),
         ),
       );
+}
+
+class _GalleryTitlePill extends StatelessWidget {
+  final String title;
+  const _GalleryTitlePill({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        key: const Key('product_gallery_title_contrast'),
+        constraints: const BoxConstraints(maxWidth: 260),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.86),
+          borderRadius: BorderRadius.circular(R.sm),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.46)),
+        ),
+        child: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 16,
+            height: 1.15,
+            fontWeight: FontWeight.w800,
+            color: AppColors.onSurface,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// 图廊单图：http 走网络图，其余按本地资源，失败回退占位。

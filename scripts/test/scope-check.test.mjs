@@ -812,6 +812,7 @@ test('C14 116x 聚合工单：四 lane 精确文件与 final40 生成链路通�
     'app/lib/core/api_http_client_web.dart',
     'app/lib/core/notification_state.dart',
     'app/test/auth_security_test.dart',
+    'app/lib/pages/market/product_detail_page.dart',
     // Admin 116g-B ops 基座
     'backend/admin/src/policies/dangerousOperationPolicy.js',
     'backend/admin/src/policies/requestErrorPolicy.js',

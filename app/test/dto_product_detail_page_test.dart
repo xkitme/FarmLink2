@@ -1,4 +1,5 @@
 import 'package:farmlink/core/api_client.dart';
+import 'package:farmlink/core/constants.dart';
 import 'package:farmlink/core/dto/market_product.dart';
 import 'package:farmlink/core/repository/product_repository.dart';
 import 'package:farmlink/pages/market/product_detail_page.dart';
@@ -54,7 +55,9 @@ void main() {
     ProductPreview? preview,
   }) {
     return GoRouter(
-      initialLocation: productId == null ? '/market/product/x' : '/market/product/$productId',
+      initialLocation: productId == null
+          ? '/market/product/x'
+          : '/market/product/$productId',
       routes: <RouteBase>[
         GoRoute(
           path: '/market/product/:id',
@@ -81,6 +84,10 @@ void main() {
 
     // 标题（AppBar + 正文，共 2 处）
     expect(find.text('来自仓库的高山玉米'), findsNWidgets(2));
+    final titleContrast = tester.widget<Container>(
+        find.byKey(const Key('product_gallery_title_contrast')));
+    final titleDecoration = titleContrast.decoration as BoxDecoration;
+    expect(titleDecoration.color, AppColors.surface.withValues(alpha: 0.86));
     // 价格（正文 + 吸底栏，共 2 处）
     expect(find.text('￥9.90'), findsNWidgets(2));
     expect(find.text('/公斤'), findsNWidgets(2));
@@ -97,8 +104,7 @@ void main() {
     expect(find.byIcon(Icons.storefront), findsOneWidget);
   });
 
-  testWidgets('stock=0：吸底按钮禁用并显示「暂时缺货」（与迁移前一致）',
-      (WidgetTester tester) async {
+  testWidgets('stock=0：吸底按钮禁用并显示「暂时缺货」（与迁移前一致）', (WidgetTester tester) async {
     final fake = _FakeProductRepository(
       MarketProduct.fromJson(<String, dynamic>{
         'id': 8,
