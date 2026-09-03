@@ -157,6 +157,7 @@ void main() {
       final image = tester.widget<Image>(find.byType(Image));
       expect((image.image as AssetImage).assetName,
           'assets/images/farmlink-mark.png');
+      expect(image.alignment, Alignment.centerLeft);
       expect(find.text('田园通'), findsOneWidget);
     });
 
