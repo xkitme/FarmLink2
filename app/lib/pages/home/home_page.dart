@@ -34,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   int _heroSlideIndex = 0;
   late final PageController _heroSlideController = PageController();
   Timer? _heroSlideTimer;
+  bool _heroSlideUserDragging = false;
   Map<String, dynamic>? _platformStats;
   List<Map<String, dynamic>> _prices = [];
   Map<String, dynamic>? _subsidy;
@@ -202,40 +203,33 @@ class _HomePageState extends State<HomePage> {
                 padding: EdgeInsets.zero,
                 children: [
                   _homeHero(),
-                  Transform.translate(
-                    offset: const Offset(0, -18),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(22)),
-                      ),
-                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 46),
-                      child: Column(
-                        children: [
-                          if (_fromCache) ...[
-                            AlertBanner(
-                                '数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
-                                critical: false),
-                            const SizedBox(height: 12),
-                          ],
-                          if (isAdmin && _hasPlatformStats) ...[
-                            const SizedBox(height: 14),
-                            _platformStatsStrip()
-                                .animate(delay: 90.ms)
-                                .fadeIn(duration: 320.ms)
-                                .slideY(begin: 0.04),
-                          ],
-                          const SectionTitle('核心服务'),
-                          _serviceGrid(context),
-                          const SizedBox(height: 22),
-                          _sectionBanners(),
-                          const SizedBox(height: 20),
-                          _priceCard(),
-                          const SizedBox(height: 16),
-                          _subsidyCard(),
+                  Container(
+                    color: AppColors.background,
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 46),
+                    child: Column(
+                      children: [
+                        if (_fromCache) ...[
+                          AlertBanner(
+                              '数据更新中${_cacheTime == null ? '' : ' · 上次同步 $_cacheTime'}',
+                              critical: false),
+                          const SizedBox(height: 12),
                         ],
-                      ),
+                        if (isAdmin && _hasPlatformStats) ...[
+                          const SizedBox(height: 14),
+                          _platformStatsStrip()
+                              .animate(delay: 90.ms)
+                              .fadeIn(duration: 320.ms)
+                              .slideY(begin: 0.04),
+                        ],
+                        const SectionTitle('核心服务'),
+                        _serviceGrid(context),
+                        const SizedBox(height: 22),
+                        _sectionBanners(),
+                        const SizedBox(height: 20),
+                        _priceCard(),
+                        const SizedBox(height: 16),
+                        _subsidyCard(),
+                      ],
                     ),
                   ),
                 ],
@@ -247,63 +241,76 @@ class _HomePageState extends State<HomePage> {
   Widget _homeHero() {
     final top = MediaQuery.of(context).padding.top;
     return Container(
-      decoration: const BoxDecoration(gradient: AppColors.heroGradient),
-      padding: EdgeInsets.fromLTRB(16, top + 8, 16, 34),
-      child: Column(
+      color: AppColors.background,
+      child: Stack(
         children: [
-          Row(
-            children: [
-              const FarmBrand(markSize: 34, labelColor: Colors.white),
-              const Spacer(),
-              ValueListenableBuilder<int>(
-                valueListenable: NotificationState.unread,
-                builder: (context, unread, _) => IconButton(
-                  onPressed: () => context.go('/messages'),
-                  tooltip: '消息通知',
-                  icon: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      const Icon(Icons.notifications_none,
-                          color: Colors.white, size: 22),
-                      if (unread > 0)
-                        Positioned(
-                          right: -4,
-                          top: -4,
-                          child: Container(
-                            constraints: const BoxConstraints(
-                                minWidth: 16, minHeight: 16),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: FarmColors.error,
-                              borderRadius: BorderRadius.circular(99),
-                              border:
-                                  Border.all(color: Colors.white, width: 1.5),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              unread > 99 ? '99+' : '$unread',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                height: 1,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          const Positioned.fill(
+            bottom: 88,
+            child: DecoratedBox(
+              decoration: BoxDecoration(gradient: AppColors.heroGradient),
+            ),
           ),
-          const SizedBox(height: 8),
-          _homeSearch(),
-          const SizedBox(height: 16),
-          _homeImageCarousel()
-              .animate()
-              .fadeIn(duration: 300.ms)
-              .slideY(begin: 0.05),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, top + 8, 16, 18),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const FarmBrand(markSize: 34, labelColor: Colors.white),
+                    const Spacer(),
+                    ValueListenableBuilder<int>(
+                      valueListenable: NotificationState.unread,
+                      builder: (context, unread, _) => IconButton(
+                        onPressed: () => context.go('/messages'),
+                        tooltip: '消息通知',
+                        icon: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            const Icon(Icons.notifications_none,
+                                color: Colors.white, size: 22),
+                            if (unread > 0)
+                              Positioned(
+                                right: -4,
+                                top: -4,
+                                child: Container(
+                                  constraints: const BoxConstraints(
+                                      minWidth: 16, minHeight: 16),
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 4),
+                                  decoration: BoxDecoration(
+                                    color: FarmColors.error,
+                                    borderRadius: BorderRadius.circular(99),
+                                    border: Border.all(
+                                        color: Colors.white, width: 1.5),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    unread > 99 ? '99+' : '$unread',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      height: 1,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _homeSearch(),
+                const SizedBox(height: 16),
+                _homeImageCarousel()
+                    .animate()
+                    .fadeIn(duration: 300.ms)
+                    .slideY(begin: 0.05),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -355,7 +362,8 @@ class _HomePageState extends State<HomePage> {
     final slides = _heroSlides.isEmpty ? _defaultHeroSlides() : _heroSlides;
     final current = _heroSlideIndex.clamp(0, slides.length - 1).toInt();
     return Container(
-      height: 184,
+      key: const Key('home_image_carousel_frame'),
+      height: 152,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
@@ -364,19 +372,28 @@ class _HomePageState extends State<HomePage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          PageView.builder(
-            key: const Key('home_image_carousel'),
-            controller: _heroSlideController,
-            itemCount: slides.length,
-            onPageChanged: (index) => setState(() => _heroSlideIndex = index),
-            itemBuilder: (context, index) => _heroSlideImage(slides[index]),
+          NotificationListener<ScrollNotification>(
+            onNotification: _handleHeroSlideScroll,
+            child: PageView.builder(
+              key: const Key('home_image_carousel'),
+              controller: _heroSlideController,
+              itemCount: slides.length,
+              onPageChanged: (index) => setState(() => _heroSlideIndex = index),
+              itemBuilder: (context, index) => GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _openHeroSlide(slides[index]),
+                child: _heroSlideImage(slides[index]),
+              ),
+            ),
           ),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [Color(0xB3000000), Color(0x14000000)],
+          const IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Color(0xB3000000), Color(0x14000000)],
+                ),
               ),
             ),
           ),
@@ -384,22 +401,14 @@ class _HomePageState extends State<HomePage> {
             left: 18,
             right: 18,
             bottom: 16,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(child: _heroSlideCaption(slides[current])),
-                const SizedBox(width: 12),
-                _heroSlideDots(slides.length, current),
-              ],
-            ),
-          ),
-          Positioned.fill(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => _openHeroSlide(slides[current]),
-                splashColor: Colors.white.withValues(alpha: 0.08),
-                highlightColor: Colors.white.withValues(alpha: 0.05),
+            child: IgnorePointer(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(child: _heroSlideCaption(slides[current])),
+                  const SizedBox(width: 12),
+                  _heroSlideDots(slides.length, current),
+                ],
               ),
             ),
           ),
@@ -483,7 +492,11 @@ class _HomePageState extends State<HomePage> {
     final slides = _heroSlides.isEmpty ? _defaultHeroSlides() : _heroSlides;
     if (slides.length <= 1) return;
     _heroSlideTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted || !_heroSlideController.hasClients) return;
+      if (!mounted ||
+          !_heroSlideController.hasClients ||
+          _heroSlideUserDragging) {
+        return;
+      }
       final next = (_heroSlideIndex + 1) % slides.length;
       _heroSlideController.animateToPage(
         next,
@@ -491,6 +504,20 @@ class _HomePageState extends State<HomePage> {
         curve: Curves.easeOutCubic,
       );
     });
+  }
+
+  bool _handleHeroSlideScroll(ScrollNotification notification) {
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      _heroSlideUserDragging = true;
+      _heroSlideTimer?.cancel();
+      return false;
+    }
+    if (notification is ScrollEndNotification && _heroSlideUserDragging) {
+      _heroSlideUserDragging = false;
+      _startHeroSlideTimer();
+    }
+    return false;
   }
 
   void _openHeroSlide(Map<String, dynamic> slide) {

@@ -499,6 +499,34 @@ void main() {
     });
   });
 
+  testWidgets('B15a-carousel: compact image carousel supports horizontal drag',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(411, 731);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await runTest(tester, () async {
+      await pumpFarmLinkApp(tester);
+      await openHome(tester);
+
+      final frame = find.byKey(const Key('home_image_carousel_frame'));
+      final carousel = find.byKey(const Key('home_image_carousel'));
+      expect(frame, findsOneWidget);
+      expect(carousel, findsOneWidget);
+      expect(tester.getSize(frame).height, 152);
+      expect(find.text('今天也要照看好田地'), findsOneWidget);
+
+      await tester.drag(carousel, const Offset(-320, 0));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AI 植保到田间'), findsOneWidget,
+          reason: '轮播必须接收横向拖动，不能被点击遮罩层挡住');
+    });
+  });
+
   testWidgets('B15b: navigate from /home to /agri via smart farming banner',
       (WidgetTester tester) async {
     await runTest(tester, () async {
