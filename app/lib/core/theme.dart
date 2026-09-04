@@ -7,8 +7,14 @@ import '../design_system/farm_tokens.dart';
 /// 不用 `CupertinoPageTransitionsBuilder`——该符号在不同 Flutter 版本的归属
 /// 不一致（3.32 在 material、3.44 在 material 已移除），跨机编译会失败；
 /// 自定义 `PageTransitionsBuilder` 是全版本稳定 API。
-class _SlidePageTransitionsBuilder extends PageTransitionsBuilder {
-  const _SlidePageTransitionsBuilder();
+///
+/// 方向契约（116h-A 系统导航收口）：
+/// - **进入下级**（push）：新页自右滑入（dx: +1 → 0）；
+/// - **返回上级**（pop）：新页自原位滑出右侧（dx: 0 → +1，动画自动反向），
+///   与进入方向严格对称——返回必须走 `pop` 而非 `go`，否则会触发
+///   「再前进」式动画造成方向反向（见 docs/108 的 push/pop 混用教训）。
+class FarmSlidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const FarmSlidePageTransitionsBuilder();
 
   @override
   Widget buildTransitions<T>(
@@ -62,12 +68,12 @@ ThemeData buildAppTheme() {
     // back 自动反向，前进/返回视觉对称。M3 默认 Zoom 进出方向一致，观感"不协调"。
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: _SlidePageTransitionsBuilder(),
-        TargetPlatform.iOS: _SlidePageTransitionsBuilder(),
-        TargetPlatform.linux: _SlidePageTransitionsBuilder(),
-        TargetPlatform.macOS: _SlidePageTransitionsBuilder(),
-        TargetPlatform.windows: _SlidePageTransitionsBuilder(),
-        TargetPlatform.fuchsia: _SlidePageTransitionsBuilder(),
+        TargetPlatform.android: FarmSlidePageTransitionsBuilder(),
+        TargetPlatform.iOS: FarmSlidePageTransitionsBuilder(),
+        TargetPlatform.linux: FarmSlidePageTransitionsBuilder(),
+        TargetPlatform.macOS: FarmSlidePageTransitionsBuilder(),
+        TargetPlatform.windows: FarmSlidePageTransitionsBuilder(),
+        TargetPlatform.fuchsia: FarmSlidePageTransitionsBuilder(),
       },
     ),
 

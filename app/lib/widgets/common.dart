@@ -4,19 +4,29 @@ import 'package:go_router/go_router.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../design_system/farm_brand.dart';
+import '../design_system/farm_nav.dart';
 
 // 116h-A：统一五态组件（Loading/Empty/Error/Unauthorized/Offline）在 design_system 定义，
 // 经本文件再导出，让既有页面继续从 `widgets/common.dart` 取到全部状态组件。
 export '../design_system/farm_state_views.dart';
 
-/// 品牌顶栏：白底 h64，左农机图标（或返回箭头）、居中页面标题、右搜索/铃铛
+/// 品牌顶栏：白底 h64，居中页面标题，右侧搜索/铃铛。
 ///
-/// 一级 tab 页：直接 `FarmAppBar()`，左侧是品牌叶 icon。
-/// 二级及详情页：传入当前页面标题，左侧变返回箭头。
+/// 116h-A 系统导航收口后的层级契约：
+/// - **一级 tab 顶层页**（路径 ∈ [kTopLevelTabPaths] 且无返回栈）：左上角**不**放
+///   品牌图（左上语义 = 返回箭头位，避免与二级页混淆），右上角统一显示
+///   [FarmBrand] 品牌入口（点击回品牌首页 `/home`）。
+/// - **二级及以上页面**（含从一级 push 进入的 tab 页、`go` 直达的二级页）：
+///   左上角统一显示返回箭头（可 pop 则 pop，否则回 [backFallback]）。
+///
+/// [showBack] 显式传 `true`/`false` 时按显式覆盖；不传（默认）自动判定层级。
 class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final VoidCallback? onBell;
-  final bool showBack;
+  final bool? showBack;
+
+  /// 一级顶层形态时是否在右上角显示田园通品牌入口（默认显示）。
+  final bool showBrandEntry;
   final bool showSearch;
   final String backFallback;
   final String title;
@@ -24,7 +34,8 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
     super.key,
     this.actions,
     this.onBell,
-    this.showBack = false,
+    this.showBack,
+    this.showBrandEntry = true,
     this.showSearch = true,
     this.backFallback = '/home',
     this.title = '田园通',
@@ -33,27 +44,43 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(64);
 
+  /// 层级自动判定：当前路由是否「一级 tab 顶层页」。
+  ///
+  /// 判定依据 = 当前 path ∈ [kTopLevelTabPaths] 且导航栈不可再返回
+  /// （底栏 `go` 直达时为一级；从首页 `push` 进入同一 tab 页时可返回，按二级处理）。
+  bool _autoIsTopLevel(BuildContext context) {
+    final router = GoRouter.maybeOf(context);
+    if (router == null) return true; // 无路由上下文（如裸组件测试）：退回一级形态
+    final state = GoRouterState.of(context);
+    final path = state.uri.path;
+    if (!isTopLevelTabPath(path)) return false;
+    return !router.canPop();
+  }
+
   @override
   Widget build(BuildContext context) {
+    // showBack 显式传 true=二级（带返回箭头）/ false=一级；不传则按层级自动判定。
+    final isTopLevel = showBack == null ? _autoIsTopLevel(context) : !showBack!;
+    final router = GoRouter.maybeOf(context);
     return AppBar(
       toolbarHeight: 64,
       automaticallyImplyLeading: false,
       titleSpacing: 0,
-      leading: showBack
-          ? IconButton(
+      leading: isTopLevel
+          ? null
+          : IconButton(
               tooltip: '返回',
               icon: const Icon(Icons.arrow_back,
                   color: AppColors.onSurfaceVariant),
               onPressed: () {
-                final router = GoRouter.of(context);
+                if (router == null) return;
                 if (router.canPop()) {
                   router.pop();
                 } else {
                   router.go(backFallback);
                 }
               },
-            )
-          : const Center(child: FarmBrand(markSize: 30, showLabel: false)),
+            ),
       title: Text(title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -65,19 +92,28 @@ class FarmAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: [
         if (showSearch)
           IconButton(
-            onPressed: () => GoRouter.of(context).go('/search'),
+            // 进入搜索页用 push：可 pop 返回，返回动画反向而非继续前进。
+            onPressed: () => router?.push('/search'),
             icon: const Icon(Icons.search, color: AppColors.onSurfaceVariant),
             tooltip: '全局搜索',
           ),
         ...(actions ??
             [
               IconButton(
-                onPressed: onBell ?? () => GoRouter.of(context).go('/messages'),
+                // 进入消息页用 push：可 pop 返回，返回动画反向而非继续前进。
+                onPressed: onBell ?? () => router?.push('/messages'),
                 icon: const Icon(Icons.notifications_none,
                     color: AppColors.onSurfaceVariant),
                 tooltip: '消息通知',
               ),
             ]),
+        // 一级 tab 顶层页：右上角统一品牌入口（点击回品牌首页 /home）。
+        if (isTopLevel && showBrandEntry)
+          IconButton(
+            tooltip: '田园通',
+            onPressed: () => router?.go('/home'),
+            icon: const FarmBrand(markSize: 24, showLabel: false),
+          ),
       ],
     );
   }
